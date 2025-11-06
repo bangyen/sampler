@@ -217,21 +217,23 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("Conversation History")
 
-model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
-model, tokenizer = load_model(model_id)
-
-if model is None or tokenizer is None:
-    st.error("Failed to load the model. Please check your internet connection and try again.")
-    st.stop()
-
-st.session_state.tokenizer = tokenizer
-
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
 if "messages" not in st.session_state:
     loaded_messages = load_conversation(st.session_state.session_id)
     st.session_state.messages = loaded_messages if loaded_messages else []
+
+model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
+
+with st.spinner(f"Loading {st.session_state.selected_model}..."):
+    model, tokenizer = load_model(model_id)
+
+if model is None or tokenizer is None:
+    st.error("Failed to load the model. Please check your internet connection and try again.")
+    st.stop()
+
+st.session_state.tokenizer = tokenizer
 
 st.success(f"Model loaded successfully: {st.session_state.selected_model}")
 
@@ -256,7 +258,7 @@ with st.sidebar:
         for i, conv in enumerate(all_conversations[:10]):
             is_current = conv["session_id"] == st.session_state.session_id
             
-            col_a, col_b = st.columns([3, 1])
+            col_a, col_b = st.columns([2.5, 1.5])
             
             with col_a:
                 button_label = f"{'>' if is_current else ''} {conv['message_count']} messages"
@@ -266,7 +268,7 @@ with st.sidebar:
                     st.rerun()
             
             with col_b:
-                if st.button("Delete", key=f"del_{i}"):
+                if st.button("Delete", key=f"del_{i}", use_container_width=True):
                     delete_conversation(conv["session_id"])
                     if conv["session_id"] == st.session_state.session_id:
                         st.session_state.session_id = str(uuid.uuid4())
@@ -374,15 +376,14 @@ with col1:
         
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        with st.chat_message("user"):
-            st.markdown(user_input)
+        messages_for_model = [
+            {"role": "system", "content": "You are a helpful AI assistant."}
+        ] + st.session_state.messages
+        
+        start_time = time.time()
+        response_text = ""
         
         with st.chat_message("assistant"):
-            messages_for_model = [
-                {"role": "system", "content": "You are a helpful AI assistant."}
-            ] + st.session_state.messages
-            
-            start_time = time.time()
             response_text = st.write_stream(
                 generate_response_streaming(
                     model, 
@@ -394,8 +395,8 @@ with col1:
                     top_k
                 )
             )
-            end_time = time.time()
             
+            end_time = time.time()
             generation_time = end_time - start_time
             num_tokens = len(tokenizer.encode(response_text))
             tokens_per_second = num_tokens / generation_time if generation_time > 0 else 0
