@@ -6,6 +6,7 @@ A complete Streamlit application demonstrating Microsoft's BitNet b1.58 2B LLM, 
 ## Current Status: ✅ FULLY FUNCTIONAL
 
 The application successfully runs with all core features implemented and working:
+- ✅ Multiple model support with selector (BitNet, SmolLM2, Qwen2.5 models)
 - ✅ BitNet model loading and inference (CPU-only)
 - ✅ Interactive chat interface
 - ✅ Real-time streaming responses
@@ -58,7 +59,26 @@ The application successfully runs with all core features implemented and working
 - Metrics displayed as caption below each response
 - Format: `⏱️ Xs | 🔢 N tokens | 🚀 X.X tokens/s`
 
-#### 6. Conversation Persistence
+#### 6. Model Selector
+- **Status:** ✅ Fully functional
+- **Available Models:**
+  - BitNet b1.58 2B (microsoft/bitnet-b1.58-2B-4T-bf16) - 1.58-bit quantized
+  - SmolLM2 1.7B-Instruct (HuggingFaceTB/SmolLM2-1.7B-Instruct) - lightweight instruction-tuned
+  - Qwen2.5 1.5B-Instruct (Qwen/Qwen2.5-1.5B-Instruct) - multilingual chat model
+  - Qwen2.5 0.5B-Instruct (Qwen/Qwen2.5-0.5B-Instruct) - ultra-compact chat model
+- **Features:**
+  - Radio button selector in sidebar
+  - Dynamic model info display (parameters, type, description)
+  - Automatic model loading with progress indicators
+  - Tokenizer updates correctly when switching models (fixed bug)
+  - All models are ungated (no HuggingFace auth required)
+- **Technical Details:**
+  - Session state tracks selected model
+  - Triggers automatic page rerun on model change
+  - Tokenizer always updates with model (prevents chat template mismatches)
+  - Model-specific chat templates applied correctly
+
+#### 7. Conversation Persistence
 - **Status:** Fully functional with smart database fallback
 - **Dependencies Installed:** SQLAlchemy 2.0.44 and psycopg2 2.9.11
 - **Primary Implementation:** PostgreSQL with SQLAlchemy (`database.py`)
