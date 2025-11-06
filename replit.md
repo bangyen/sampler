@@ -144,16 +144,27 @@ Access at: `http://0.0.0.0:5000`
 ### 2. Database Persistence with Smart Fallback
 **Status:** ✅ Resolved  
 **Solution:** Successfully installed SQLAlchemy 2.0.44 and psycopg2 2.9.11 via pip  
-**Current State:** Neon PostgreSQL endpoint is sleeping (auto-sleep after inactivity)  
+**Current State:** Neon PostgreSQL endpoint is auto-sleeping (Neon's auto-sleep feature after inactivity)  
 **Implementation:** Smart connection test on startup with automatic JSON fallback  
 **User Experience:** Seamless - app shows which persistence backend is active  
-**Impact:** All conversation persistence features work perfectly via JSON storage
+**Impact:** All conversation persistence features work perfectly via JSON storage  
+**Note:** To use PostgreSQL, the Neon endpoint needs to be manually re-enabled via Neon API
 
 ### 3. Generation Speed
 **Issue:** CPU inference is slow (30-60 seconds per response)  
 **Reason:** BitNet quantization benefits require specialized hardware/kernels  
 **Note:** This is expected behavior for CPU-only inference without bitnet.cpp optimization  
 **Status:** ✅ Expected behavior
+
+### 4. UI/UX Improvements (November 2025)
+**Fixes Applied:**
+- ✅ Fixed example prompt button duplication - now uses pending_prompt mechanism
+- ✅ Fixed chat input positioning - messages appear above input correctly  
+- ✅ Fixed response text capture bug - proper string handling from st.write_stream
+- ✅ Fixed metrics display - shows sec/token when < 1 for better readability at slow speeds
+- ✅ Added division-by-zero protection in all metrics calculations
+- ✅ Removed duplicate messages during generation
+**Status:** ✅ All resolved
 
 ## Performance Characteristics
 
