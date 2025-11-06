@@ -58,11 +58,25 @@ def load_model():
 def generate_response(model, tokenizer, messages, temperature, max_tokens):
     """Generate a response from the model"""
     try:
-        prompt = tokenizer.apply_chat_template(
-            messages, 
-            tokenize=False, 
-            add_generation_prompt=True
-        )
+        try:
+            prompt = tokenizer.apply_chat_template(
+                messages, 
+                tokenize=False, 
+                add_generation_prompt=True
+            )
+        except (AttributeError, TypeError):
+            prompt_parts = []
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+                if role == "system":
+                    prompt_parts.append(f"System: {content}")
+                elif role == "user":
+                    prompt_parts.append(f"User: {content}")
+                elif role == "assistant":
+                    prompt_parts.append(f"Assistant: {content}")
+            prompt_parts.append("Assistant:")
+            prompt = "\n".join(prompt_parts)
         
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
@@ -80,8 +94,14 @@ def generate_response(model, tokenizer, messages, temperature, max_tokens):
         if prompt in response:
             response = response.replace(prompt, "").strip()
         
+        if response.startswith("Assistant:"):
+            response = response[len("Assistant:"):].strip()
+        
         return response
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        st.error(f"Generation error details:\n{error_details}")
         return f"Error generating response: {str(e)}"
 
 model, tokenizer = load_model()
