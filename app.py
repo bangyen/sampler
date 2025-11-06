@@ -46,18 +46,46 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
             return False
 
 st.set_page_config(
-    page_title="BitNet LLM Demo",
+    page_title="Quantized LLM Comparison Demo",
     layout="wide"
 )
 
-st.title("Microsoft BitNet b1.58 2B LLM Demo")
+AVAILABLE_MODELS = {
+    "BitNet b1.58 2B": {
+        "id": "microsoft/bitnet-b1.58-2B-4T-bf16",
+        "params": "2B",
+        "quantization": "1.58-bit",
+        "memory": "~400MB",
+        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}"
+    },
+    "Gemma 2B": {
+        "id": "google/gemma-2b",
+        "params": "2B",
+        "quantization": "FP16",
+        "memory": "~4.8GB",
+        "description": "Google's efficient 2B parameter model"
+    },
+    "Llama 3.2 1B": {
+        "id": "meta-llama/Llama-3.2-1B",
+        "params": "1B",
+        "quantization": "FP16",
+        "memory": "~2GB",
+        "description": "Meta's small but powerful 1B model"
+    },
+    "Qwen 2.5 1.5B": {
+        "id": "Qwen/Qwen2.5-1.5B",
+        "params": "1.5B",
+        "quantization": "FP16",
+        "memory": "~3GB",
+        "description": "Alibaba's multilingual 1.5B model"
+    }
+}
+
+st.title("Quantized LLM Comparison Demo")
 
 st.markdown("""
-This demo uses Microsoft's BitNet b1.58 2B model, a 1-bit Large Language Model with 2 billion parameters.
-BitNet uses ternary weights {-1, 0, +1} requiring only ~400MB memory compared to 1.4-4.8GB for similar models.
-
-**Note:** This implementation uses the Hugging Face Transformers library for compatibility. 
-For production deployments with optimized performance, consider using the native bitnet.cpp framework.
+Compare different quantized and efficient LLM models to see how they perform. 
+Select a model from the sidebar to switch between them.
 """)
 
 if PERSISTENCE_TYPE == "JSON":
@@ -67,26 +95,24 @@ elif PERSISTENCE_TYPE == "PostgreSQL":
 elif PERSISTENCE_TYPE == "None":
     st.warning("Conversation persistence is disabled")
 
-MODEL_ID = "microsoft/bitnet-b1.58-2B-4T-bf16"
-
 @st.cache_resource
-def load_model():
-    """Load the BitNet model and tokenizer"""
-    with st.spinner("Downloading and loading BitNet model... This may take a few minutes on first run."):
+def load_model(model_id):
+    """Load the selected model and tokenizer"""
+    with st.spinner(f"Downloading and loading {model_id}... This may take a few minutes on first run."):
         try:
-            tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+            tokenizer = AutoTokenizer.from_pretrained(model_id)
             
             try:
                 model = AutoModelForCausalLM.from_pretrained(
-                    MODEL_ID,
+                    model_id,
                     torch_dtype=torch.float32,
                     low_cpu_mem_usage=True
                 )
             except (ImportError, OSError) as e:
                 if "accelerate" in str(e).lower():
-                    st.warning("BitNet quantized model requires 'accelerate' package which is not available. Loading in compatibility mode...")
+                    st.warning("Model requires 'accelerate' package which is not available. Loading in compatibility mode...")
                     model = AutoModelForCausalLM.from_pretrained(
-                        MODEL_ID,
+                        model_id,
                         torch_dtype=torch.float32,
                         low_cpu_mem_usage=True,
                         _fast_init=False
@@ -167,7 +193,32 @@ def generate_response_streaming(model, tokenizer, messages, temperature, max_tok
         st.error(f"Generation error details:\n{error_details}")
         yield f"Error generating response: {str(e)}"
 
-model, tokenizer = load_model()
+with st.sidebar:
+    st.subheader("Model Selection")
+    
+    if "selected_model" not in st.session_state:
+        st.session_state.selected_model = "BitNet b1.58 2B"
+    
+    selected_model_name = st.radio(
+        "Choose a model:",
+        options=list(AVAILABLE_MODELS.keys()),
+        index=list(AVAILABLE_MODELS.keys()).index(st.session_state.selected_model),
+        help="Select a model to use for generation"
+    )
+    
+    if selected_model_name != st.session_state.selected_model:
+        st.session_state.selected_model = selected_model_name
+        st.rerun()
+    
+    selected_model_info = AVAILABLE_MODELS[selected_model_name]
+    st.caption(f"**{selected_model_info['params']} params | {selected_model_info['quantization']} | {selected_model_info['memory']}**")
+    st.caption(selected_model_info['description'])
+    
+    st.markdown("---")
+    st.subheader("Conversation History")
+
+model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
+model, tokenizer = load_model(model_id)
 
 if model is None or tokenizer is None:
     st.error("Failed to load the model. Please check your internet connection and try again.")
@@ -183,14 +234,13 @@ if "messages" not in st.session_state:
     loaded_messages = load_conversation(st.session_state.session_id)
     st.session_state.messages = loaded_messages if loaded_messages else []
 
-st.success("Model loaded successfully!")
+st.success(f"Model loaded successfully: {st.session_state.selected_model}")
 
 st.markdown("---")
 
 col1, col2 = st.columns([2, 1])
 
 with st.sidebar:
-    st.subheader("Conversation History")
     
     if st.button("+ New Conversation"):
         st.session_state.session_id = str(uuid.uuid4())
@@ -272,12 +322,13 @@ with col2:
     st.markdown("---")
     
     st.subheader("Model Info")
+    current_model = AVAILABLE_MODELS[st.session_state.selected_model]
     st.markdown(f"""
-    - **Model:** BitNet b1.58 2B
-    - **Parameters:** 2 Billion
-    - **Quantization:** 1.58-bit
-    - **Memory:** ~400MB
-    - **Context:** 4096 tokens
+    - **Model:** {st.session_state.selected_model}
+    - **Parameters:** {current_model['params']}
+    - **Quantization:** {current_model['quantization']}
+    - **Memory:** {current_model['memory']}
+    - **Model ID:** {current_model['id']}
     """)
     
     if st.button("Clear Chat History"):
