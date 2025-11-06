@@ -224,9 +224,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = loaded_messages if loaded_messages else []
 
 model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
-
-with st.spinner(f"Loading {st.session_state.selected_model}..."):
-    model, tokenizer = load_model(model_id)
+model, tokenizer = load_model(model_id)
 
 if model is None or tokenizer is None:
     st.error("Failed to load the model. Please check your internet connection and try again.")

@@ -164,6 +164,7 @@ Access at: `http://0.0.0.0:5000`
 - ✅ Fixed metrics display - shows sec/token when < 1 for better readability at slow speeds
 - ✅ Added division-by-zero protection in all metrics calculations
 - ✅ Removed duplicate messages during generation
+- ✅ Fixed duplicate spinner issue - removed explicit spinner, uses Streamlit's automatic cache spinner only
 **Status:** ✅ All resolved
 
 ## Performance Characteristics
