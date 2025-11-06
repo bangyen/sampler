@@ -11,7 +11,7 @@ The application successfully runs with all core features implemented and working
 - ✅ Real-time streaming responses
 - ✅ Advanced generation parameters (temperature, top-p, top-k, max tokens)
 - ✅ Performance metrics tracking (time, tokens, tokens/second)
-- ⚠️ Database persistence (attempted but SQLAlchemy/psycopg2 installation failed through uv package manager)
+- ✅ Conversation persistence (JSON file-based storage - fully functional)
 
 ## Technical Implementation
 
@@ -58,13 +58,19 @@ The application successfully runs with all core features implemented and working
 - Metrics displayed as caption below each response
 - Format: `⏱️ Xs | 🔢 N tokens | 🚀 X.X tokens/s`
 
-#### 6. Conversation Persistence (Attempted)
-- **Status:** Implementation complete but disabled due to dependency issues
-- **Files:** `database.py` with complete PostgreSQL schema
-- **Schema:** Conversations and Messages tables with SQLAlchemy ORM
-- **Features:** Auto-save, conversation history sidebar, load/delete conversations
-- **Issue:** uv package manager cannot install `sqlalchemy` and `psycopg2-binary`
-- **Workaround:** App gracefully handles missing database dependencies with fallback functions
+#### 6. Conversation Persistence
+- **Status:** Fully functional with JSON file storage
+- **Primary Implementation:** PostgreSQL with SQLAlchemy (`database.py`)
+- **Active Backend:** JSON file storage (`json_storage.py`)
+- **Storage Location:** `conversations/` directory with one JSON file per conversation
+- **Features:** 
+  - Auto-save after each message
+  - Conversation history sidebar with message counts
+  - Load previous conversations
+  - Create new conversations with unique session IDs
+  - Delete conversations
+- **Fallback Chain:** PostgreSQL → JSON storage → No-op stubs
+- **Note:** PostgreSQL infrastructure ready; SQLAlchemy/psycopg2 installation blocked by uv package manager
 
 ## Project Structure
 
