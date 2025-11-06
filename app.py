@@ -47,11 +47,10 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
 
 st.set_page_config(
     page_title="BitNet LLM Demo",
-    page_icon="🤖",
     layout="wide"
 )
 
-st.title("🤖 Microsoft BitNet b1.58 2B LLM Demo")
+st.title("Microsoft BitNet b1.58 2B LLM Demo")
 
 st.markdown("""
 This demo uses Microsoft's BitNet b1.58 2B model, a 1-bit Large Language Model with 2 billion parameters.
@@ -62,11 +61,11 @@ For production deployments with optimized performance, consider using the native
 """)
 
 if PERSISTENCE_TYPE == "JSON":
-    st.info("💾 Using JSON file-based persistence (PostgreSQL database unavailable)")
+    st.info("Using JSON file-based persistence (PostgreSQL database unavailable)")
 elif PERSISTENCE_TYPE == "PostgreSQL":
-    st.success("💾 Using PostgreSQL database for persistence")
+    st.success("Using PostgreSQL database for persistence")
 elif PERSISTENCE_TYPE == "None":
-    st.warning("⚠️ Conversation persistence is disabled")
+    st.warning("Conversation persistence is disabled")
 
 MODEL_ID = "microsoft/bitnet-b1.58-2B-4T-bf16"
 
@@ -85,7 +84,7 @@ def load_model():
                 )
             except (ImportError, OSError) as e:
                 if "accelerate" in str(e).lower():
-                    st.warning("⚠️ BitNet quantized model requires 'accelerate' package which is not available. Loading in compatibility mode...")
+                    st.warning("BitNet quantized model requires 'accelerate' package which is not available. Loading in compatibility mode...")
                     model = AutoModelForCausalLM.from_pretrained(
                         MODEL_ID,
                         torch_dtype=torch.float32,
@@ -184,16 +183,16 @@ if "messages" not in st.session_state:
     loaded_messages = load_conversation(st.session_state.session_id)
     st.session_state.messages = loaded_messages if loaded_messages else []
 
-st.success("✅ Model loaded successfully!")
+st.success("Model loaded successfully!")
 
 st.markdown("---")
 
 col1, col2 = st.columns([2, 1])
 
 with st.sidebar:
-    st.subheader("💾 Conversation History")
+    st.subheader("Conversation History")
     
-    if st.button("➕ New Conversation"):
+    if st.button("+ New Conversation"):
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
         st.rerun()
@@ -211,14 +210,14 @@ with st.sidebar:
             col_a, col_b = st.columns([3, 1])
             
             with col_a:
-                button_label = f"{'▶️' if is_current else '💬'} {conv['message_count']} messages"
+                button_label = f"{'>' if is_current else ''} {conv['message_count']} messages"
                 if st.button(button_label, key=f"conv_{i}", use_container_width=True):
                     st.session_state.session_id = conv["session_id"]
                     st.session_state.messages = load_conversation(conv["session_id"])
                     st.rerun()
             
             with col_b:
-                if st.button("🗑️", key=f"del_{i}"):
+                if st.button("Delete", key=f"del_{i}"):
                     delete_conversation(conv["session_id"])
                     if conv["session_id"] == st.session_state.session_id:
                         st.session_state.session_id = str(uuid.uuid4())
@@ -231,7 +230,7 @@ with st.sidebar:
         st.info("No saved conversations yet")
 
 with col2:
-    st.subheader("⚙️ Generation Settings")
+    st.subheader("Generation Settings")
     
     temperature = st.slider(
         "Temperature",
@@ -251,7 +250,7 @@ with col2:
         help="Maximum number of tokens to generate"
     )
     
-    with st.expander("🔧 Advanced Settings"):
+    with st.expander("Advanced Settings"):
         top_p = st.slider(
             "Top-p (nucleus sampling)",
             min_value=0.0,
@@ -272,7 +271,7 @@ with col2:
     
     st.markdown("---")
     
-    st.subheader("📊 Model Info")
+    st.subheader("Model Info")
     st.markdown(f"""
     - **Model:** BitNet b1.58 2B
     - **Parameters:** 2 Billion
@@ -281,19 +280,19 @@ with col2:
     - **Context:** 4096 tokens
     """)
     
-    if st.button("🔄 Clear Chat History"):
+    if st.button("Clear Chat History"):
         st.session_state.messages = []
         save_conversation(st.session_state.session_id, st.session_state.messages)
         st.rerun()
 
 with col1:
-    st.subheader("💬 Chat Interface")
+    st.subheader("Chat Interface")
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
     if len(st.session_state.messages) == 0:
-        st.info("👋 Welcome! Try one of these example prompts:")
+        st.info("Welcome! Try one of these example prompts:")
         example_prompts = [
             "Explain quantum computing in simple terms",
             "Write a short poem about artificial intelligence",
@@ -304,7 +303,7 @@ with col1:
         cols = st.columns(2)
         for idx, prompt in enumerate(example_prompts):
             col_idx = idx % 2
-            if cols[col_idx].button(f"📝 {prompt}", key=f"example_{idx}"):
+            if cols[col_idx].button(prompt, key=f"example_{idx}"):
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 st.rerun()
     
@@ -314,7 +313,7 @@ with col1:
             if message["role"] == "assistant":
                 metrics = message.get("metrics")
                 if metrics:
-                    st.caption(f"⏱️ {metrics['time']:.1f}s | 🔢 {metrics['tokens']} tokens | 🚀 {metrics['tokens_per_sec']:.1f} tokens/s")
+                    st.caption(f"Time: {metrics['time']:.1f}s | Tokens: {metrics['tokens']} | Speed: {metrics['tokens_per_sec']:.1f} tokens/s")
                 else:
                     st.caption("_No metrics available for this response_")
     
@@ -357,7 +356,7 @@ with col1:
                 "tokens_per_sec": tokens_per_second
             }
             
-            st.caption(f"⏱️ {generation_time:.1f}s | 🔢 {num_tokens} tokens | 🚀 {tokens_per_second:.1f} tokens/s")
+            st.caption(f"Time: {generation_time:.1f}s | Tokens: {num_tokens} | Speed: {tokens_per_second:.1f} tokens/s")
         
         st.session_state.messages.append({
             "role": "assistant", 
