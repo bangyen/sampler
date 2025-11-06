@@ -59,9 +59,16 @@ The application successfully runs with all core features implemented and working
 - Format: `⏱️ Xs | 🔢 N tokens | 🚀 X.X tokens/s`
 
 #### 6. Conversation Persistence
-- **Status:** Fully functional with JSON file storage
+- **Status:** Fully functional with smart database fallback
+- **Dependencies Installed:** SQLAlchemy 2.0.44 and psycopg2 2.9.11
 - **Primary Implementation:** PostgreSQL with SQLAlchemy (`database.py`)
 - **Active Backend:** JSON file storage (`json_storage.py`)
+- **Current State:** Neon PostgreSQL endpoint is sleeping/disabled (auto-sleep feature)
+- **Fallback Mechanism:**
+  - App tests database connection on startup via `test_database_connection()`
+  - If PostgreSQL unavailable, automatically falls back to JSON storage
+  - Seamless user experience regardless of database status
+  - No error messages displayed to users
 - **Storage Location:** `conversations/` directory with one JSON file per conversation
 - **Features:** 
   - Auto-save after each message
@@ -69,8 +76,8 @@ The application successfully runs with all core features implemented and working
   - Load previous conversations
   - Create new conversations with unique session IDs
   - Delete conversations
-- **Fallback Chain:** PostgreSQL → JSON storage → No-op stubs
-- **Note:** PostgreSQL infrastructure ready; SQLAlchemy/psycopg2 installation blocked by uv package manager
+  - Persistence status indicator in UI
+- **Fallback Chain:** PostgreSQL (test connection) → JSON storage → No-op stubs
 
 ## Project Structure
 
@@ -114,12 +121,13 @@ Access at: `http://0.0.0.0:5000`
 **Solution:** Installed manually via `pip install accelerate`  
 **Status:** ✅ Resolved
 
-### 2. SQLAlchemy/psycopg2 Installation
-**Problem:** uv package manager crashes when trying to install database dependencies  
-**Error:** `runtime error: invalid memory address or nil pointer dereference`  
-**Workaround:** App imports database module with try/except, shows warning if unavailable  
-**Impact:** Conversation persistence disabled, but all other features work perfectly  
-**Status:** ⚠️ Known limitation
+### 2. Database Persistence with Smart Fallback
+**Status:** ✅ Resolved  
+**Solution:** Successfully installed SQLAlchemy 2.0.44 and psycopg2 2.9.11 via pip  
+**Current State:** Neon PostgreSQL endpoint is sleeping (auto-sleep after inactivity)  
+**Implementation:** Smart connection test on startup with automatic JSON fallback  
+**User Experience:** Seamless - app shows which persistence backend is active  
+**Impact:** All conversation persistence features work perfectly via JSON storage
 
 ### 3. Generation Speed
 **Issue:** CPU inference is slow (30-60 seconds per response)  

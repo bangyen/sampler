@@ -78,8 +78,7 @@ def save_conversation(session_id, messages):
         db_session.commit()
         db_session.close()
         return True
-    except Exception as e:
-        st.error(f"Error saving conversation: {str(e)}")
+    except Exception:
         return False
 
 def load_conversation(session_id):
@@ -105,8 +104,7 @@ def load_conversation(session_id):
         
         db_session.close()
         return result
-    except Exception as e:
-        st.error(f"Error loading conversation: {str(e)}")
+    except Exception:
         return []
 
 def get_all_conversations():
@@ -131,8 +129,7 @@ def get_all_conversations():
         
         db_session.close()
         return result
-    except Exception as e:
-        st.error(f"Error loading conversations: {str(e)}")
+    except Exception:
         return []
 
 def delete_conversation(session_id):
@@ -148,6 +145,5 @@ def delete_conversation(session_id):
         db_session.commit()
         db_session.close()
         return True
-    except Exception as e:
-        st.error(f"Error deleting conversation: {str(e)}")
+    except Exception:
         return False

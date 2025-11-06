@@ -6,20 +6,35 @@ from threading import Thread
 import os
 import uuid
 
+def test_database_connection():
+    """Test if PostgreSQL database is accessible"""
+    try:
+        from database import get_engine
+        from sqlalchemy import text
+        engine = get_engine()
+        if engine is None:
+            return False
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+
 try:
     from database import save_conversation, load_conversation, get_all_conversations, delete_conversation
-    DATABASE_AVAILABLE = True
-    PERSISTENCE_TYPE = "PostgreSQL"
-except (ImportError, ModuleNotFoundError):
+    if test_database_connection():
+        DATABASE_AVAILABLE = True
+        PERSISTENCE_TYPE = "PostgreSQL"
+    else:
+        raise ConnectionError("Database connection test failed")
+except (ImportError, ModuleNotFoundError, ConnectionError):
     try:
         from json_storage import save_conversation, load_conversation, get_all_conversations, delete_conversation
         DATABASE_AVAILABLE = True
         PERSISTENCE_TYPE = "JSON"
-        st.info(f"💾 Using JSON file-based persistence (PostgreSQL unavailable)")
     except Exception as e:
         DATABASE_AVAILABLE = False
         PERSISTENCE_TYPE = "None"
-        st.warning(f"⚠️ Persistence disabled: {str(e)}")
         
         def save_conversation(session_id, messages):
             return False
@@ -45,6 +60,13 @@ BitNet uses ternary weights {-1, 0, +1} requiring only ~400MB memory compared to
 **Note:** This implementation uses the Hugging Face Transformers library for compatibility. 
 For production deployments with optimized performance, consider using the native bitnet.cpp framework.
 """)
+
+if PERSISTENCE_TYPE == "JSON":
+    st.info("💾 Using JSON file-based persistence (PostgreSQL database unavailable)")
+elif PERSISTENCE_TYPE == "PostgreSQL":
+    st.success("💾 Using PostgreSQL database for persistence")
+elif PERSISTENCE_TYPE == "None":
+    st.warning("⚠️ Conversation persistence is disabled")
 
 MODEL_ID = "microsoft/bitnet-b1.58-2B-4T-bf16"
 
