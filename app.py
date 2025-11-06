@@ -98,36 +98,35 @@ elif PERSISTENCE_TYPE == "None":
 @st.cache_resource
 def load_model(model_id):
     """Load the selected model and tokenizer"""
-    with st.spinner(f"Downloading and loading {model_id}... This may take a few minutes on first run."):
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        
         try:
-            tokenizer = AutoTokenizer.from_pretrained(model_id)
-            
-            try:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_id,
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=True
+            )
+        except (ImportError, OSError) as e:
+            if "accelerate" in str(e).lower():
+                st.warning("Model requires 'accelerate' package which is not available. Loading in compatibility mode...")
                 model = AutoModelForCausalLM.from_pretrained(
                     model_id,
                     torch_dtype=torch.float32,
-                    low_cpu_mem_usage=True
+                    low_cpu_mem_usage=True,
+                    _fast_init=False
                 )
-            except (ImportError, OSError) as e:
-                if "accelerate" in str(e).lower():
-                    st.warning("Model requires 'accelerate' package which is not available. Loading in compatibility mode...")
-                    model = AutoModelForCausalLM.from_pretrained(
-                        model_id,
-                        torch_dtype=torch.float32,
-                        low_cpu_mem_usage=True,
-                        _fast_init=False
-                    )
-                else:
-                    raise
-            
-            model.to("cpu")
-            model.eval()
-            return model, tokenizer
-        except Exception as e:
-            st.error(f"Error loading model: {str(e)}")
-            import traceback
-            st.error(f"Traceback: {traceback.format_exc()}")
-            return None, None
+            else:
+                raise
+        
+        model.to("cpu")
+        model.eval()
+        return model, tokenizer
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
+        return None, None
 
 def format_prompt(messages):
     """Format messages into a prompt string"""
@@ -370,6 +369,10 @@ with col1:
                     st.caption("_No metrics available for this response_")
     
     user_input = st.chat_input("Type your message here...")
+    
+    if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
+        user_input = st.session_state.messages[-1]["content"]
+        st.session_state.messages.pop()
     
     if user_input:
         import time
