@@ -355,7 +355,7 @@ with col1:
         for idx, prompt in enumerate(example_prompts):
             col_idx = idx % 2
             if cols[col_idx].button(prompt, key=f"example_{idx}"):
-                st.session_state.messages.append({"role": "user", "content": prompt})
+                st.session_state.pending_prompt = prompt
                 st.rerun()
     
     for idx, message in enumerate(st.session_state.messages):
@@ -364,15 +364,22 @@ with col1:
             if message["role"] == "assistant":
                 metrics = message.get("metrics")
                 if metrics:
-                    st.caption(f"Time: {metrics['time']:.1f}s | Tokens: {metrics['tokens']} | Speed: {metrics['tokens_per_sec']:.1f} tokens/s")
+                    tokens_per_sec = metrics.get('tokens_per_sec', 0)
+                    if tokens_per_sec > 0 and tokens_per_sec < 1:
+                        speed_display = f"{1/tokens_per_sec:.1f} sec/token"
+                    elif tokens_per_sec >= 1:
+                        speed_display = f"{tokens_per_sec:.1f} tokens/sec"
+                    else:
+                        speed_display = "N/A"
+                    st.caption(f"Time: {metrics['time']:.1f}s | Tokens: {metrics['tokens']} | Speed: {speed_display}")
                 else:
                     st.caption("_No metrics available for this response_")
     
     user_input = st.chat_input("Type your message here...")
     
-    if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
-        user_input = st.session_state.messages[-1]["content"]
-        st.session_state.messages.pop()
+    if "pending_prompt" in st.session_state:
+        user_input = st.session_state.pending_prompt
+        del st.session_state.pending_prompt
     
     if user_input:
         import time
@@ -384,7 +391,6 @@ with col1:
         ] + st.session_state.messages
         
         start_time = time.time()
-        response_text = ""
         
         with st.chat_message("assistant"):
             response_text = st.write_stream(
@@ -401,8 +407,11 @@ with col1:
             
             end_time = time.time()
             generation_time = end_time - start_time
-            num_tokens = len(tokenizer.encode(response_text))
-            tokens_per_second = num_tokens / generation_time if generation_time > 0 else 0
+            
+            if not isinstance(response_text, str):
+                response_text = ""
+            num_tokens = len(tokenizer.encode(response_text)) if response_text else 0
+            tokens_per_second = num_tokens / generation_time if generation_time > 0 and num_tokens > 0 else 0
             
             metrics = {
                 "time": generation_time,
@@ -410,7 +419,13 @@ with col1:
                 "tokens_per_sec": tokens_per_second
             }
             
-            st.caption(f"Time: {generation_time:.1f}s | Tokens: {num_tokens} | Speed: {tokens_per_second:.1f} tokens/s")
+            if tokens_per_second > 0 and tokens_per_second < 1:
+                speed_display = f"{1/tokens_per_second:.1f} sec/token"
+            elif tokens_per_second >= 1:
+                speed_display = f"{tokens_per_second:.1f} tokens/sec"
+            else:
+                speed_display = "N/A"
+            st.caption(f"Time: {generation_time:.1f}s | Tokens: {num_tokens} | Speed: {speed_display}")
         
         st.session_state.messages.append({
             "role": "assistant", 
