@@ -58,26 +58,26 @@ AVAILABLE_MODELS = {
         "memory": "~400MB",
         "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}"
     },
-    "Gemma 2B": {
-        "id": "google/gemma-2b",
-        "params": "2B",
+    "SmolLM2 1.7B": {
+        "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        "params": "1.7B",
         "quantization": "FP16",
-        "memory": "~4.8GB",
-        "description": "Google's efficient 2B parameter model"
-    },
-    "Llama 3.2 1B": {
-        "id": "meta-llama/Llama-3.2-1B",
-        "params": "1B",
-        "quantization": "FP16",
-        "memory": "~2GB",
-        "description": "Meta's small but powerful 1B model"
+        "memory": "~3.4GB",
+        "description": "HuggingFace's efficient model optimized for edge/mobile"
     },
     "Qwen 2.5 1.5B": {
-        "id": "Qwen/Qwen2.5-1.5B",
+        "id": "Qwen/Qwen2.5-1.5B-Instruct",
         "params": "1.5B",
         "quantization": "FP16",
         "memory": "~3GB",
-        "description": "Alibaba's multilingual 1.5B model"
+        "description": "Alibaba's multilingual instruct-tuned model (29+ languages)"
+    },
+    "Qwen 2.5 0.5B": {
+        "id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "params": "0.5B",
+        "quantization": "FP16",
+        "memory": "~1GB",
+        "description": "Alibaba's smallest model, great for quick responses"
     }
 }
 
@@ -224,8 +224,7 @@ if model is None or tokenizer is None:
     st.error("Failed to load the model. Please check your internet connection and try again.")
     st.stop()
 
-if "tokenizer" not in st.session_state:
-    st.session_state.tokenizer = tokenizer
+st.session_state.tokenizer = tokenizer
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
