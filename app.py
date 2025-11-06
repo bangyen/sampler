@@ -1,6 +1,6 @@
 import streamlit as st
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 import os
 
 st.set_page_config(
@@ -19,7 +19,7 @@ BitNet uses ternary weights {-1, 0, +1} requiring only ~400MB memory compared to
 For production deployments with optimized performance, consider using the native bitnet.cpp framework.
 """)
 
-MODEL_ID = "microsoft/bitnet-b1.58-2B-4T"
+MODEL_ID = "microsoft/bitnet-b1.58-2B-4T-bf16"
 
 @st.cache_resource
 def load_model():
@@ -27,15 +27,32 @@ def load_model():
     with st.spinner("Downloading and loading BitNet model... This may take a few minutes on first run."):
         try:
             tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-            model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
-                torch_dtype=torch.float32,
-                low_cpu_mem_usage=True
-            )
+            
+            try:
+                model = AutoModelForCausalLM.from_pretrained(
+                    MODEL_ID,
+                    torch_dtype=torch.float32,
+                    low_cpu_mem_usage=True
+                )
+            except (ImportError, OSError) as e:
+                if "accelerate" in str(e).lower():
+                    st.warning("⚠️ BitNet quantized model requires 'accelerate' package which is not available. Loading in compatibility mode...")
+                    model = AutoModelForCausalLM.from_pretrained(
+                        MODEL_ID,
+                        torch_dtype=torch.float32,
+                        low_cpu_mem_usage=True,
+                        _fast_init=False
+                    )
+                else:
+                    raise
+            
             model.to("cpu")
+            model.eval()
             return model, tokenizer
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
+            import traceback
+            st.error(f"Traceback: {traceback.format_exc()}")
             return None, None
 
 def generate_response(model, tokenizer, messages, temperature, max_tokens):
