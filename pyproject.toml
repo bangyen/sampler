@@ -7,6 +7,8 @@ dependencies = [
     "streamlit>=1.51.0",
     "torch",
     "transformers @ git+https://github.com/shumingma/transformers.git",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
 ]
 
 [[tool.uv.index]]

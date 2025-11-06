@@ -1,7 +1,34 @@
 import streamlit as st
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
+from transformers import TextIteratorStreamer
+from threading import Thread
 import os
+import uuid
+
+try:
+    from database import save_conversation, load_conversation, get_all_conversations, delete_conversation
+    DATABASE_AVAILABLE = True
+    PERSISTENCE_TYPE = "PostgreSQL"
+except (ImportError, ModuleNotFoundError):
+    try:
+        from json_storage import save_conversation, load_conversation, get_all_conversations, delete_conversation
+        DATABASE_AVAILABLE = True
+        PERSISTENCE_TYPE = "JSON"
+        st.info(f"💾 Using JSON file-based persistence (PostgreSQL unavailable)")
+    except Exception as e:
+        DATABASE_AVAILABLE = False
+        PERSISTENCE_TYPE = "None"
+        st.warning(f"⚠️ Persistence disabled: {str(e)}")
+        
+        def save_conversation(session_id, messages):
+            return False
+        def load_conversation(session_id):
+            return []
+        def get_all_conversations():
+            return []
+        def delete_conversation(session_id):
+            return False
 
 st.set_page_config(
     page_title="BitNet LLM Demo",
@@ -55,11 +82,11 @@ def load_model():
             st.error(f"Traceback: {traceback.format_exc()}")
             return None, None
 
-def generate_response(model, tokenizer, messages, temperature, max_tokens):
-    """Generate a response from the model"""
+def format_prompt(messages):
+    """Format messages into a prompt string"""
     try:
         try:
-            prompt = tokenizer.apply_chat_template(
+            prompt = st.session_state.tokenizer.apply_chat_template(
                 messages, 
                 tokenize=False, 
                 add_generation_prompt=True
@@ -77,32 +104,47 @@ def generate_response(model, tokenizer, messages, temperature, max_tokens):
                     prompt_parts.append(f"Assistant: {content}")
             prompt_parts.append("Assistant:")
             prompt = "\n".join(prompt_parts)
-        
+        return prompt
+    except Exception as e:
+        return None
+
+def generate_response_streaming(model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50):
+    """Generate a streaming response from the model"""
+    try:
+        prompt = format_prompt(messages)
+        if prompt is None:
+            yield "Error: Could not format prompt"
+            return
+            
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_tokens,
-                temperature=temperature,
-                do_sample=temperature > 0,
-                pad_token_id=tokenizer.eos_token_id
-            )
+        streamer = TextIteratorStreamer(tokenizer, skip_special_tokens=True, skip_prompt=True)
         
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        generation_kwargs = {
+            **inputs,
+            "max_new_tokens": max_tokens,
+            "temperature": temperature,
+            "do_sample": temperature > 0,
+            "top_p": top_p,
+            "top_k": top_k,
+            "pad_token_id": tokenizer.eos_token_id,
+            "streamer": streamer
+        }
         
-        if prompt in response:
-            response = response.replace(prompt, "").strip()
+        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+        thread.start()
         
-        if response.startswith("Assistant:"):
-            response = response[len("Assistant:"):].strip()
+        for new_text in streamer:
+            if new_text.startswith("Assistant:"):
+                new_text = new_text[len("Assistant:"):].strip()
+            yield new_text
         
-        return response
+        thread.join()
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         st.error(f"Generation error details:\n{error_details}")
-        return f"Error generating response: {str(e)}"
+        yield f"Error generating response: {str(e)}"
 
 model, tokenizer = load_model()
 
@@ -110,11 +152,61 @@ if model is None or tokenizer is None:
     st.error("Failed to load the model. Please check your internet connection and try again.")
     st.stop()
 
+if "tokenizer" not in st.session_state:
+    st.session_state.tokenizer = tokenizer
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+if "messages" not in st.session_state:
+    loaded_messages = load_conversation(st.session_state.session_id)
+    st.session_state.messages = loaded_messages if loaded_messages else []
+
 st.success("✅ Model loaded successfully!")
 
 st.markdown("---")
 
 col1, col2 = st.columns([2, 1])
+
+with st.sidebar:
+    st.subheader("💾 Conversation History")
+    
+    if st.button("➕ New Conversation"):
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.messages = []
+        st.rerun()
+    
+    st.markdown("---")
+    
+    all_conversations = get_all_conversations()
+    
+    if all_conversations:
+        st.caption(f"Found {len(all_conversations)} saved conversation(s)")
+        
+        for i, conv in enumerate(all_conversations[:10]):
+            is_current = conv["session_id"] == st.session_state.session_id
+            
+            col_a, col_b = st.columns([3, 1])
+            
+            with col_a:
+                button_label = f"{'▶️' if is_current else '💬'} {conv['message_count']} messages"
+                if st.button(button_label, key=f"conv_{i}", use_container_width=True):
+                    st.session_state.session_id = conv["session_id"]
+                    st.session_state.messages = load_conversation(conv["session_id"])
+                    st.rerun()
+            
+            with col_b:
+                if st.button("🗑️", key=f"del_{i}"):
+                    delete_conversation(conv["session_id"])
+                    if conv["session_id"] == st.session_state.session_id:
+                        st.session_state.session_id = str(uuid.uuid4())
+                        st.session_state.messages = []
+                    st.rerun()
+        
+        if len(all_conversations) > 10:
+            st.caption(f"Showing 10 of {len(all_conversations)} conversations")
+    else:
+        st.info("No saved conversations yet")
 
 with col2:
     st.subheader("⚙️ Generation Settings")
@@ -137,6 +229,25 @@ with col2:
         help="Maximum number of tokens to generate"
     )
     
+    with st.expander("🔧 Advanced Settings"):
+        top_p = st.slider(
+            "Top-p (nucleus sampling)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.9,
+            step=0.05,
+            help="Sample from smallest set of tokens whose cumulative probability exceeds p"
+        )
+        
+        top_k = st.slider(
+            "Top-k sampling",
+            min_value=1,
+            max_value=100,
+            value=50,
+            step=1,
+            help="Sample from top k most likely tokens"
+        )
+    
     st.markdown("---")
     
     st.subheader("📊 Model Info")
@@ -150,6 +261,7 @@ with col2:
     
     if st.button("🔄 Clear Chat History"):
         st.session_state.messages = []
+        save_conversation(st.session_state.session_id, st.session_state.messages)
         st.rerun()
 
 with col1:
@@ -174,35 +286,64 @@ with col1:
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 st.rerun()
     
-    for message in st.session_state.messages:
+    for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            if message["role"] == "assistant":
+                metrics = message.get("metrics")
+                if metrics:
+                    st.caption(f"⏱️ {metrics['time']:.1f}s | 🔢 {metrics['tokens']} tokens | 🚀 {metrics['tokens_per_sec']:.1f} tokens/s")
+                else:
+                    st.caption("_No metrics available for this response_")
     
     user_input = st.chat_input("Type your message here...")
     
     if user_input:
+        import time
+        
         st.session_state.messages.append({"role": "user", "content": user_input})
         
         with st.chat_message("user"):
             st.markdown(user_input)
         
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                messages_for_model = [
-                    {"role": "system", "content": "You are a helpful AI assistant."}
-                ] + st.session_state.messages
-                
-                response = generate_response(
+            messages_for_model = [
+                {"role": "system", "content": "You are a helpful AI assistant."}
+            ] + st.session_state.messages
+            
+            start_time = time.time()
+            response_text = st.write_stream(
+                generate_response_streaming(
                     model, 
                     tokenizer, 
                     messages_for_model, 
                     temperature, 
-                    max_tokens
+                    max_tokens,
+                    top_p,
+                    top_k
                 )
-                
-                st.markdown(response)
+            )
+            end_time = time.time()
+            
+            generation_time = end_time - start_time
+            num_tokens = len(tokenizer.encode(response_text))
+            tokens_per_second = num_tokens / generation_time if generation_time > 0 else 0
+            
+            metrics = {
+                "time": generation_time,
+                "tokens": num_tokens,
+                "tokens_per_sec": tokens_per_second
+            }
+            
+            st.caption(f"⏱️ {generation_time:.1f}s | 🔢 {num_tokens} tokens | 🚀 {tokens_per_second:.1f} tokens/s")
         
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.append({
+            "role": "assistant", 
+            "content": response_text,
+            "metrics": metrics
+        })
+        
+        save_conversation(st.session_state.session_id, st.session_state.messages)
         st.rerun()
 
 st.markdown("---")
