@@ -181,7 +181,9 @@ body {
 }
 
 .chat-container {
-    flex: 2;
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
     display: flex;
     flex-direction: column;
     padding: 20px;
@@ -580,7 +582,7 @@ body {
     
     .chat-container {
         width: 100%;
-        max-width: 100%;
+        max-width: 900px;
         flex: none;
         overflow: visible;
         padding-bottom: 20px;
@@ -645,19 +647,25 @@ body {
 }
 
 .tab-content.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
 }
 
 /* NER Styles */
 .ner-container,
-.ocr-container {
-    max-width: 900px;
-    margin: 0 auto;
+.ocr-container,
+.layout-container {
+    max-width: 900px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
     padding: 30px;
 }
 
 .ner-header,
-.ocr-header {
+.ocr-header,
+.layout-header {
     margin-bottom: 30px;
 }
 
@@ -832,7 +840,9 @@ body {
     }
     
     .ner-container,
-    .ocr-container {
+    .ocr-container,
+    .layout-container {
         padding: 20px 15px;
+        max-width: 900px;
     }
 }
