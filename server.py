@@ -7,7 +7,6 @@ import asyncio
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
-from transformers.pipelines import pipeline
 from threading import Thread
 import json
 import uuid
@@ -34,33 +33,6 @@ try:
 except ImportError:
     PILLOW_AVAILABLE = False
 
-try:
-    import pytesseract
-    TESSERACT_AVAILABLE = True
-except ImportError:
-    TESSERACT_AVAILABLE = False
-
-try:
-    from surya.ocr import run_ocr
-    from surya.model.detection.model import load_model as load_det_model, load_processor as load_det_processor
-    from surya.model.recognition.model import load_model as load_rec_model
-    from surya.model.recognition.processor import load_processor as load_rec_processor
-    SURYA_AVAILABLE = True
-except ImportError:
-    SURYA_AVAILABLE = False
-
-try:
-    from google.cloud import vision
-    GOOGLE_VISION_AVAILABLE = True
-except ImportError:
-    GOOGLE_VISION_AVAILABLE = False
-
-try:
-    from azure.cognitiveservices.vision.computervision import ComputerVisionClient
-    from msrest.authentication import CognitiveServicesCredentials
-    AZURE_VISION_AVAILABLE = True
-except ImportError:
-    AZURE_VISION_AVAILABLE = False
 
 try:
     from database import (
@@ -191,110 +163,33 @@ NER_MODELS = {
 }
 
 OCR_CONFIGS = {
-    "EasyOCR - English Only": {
+    "English Only": {
         "engine": "easyocr",
         "languages": ["en"],
-        "description": "Fast English text extraction with EasyOCR",
-        "available": EASYOCR_AVAILABLE,
+        "description": "Fastest - English text only",
     },
-    "EasyOCR - English + Spanish": {
+    "English + Spanish": {
         "engine": "easyocr",
         "languages": ["en", "es"],
-        "description": "English and Spanish text with EasyOCR",
-        "available": EASYOCR_AVAILABLE,
+        "description": "English and Spanish text recognition",
     },
-    "EasyOCR - English + Chinese": {
+    "English + Chinese": {
         "engine": "easyocr",
         "languages": ["en", "ch_sim"],
-        "description": "English and Simplified Chinese with EasyOCR",
-        "available": EASYOCR_AVAILABLE,
+        "description": "English and Simplified Chinese text",
     },
-    "EasyOCR - Multi-Language": {
+    "Multi-Language": {
         "engine": "easyocr",
         "languages": ["en", "es", "fr", "de", "it", "pt"],
-        "description": "Common European languages with EasyOCR",
-        "available": EASYOCR_AVAILABLE,
-    },
-    "Tesseract - English": {
-        "engine": "tesseract",
-        "languages": ["eng"],
-        "description": "Industry-standard Tesseract OCR for English",
-        "available": TESSERACT_AVAILABLE,
-    },
-    "Tesseract - Spanish": {
-        "engine": "tesseract",
-        "languages": ["spa"],
-        "description": "Tesseract OCR optimized for Spanish",
-        "available": TESSERACT_AVAILABLE,
-    },
-    "Tesseract - French": {
-        "engine": "tesseract",
-        "languages": ["fra"],
-        "description": "Tesseract OCR optimized for French",
-        "available": TESSERACT_AVAILABLE,
-    },
-    "Tesseract - Chinese Simplified": {
-        "engine": "tesseract",
-        "languages": ["chi_sim"],
-        "description": "Tesseract OCR for Simplified Chinese",
-        "available": TESSERACT_AVAILABLE,
-    },
-    "Tesseract - Multi-Language": {
-        "engine": "tesseract",
-        "languages": ["eng+spa+fra+deu"],
-        "description": "Multi-language support with Tesseract",
-        "available": TESSERACT_AVAILABLE,
-    },
-    "Surya OCR": {
-        "engine": "surya",
-        "languages": ["multilingual"],
-        "description": "Modern efficient OCR with 90+ language support",
-        "available": SURYA_AVAILABLE,
-    },
-    "Google Cloud Vision": {
-        "engine": "google_vision",
-        "languages": ["auto"],
-        "description": "Google Cloud Vision API (requires API key)",
-        "available": GOOGLE_VISION_AVAILABLE,
-    },
-    "Azure Computer Vision": {
-        "engine": "azure_vision",
-        "languages": ["auto"],
-        "description": "Azure Computer Vision API (requires API key)",
-        "available": AZURE_VISION_AVAILABLE,
+        "description": "Common European languages (slower)",
     },
 }
 
 LAYOUT_CONFIG = {
-    "PaddleOCR - English": {
+    "PaddleOCR": {
         "engine": "paddleocr",
         "languages": ["en"],
-        "description": "Layout analysis with PaddleOCR optimized for English",
-        "available": PADDLEOCR_AVAILABLE,
-    },
-    "PaddleOCR - Chinese": {
-        "engine": "paddleocr",
-        "languages": ["ch"],
-        "description": "Layout analysis with PaddleOCR optimized for Chinese",
-        "available": PADDLEOCR_AVAILABLE,
-    },
-    "PaddleOCR - Multilingual": {
-        "engine": "paddleocr",
-        "languages": ["latin"],
-        "description": "Layout analysis with PaddleOCR for Latin-based languages",
-        "available": PADDLEOCR_AVAILABLE,
-    },
-    "Tesseract Layout": {
-        "engine": "tesseract_layout",
-        "languages": ["eng"],
-        "description": "Document layout analysis with Tesseract PSM mode",
-        "available": TESSERACT_AVAILABLE,
-    },
-    "Surya Layout": {
-        "engine": "surya_layout",
-        "languages": ["multilingual"],
-        "description": "Modern layout detection with Surya models",
-        "available": SURYA_AVAILABLE,
+        "description": "Advanced layout analysis with PaddleOCR (CPU-optimized)",
     },
 }
 
@@ -376,6 +271,7 @@ def load_ner_model(model_name="BERT Base NER"):
     
     if model_id not in ner_pipelines:
         try:
+            from transformers.pipelines import pipeline
             ner_pipelines[model_id] = pipeline(
                 "ner",
                 model=model_id,
@@ -535,22 +431,16 @@ async def get_ner_models():
 @app.get("/api/ocr/configs")
 async def get_ocr_configs():
     """Get list of available OCR configurations"""
-    print(f"DEBUG: EASYOCR_AVAILABLE = {EASYOCR_AVAILABLE}")
-    print(f"DEBUG: Total OCR_CONFIGS items = {len(OCR_CONFIGS)}")
-    available_configs = {k: v for k, v in OCR_CONFIGS.items() if v.get("available", True)}
-    print(f"DEBUG: Available configs after filtering = {len(available_configs)}")
-    print(f"DEBUG: Available configs = {list(available_configs.keys())}")
     return {
-        "configs": available_configs
+        "configs": OCR_CONFIGS
     }
 
 
 @app.get("/api/layout/config")
 async def get_layout_config():
     """Get layout analysis configuration"""
-    available_configs = {k: v for k, v in LAYOUT_CONFIG.items() if v.get("available", True)}
     return {
-        "config": available_configs
+        "config": LAYOUT_CONFIG
     }
 
 
@@ -677,110 +567,6 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
             
             extracted_text = " ".join(extracted_text_parts)
         
-        elif engine == "tesseract":
-            if not TESSERACT_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Tesseract not installed")
-            image = Image.open(io.BytesIO(contents))
-            lang = '+'.join(OCR_CONFIGS[config]["languages"])
-            extracted_text = pytesseract.image_to_string(image, lang=lang)
-            data = pytesseract.image_to_data(image, lang=lang, output_type=pytesseract.Output.DICT)
-            
-            bounding_boxes = []
-            for i, text in enumerate(data['text']):
-                if text.strip():
-                    bounding_boxes.append({
-                        "text": text,
-                        "confidence": float(data['conf'][i]) / 100 if data['conf'][i] != -1 else 0.0,
-                        "bbox": [[data['left'][i], data['top'][i]], 
-                                [data['left'][i] + data['width'][i], data['top'][i]],
-                                [data['left'][i] + data['width'][i], data['top'][i] + data['height'][i]],
-                                [data['left'][i], data['top'][i] + data['height'][i]]]
-                    })
-        
-        elif engine == "surya":
-            if not SURYA_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Surya OCR not installed")
-            image = Image.open(io.BytesIO(contents))
-            det_model = load_det_model()
-            det_processor = load_det_processor()
-            rec_model = load_rec_model()
-            rec_processor = load_rec_processor()
-            
-            predictions = run_ocr([image], [["en"]], det_model, det_processor, rec_model, rec_processor)
-            
-            extracted_text_parts = []
-            bounding_boxes = []
-            for pred in predictions[0]:
-                text = pred.text
-                extracted_text_parts.append(text)
-                bbox = pred.bbox
-                bounding_boxes.append({
-                    "text": text,
-                    "confidence": float(pred.confidence) if hasattr(pred, 'confidence') else 1.0,
-                    "bbox": [[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]]]
-                })
-            extracted_text = " ".join(extracted_text_parts)
-        
-        elif engine == "google_vision":
-            if not GOOGLE_VISION_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Google Cloud Vision not installed")
-            import os
-            if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-                raise HTTPException(status_code=503, detail="GOOGLE_APPLICATION_CREDENTIALS not set")
-            
-            client = vision.ImageAnnotatorClient()
-            image_content = vision.Image(content=contents)
-            response = client.text_detection(image=image_content)
-            
-            if response.error.message:
-                raise HTTPException(status_code=500, detail=response.error.message)
-            
-            texts = response.text_annotations
-            extracted_text = texts[0].description if texts else ""
-            
-            bounding_boxes = []
-            for text in texts[1:]:
-                vertices = text.bounding_poly.vertices
-                bounding_boxes.append({
-                    "text": text.description,
-                    "confidence": 1.0,
-                    "bbox": [[v.x, v.y] for v in vertices]
-                })
-        
-        elif engine == "azure_vision":
-            if not AZURE_VISION_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Azure Computer Vision not installed")
-            import os
-            endpoint = os.getenv("AZURE_VISION_ENDPOINT")
-            key = os.getenv("AZURE_VISION_KEY")
-            if not endpoint or not key:
-                raise HTTPException(status_code=503, detail="AZURE_VISION_ENDPOINT or AZURE_VISION_KEY not set")
-            
-            client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(key))
-            read_result = client.read_in_stream(io.BytesIO(contents), raw=True)
-            operation_id = read_result.headers["Operation-Location"].split("/")[-1]
-            
-            import asyncio
-            while True:
-                result = client.get_read_result(operation_id)
-                if result.status.lower() not in ['notstarted', 'running']:
-                    break
-                await asyncio.sleep(1)
-            
-            extracted_text_parts = []
-            bounding_boxes = []
-            if result.analyze_result:
-                for page in result.analyze_result.read_results:
-                    for line in page.lines:
-                        extracted_text_parts.append(line.text)
-                        bbox = line.bounding_box
-                        bounding_boxes.append({
-                            "text": line.text,
-                            "confidence": 1.0,
-                            "bbox": [[bbox[i], bbox[i+1]] for i in range(0, len(bbox), 2)]
-                        })
-            extracted_text = " ".join(extracted_text_parts)
-        
         else:
             raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
         
@@ -895,7 +681,7 @@ async def delete_ocr(ocr_id: str):
 
 
 @app.post("/api/layout")
-async def analyze_layout(file: UploadFile = File(...), config: str = "PaddleOCR - English"):
+async def analyze_layout(file: UploadFile = File(...), config: str = "PaddleOCR"):
     """Analyze document layout using various engines"""
     try:
         if config not in LAYOUT_CONFIG:
@@ -947,56 +733,6 @@ async def analyze_layout(file: UploadFile = File(...), config: str = "PaddleOCR 
                         "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
                     })
             
-            extracted_text = " ".join(extracted_text_parts)
-        
-        elif engine == "tesseract_layout":
-            if not TESSERACT_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Tesseract not installed")
-            
-            # Use PSM 6 (Assume a single uniform block of text)
-            lang = layout_cfg["languages"][0]
-            custom_config = f'--psm 6 -l {lang}'
-            extracted_text = pytesseract.image_to_string(image, config=custom_config)
-            data = pytesseract.image_to_data(image, config=custom_config, output_type=pytesseract.Output.DICT)
-            
-            bounding_boxes = []
-            for i, text in enumerate(data['text']):
-                if text.strip():
-                    bounding_boxes.append({
-                        "text": text,
-                        "confidence": float(data['conf'][i]) / 100 if data['conf'][i] != -1 else 0.0,
-                        "bbox": [[data['left'][i], data['top'][i]], 
-                                [data['left'][i] + data['width'][i], data['top'][i]],
-                                [data['left'][i] + data['width'][i], data['top'][i] + data['height'][i]],
-                                [data['left'][i], data['top'][i] + data['height'][i]]]
-                    })
-        
-        elif engine == "surya_layout":
-            if not SURYA_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Surya not installed")
-            
-            # Surya layout detection
-            from surya.layout import batch_layout_detection
-            from surya.model.detection.model import load_model as load_layout_model
-            from surya.model.detection.processor import load_processor as load_layout_processor
-            
-            layout_model = load_layout_model()
-            layout_processor = load_layout_processor()
-            
-            layout_predictions = batch_layout_detection([image], layout_model, layout_processor)
-            
-            extracted_text_parts = []
-            bounding_boxes = []
-            for bbox in layout_predictions[0].bboxes:
-                label = bbox.label
-                coords = bbox.bbox
-                extracted_text_parts.append(f"[{label}]")
-                bounding_boxes.append({
-                    "text": label,
-                    "confidence": float(bbox.confidence) if hasattr(bbox, 'confidence') else 1.0,
-                    "bbox": [[coords[0], coords[1]], [coords[2], coords[1]], 
-                            [coords[2], coords[3]], [coords[0], coords[3]]]
-                })
             extracted_text = " ".join(extracted_text_parts)
         
         else:
