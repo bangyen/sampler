@@ -200,6 +200,7 @@ Access at: `http://0.0.0.0:5000`
 - ✅ Fixed example prompts recreation after clearing chat
 - ✅ Added Stop button to abort generation in progress
 - ✅ Fixed Stop button perpetual loading state - now properly removes spinner and re-enables UI
+- ✅ Optimized Stop button speed - reduced latency from ~10-30s to ~500ms using AbortController
 - ✅ Improved mobile header spacing (70px padding-left)
 - ✅ Shortened mobile title to "LLM Comparison" to prevent wrapping
 - ✅ Replaced Advanced Settings triangle with rotating chevron (›)

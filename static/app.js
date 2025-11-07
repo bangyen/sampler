@@ -3,6 +3,7 @@ let messages = [];
 let selectedModel = 'Qwen 2.5 0.5B';
 let isGenerating = false;
 let currentReader = null;
+let currentAbortController = null;
 
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
@@ -275,6 +276,9 @@ async function sendMessage(userMessage) {
     let wasAborted = false;
     const startTime = Date.now();
     
+    // Create AbortController for instant cancellation
+    currentAbortController = new AbortController();
+    
     try {
         const response = await fetch('/api/chat/stream', {
             method: 'POST',
@@ -288,7 +292,8 @@ async function sendMessage(userMessage) {
                 max_tokens: settings.maxTokens,
                 top_p: settings.topP,
                 top_k: settings.topK
-            })
+            }),
+            signal: currentAbortController.signal
         });
         
         currentReader = response.body.getReader();
@@ -408,6 +413,7 @@ async function sendMessage(userMessage) {
         }
     } finally {
         currentReader = null;
+        currentAbortController = null;
         isGenerating = false;
         document.getElementById('send-btn').style.display = 'inline-block';
         document.getElementById('stop-btn').style.display = 'none';
@@ -417,6 +423,12 @@ async function sendMessage(userMessage) {
 }
 
 function stopGeneration() {
+    // Abort the fetch request immediately
+    if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+    }
+    // Also cancel the reader if it exists
     if (currentReader) {
         currentReader.cancel();
         currentReader = null;

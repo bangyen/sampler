@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+import asyncio
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers import TextIteratorStreamer
@@ -179,7 +180,7 @@ def format_prompt(messages: List[Dict], tokenizer):
 
 
 async def generate_response_streaming(
-    model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50
+    model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None
 ):
     """Generate a streaming response from the model"""
     try:
@@ -209,6 +210,11 @@ async def generate_response_streaming(
         thread.start()
 
         for new_text in streamer:
+            # Check if client disconnected
+            if request and await request.is_disconnected():
+                thread.join(timeout=0.1)  # Try to cleanup thread
+                return
+            
             if new_text.startswith("Assistant:"):
                 new_text = new_text[len("Assistant:") :].strip()
             yield json.dumps({'text': new_text})
@@ -236,7 +242,7 @@ async def get_models():
 
 
 @app.post("/api/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, raw_request: Request):
     """Stream chat completions"""
     if request.model_name not in AVAILABLE_MODELS:
         raise HTTPException(status_code=400, detail="Invalid model name")
@@ -257,6 +263,7 @@ async def chat_stream(request: ChatRequest):
             request.max_tokens,
             request.top_p,
             request.top_k,
+            raw_request,
         )
     )
 
