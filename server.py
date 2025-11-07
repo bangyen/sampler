@@ -80,6 +80,20 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
         def delete_conversation(session_id):
             return False
 
+from ner_storage import (
+    save_ner_analysis,
+    load_ner_analysis,
+    get_all_ner_analyses,
+    delete_ner_analysis,
+)
+
+from ocr_storage import (
+    save_ocr_analysis,
+    load_ocr_analysis,
+    get_all_ocr_analyses,
+    delete_ocr_analysis,
+)
+
 
 app = FastAPI(title="Quantized LLM Comparison API")
 
@@ -418,11 +432,20 @@ async def extract_entities(request: NERRequest):
                 "end": entity["end"]
             })
         
+        # Save to history
+        ner_id = save_ner_analysis(
+            request.text,
+            formatted_entities,
+            request.model,
+            processing_time
+        )
+        
         return {
             "entities": formatted_entities,
             "processing_time": processing_time,
             "text_length": len(request.text),
-            "model": request.model
+            "model": request.model,
+            "id": ner_id
         }
     except HTTPException:
         raise
@@ -457,12 +480,24 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
                 "bbox": [[int(point[0]), int(point[1])] for point in bbox]
             })
         
+        # Save to history
+        ocr_id = save_ocr_analysis(
+            contents,
+            file.filename,
+            extracted_text,
+            bounding_boxes,
+            config,
+            processing_time,
+            len(results)
+        )
+        
         return {
             "text": extracted_text,
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
             "num_detections": len(results),
-            "config": config
+            "config": config,
+            "id": ocr_id
         }
     except HTTPException:
         raise
@@ -503,6 +538,52 @@ async def list_conversations():
 async def delete_conv(session_id: str):
     """Delete a conversation"""
     success = delete_conversation(session_id)
+    return {"success": success}
+
+
+@app.get("/api/ner/history")
+async def list_ner_analyses():
+    """List all NER analyses"""
+    analyses = get_all_ner_analyses()
+    return {"analyses": analyses}
+
+
+@app.get("/api/ner/history/{ner_id}")
+async def get_ner_analysis(ner_id: str):
+    """Load a specific NER analysis"""
+    analysis = load_ner_analysis(ner_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="NER analysis not found")
+    return analysis
+
+
+@app.delete("/api/ner/history/{ner_id}")
+async def delete_ner(ner_id: str):
+    """Delete a NER analysis"""
+    success = delete_ner_analysis(ner_id)
+    return {"success": success}
+
+
+@app.get("/api/ocr/history")
+async def list_ocr_analyses():
+    """List all OCR analyses"""
+    analyses = get_all_ocr_analyses()
+    return {"analyses": analyses}
+
+
+@app.get("/api/ocr/history/{ocr_id}")
+async def get_ocr_analysis(ocr_id: str):
+    """Load a specific OCR analysis"""
+    analysis = load_ocr_analysis(ocr_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="OCR analysis not found")
+    return analysis
+
+
+@app.delete("/api/ocr/history/{ocr_id}")
+async def delete_ocr(ocr_id: str):
+    """Delete an OCR analysis"""
+    success = delete_ocr_analysis(ocr_id)
     return {"success": success}
 
 
