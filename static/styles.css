@@ -138,6 +138,8 @@ body {
     font-size: 13px;
     text-align: left;
     transition: all 0.2s;
+    overflow: hidden;
+    min-width: 0;
 }
 
 .conversation-btn:hover {
@@ -162,6 +164,12 @@ body {
 
 .delete-btn:hover {
     background: #ff1744;
+}
+
+.conversation-btn > div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .main-content {
