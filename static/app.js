@@ -836,11 +836,24 @@ function setupOCR() {
         reader.onload = (e) => {
             previewImg.src = e.target.result;
             previewDiv.style.display = 'block';
-            submitBtn.style.display = 'block';
-            dropZone.querySelector('p').textContent = '✓ Image loaded. Click "Extract Text" to process';
+            dropZone.style.display = 'none';
         };
         reader.readAsDataURL(file);
     }
+    
+    function clearOCRImage() {
+        ocrSelectedFile = null;
+        previewImg.src = '';
+        previewDiv.style.display = 'none';
+        dropZone.style.display = 'block';
+        fileInput.value = '';
+        
+        const resultsDiv = document.getElementById('ocr-results');
+        resultsDiv.style.display = 'none';
+    }
+    
+    const clearBtn = document.getElementById('ocr-clear-btn');
+    clearBtn.addEventListener('click', clearOCRImage);
     
     submitBtn.addEventListener('click', async () => {
         if (!ocrSelectedFile) {
@@ -1153,7 +1166,7 @@ async function setupOCRExamples() {
                 reader.onload = (e) => {
                     document.getElementById('ocr-preview-img').src = e.target.result;
                     document.getElementById('ocr-preview').style.display = 'block';
-                    document.getElementById('ocr-submit-btn').style.display = 'block';
+                    document.getElementById('ocr-drop-zone').style.display = 'none';
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
