@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantized LLM Comparison Demo</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Model Selection</h2>
+            </div>
+            
+            <div id="model-list" class="model-list">
+            </div>
+
+            <div class="divider"></div>
+            
+            <div class="persistence-info">
+                <small id="persistence-type">Loading...</small>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Conversation History</h3>
+                <button id="new-conversation-btn" class="btn btn-primary">+ New Conversation</button>
+                <div id="conversation-list" class="conversation-list">
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <h1>Quantized LLM Comparison Demo</h1>
+                <p>Compare different quantized and efficient LLM models to see how they perform.</p>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <h2>Chat Interface</h2>
+                        <button id="clear-chat-btn" class="btn btn-secondary">Clear Chat History</button>
+                    </div>
+                    
+                    <div id="chat-messages" class="chat-messages">
+                        <div id="example-prompts" class="example-prompts">
+                            <div class="info-message">Welcome! Try one of these example prompts:</div>
+                            <div class="example-grid">
+                                <button class="example-prompt" data-prompt="Explain quantum computing in simple terms">Explain quantum computing in simple terms</button>
+                                <button class="example-prompt" data-prompt="Write a short poem about artificial intelligence">Write a short poem about artificial intelligence</button>
+                                <button class="example-prompt" data-prompt="What are the benefits of 1-bit LLMs?">What are the benefits of 1-bit LLMs?</button>
+                                <button class="example-prompt" data-prompt="Tell me an interesting fact about space">Tell me an interesting fact about space</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="Type your message here..." />
+                        <button id="send-btn" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+
+                <div class="settings-panel">
+                    <h2>Generation Settings</h2>
+                    
+                    <div class="setting-group">
+                        <label for="temperature-slider">
+                            Temperature: <span id="temperature-value">0.7</span>
+                        </label>
+                        <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7" />
+                        <small>Higher values make output more random, lower values more deterministic</small>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="max-tokens-slider">
+                            Max New Tokens: <span id="max-tokens-value">150</span>
+                        </label>
+                        <input type="range" id="max-tokens-slider" min="50" max="500" step="50" value="150" />
+                        <small>Maximum number of tokens to generate</small>
+                    </div>
+
+                    <details class="advanced-settings">
+                        <summary>Advanced Settings</summary>
+                        
+                        <div class="setting-group">
+                            <label for="top-p-slider">
+                                Top-p (nucleus sampling): <span id="top-p-value">0.9</span>
+                            </label>
+                            <input type="range" id="top-p-slider" min="0" max="1" step="0.05" value="0.9" />
+                            <small>Sample from smallest set of tokens whose cumulative probability exceeds p</small>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="top-k-slider">
+                                Top-k sampling: <span id="top-k-value">50</span>
+                            </label>
+                            <input type="range" id="top-k-slider" min="1" max="100" step="1" value="50" />
+                            <small>Sample from top k most likely tokens</small>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

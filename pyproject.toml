@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11,<3.12"
 dependencies = [
-    "streamlit>=1.51.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "sse-starlette>=1.8.0",
+    "python-multipart>=0.0.6",
     "torch",
     "transformers @ git+https://github.com/shumingma/transformers.git",
     "sqlalchemy>=2.0.0",
