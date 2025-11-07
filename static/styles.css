@@ -329,7 +329,8 @@ body {
 }
 
 .settings-panel {
-    width: 320px;
+    flex: 0 0 320px;
+    max-width: 320px;
     min-width: 0;
     padding: 20px;
     background: white;

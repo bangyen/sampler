@@ -1,0 +1,39 @@
+<div class="settings-panel">
+                    <h2>Generation Settings</h2>
+                    
+                    <div class="setting-group">
+                        <label for="temperature-slider">
+                            Temperature: <span id="temperature-value">0.7</span>
+                        </label>
+                        <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7">
+                        <small>Higher values make output more random, lower values more deterministic</small>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="max-tokens-slider">
+                            Max New Tokens: <span id="max-tokens-value">150</span>
+                        </label>
+                        <input type="range" id="max-tokens-slider" min="50" max="500" step="50" value="150">
+                        <small>Maximum number of tokens to generate</small>
+                    </div>
+
+                    <details class="advanced-settings">
+                        <summary>Advanced Settings</summary>
+                        
+                        <div class="setting-group">
+                            <label for="top-p-slider">
+                                Top-p (nucleus sampling): <span id="top-p-value">0.9</span>
+                            </label>
+                            <input type="range" id="top-p-slider" min="0" max="1" step="0.05" value="0.9">
+                            <small>Sample from smallest set of tokens whose cumulative probability exceeds p</small>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="top-k-slider">
+                                Top-k sampling: <span id="top-k-value">50</span>
+                            </label>
+                            <input type="range" id="top-k-slider" min="1" max="100" step="1" value="50">
+                            <small>Sample from top k most likely tokens</small>
+                        </div>
+                    </details>
+                </div>
