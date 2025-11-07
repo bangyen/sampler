@@ -174,31 +174,21 @@ body {
 .header {
     padding: 20px 30px;
     background: white;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.header-title {
-    display: flex;
-    align-items: center;
 }
 
 .header h1 {
     font-size: 24px;
     font-weight: 600;
-    margin: 0;
+    margin-bottom: 8px;
 }
 
 .header h1 .short-title {
     display: none;
 }
 
-.header-subtitle {
+.header p {
     color: #666;
     font-size: 14px;
-    margin: 0;
-    padding-left: 0;
 }
 
 .content-wrapper {
@@ -513,11 +503,13 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 8px;
+    padding: 10px;
     flex-direction: column;
     gap: 4px;
-    align-self: flex-start;
-    margin-right: 12px;
+    position: absolute;
+    left: 10px;
+    top: 20px;
+    z-index: 10;
 }
 
 .hamburger-menu span {
@@ -591,13 +583,7 @@ body {
     
     .header {
         position: relative;
-        padding: 15px 20px;
-    }
-    
-    .header-title {
-        display: flex;
-        align-items: center;
-        gap: 0;
+        padding-left: 70px;
     }
     
     .header h1 {
@@ -612,10 +598,8 @@ body {
         display: inline;
     }
     
-    .header-subtitle {
-        font-size: 13px;
-        padding-left: 0;
-        line-height: 1.4;
+    .header-content {
+        width: 100%;
     }
     
     .content-wrapper {
