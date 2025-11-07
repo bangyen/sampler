@@ -49,9 +49,6 @@ async function loadModels() {
         const response = await fetch('/api/models');
         const data = await response.json();
         
-        document.getElementById('persistence-type').textContent = 
-            `Using ${data.persistence_type} persistence`;
-        
         const modelList = document.getElementById('model-list');
         modelList.innerHTML = '';
         
