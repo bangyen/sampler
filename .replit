@@ -37,6 +37,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 32807
+externalPort = 3003
+
+[[ports]]
 localPort = 36335
 externalPort = 3002
 
@@ -47,6 +51,10 @@ externalPort = 3000
 [[ports]]
 localPort = 42435
 externalPort = 3001
+
+[[ports]]
+localPort = 45841
+externalPort = 4200
 
 [agent]
 integrations = ["streamlit_database:1.0.0"]

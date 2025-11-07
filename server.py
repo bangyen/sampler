@@ -157,14 +157,14 @@ AVAILABLE_MODELS = {
 # Add GGUF model if llama.cpp is available
 if LLAMA_CPP_AVAILABLE:
     AVAILABLE_MODELS["BitNet b1.58 2B (GGUF - Fast)"] = {
-        "id": "1bitLLM/bitnet_b1_58-2B-i2_s",
+        "id": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "params": "2B",
         "quantization": "i2_s (GGUF)",
-        "memory": "~400MB",
+        "memory": "~1.2GB",
         "description": "BitNet optimized with llama.cpp - 2-6x faster inference!",
         "backend": "llamacpp",
-        "gguf_repo": "1bitLLM/bitnet_b1_58-2B-i2_s",
-        "gguf_file": "model.gguf"
+        "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "gguf_file": "ggml-model-i2_s.gguf"
     }
 
 NER_MODELS = {

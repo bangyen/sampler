@@ -17,3 +17,4 @@ streamlit
 ctransformers
 llama-cpp-python
 llama-cpp-python
+accelerate
