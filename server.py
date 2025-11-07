@@ -107,6 +107,15 @@ from layout_storage import (
     delete_layout_analysis,
 )
 
+# Import bitnet.cpp inference module
+try:
+    from bitnet_inference import BitNetInference, is_available as llama_cpp_available, download_gguf_model
+    LLAMA_CPP_AVAILABLE = llama_cpp_available()
+except ImportError:
+    LLAMA_CPP_AVAILABLE = False
+    BitNetInference = None
+    download_gguf_model = None
+
 
 app = FastAPI(title="Quantized LLM Comparison API")
 
@@ -117,6 +126,7 @@ AVAILABLE_MODELS = {
         "quantization": "1.58-bit",
         "memory": "~400MB",
         "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}",
+        "backend": "transformers"
     },
     "SmolLM2 1.7B": {
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
@@ -124,6 +134,7 @@ AVAILABLE_MODELS = {
         "quantization": "FP16",
         "memory": "~3.4GB",
         "description": "HuggingFace's efficient model optimized for edge/mobile",
+        "backend": "transformers"
     },
     "Qwen 2.5 1.5B": {
         "id": "Qwen/Qwen2.5-1.5B-Instruct",
@@ -131,6 +142,7 @@ AVAILABLE_MODELS = {
         "quantization": "FP16",
         "memory": "~3GB",
         "description": "Alibaba's multilingual instruct-tuned model (29+ languages)",
+        "backend": "transformers"
     },
     "Qwen 2.5 0.5B": {
         "id": "Qwen/Qwen2.5-0.5B-Instruct",
@@ -138,8 +150,22 @@ AVAILABLE_MODELS = {
         "quantization": "FP16",
         "memory": "~1GB",
         "description": "Alibaba's smallest model, great for quick responses",
+        "backend": "transformers"
     },
 }
+
+# Add GGUF model if llama.cpp is available
+if LLAMA_CPP_AVAILABLE:
+    AVAILABLE_MODELS["BitNet b1.58 2B (GGUF - Fast)"] = {
+        "id": "1bitLLM/bitnet_b1_58-2B-i2_s",
+        "params": "2B",
+        "quantization": "i2_s (GGUF)",
+        "memory": "~400MB",
+        "description": "BitNet optimized with llama.cpp - 2-6x faster inference!",
+        "backend": "llamacpp",
+        "gguf_repo": "1bitLLM/bitnet_b1_58-2B-i2_s",
+        "gguf_file": "model.gguf"
+    }
 
 NER_MODELS = {
     "BERT Base NER": {
@@ -194,6 +220,7 @@ LAYOUT_CONFIG = {
 }
 
 loaded_models = {}
+loaded_llama_models = {}
 ner_pipelines = {}
 ocr_readers = {}
 
@@ -258,6 +285,37 @@ def load_model(model_id: str):
         return loaded_models[model_id]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
+
+
+def load_llama_model(model_name: str):
+    """Load GGUF model for llama.cpp backend"""
+    if not LLAMA_CPP_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="llama.cpp backend not available. llama-cpp-python is not installed."
+        )
+    
+    if model_name in loaded_llama_models:
+        return loaded_llama_models[model_name]
+    
+    try:
+        model_config = AVAILABLE_MODELS[model_name]
+        gguf_repo = model_config.get("gguf_repo")
+        gguf_file = model_config.get("gguf_file")
+        
+        if not gguf_repo:
+            raise HTTPException(status_code=400, detail=f"Model {model_name} does not have GGUF configuration")
+        
+        # Download GGUF model from Hugging Face
+        model_path = download_gguf_model(gguf_repo, gguf_file)
+        
+        # Initialize BitNet inference engine
+        inference = BitNetInference(model_path, n_ctx=2048)
+        
+        loaded_llama_models[model_name] = inference
+        return inference
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading GGUF model: {str(e)}")
 
 
 def load_ner_model(model_name="BERT Base NER"):
@@ -403,6 +461,31 @@ async def generate_response_streaming(
         yield json.dumps({'error': str(e)})
 
 
+async def generate_response_streaming_llama(
+    inference, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None
+):
+    """Generate a streaming response using llama.cpp backend"""
+    try:
+        # Use the BitNetInference generate method
+        for token in inference.generate(
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            stream=True
+        ):
+            # Check if client disconnected
+            if request and await request.is_disconnected():
+                return
+            
+            yield json.dumps({'text': token})
+        
+        yield json.dumps({'done': True})
+    except Exception as e:
+        yield json.dumps({'error': str(e)})
+
+
 @app.get("/")
 async def read_root():
     """Serve the main HTML page"""
@@ -449,25 +532,44 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
     if request.model_name not in AVAILABLE_MODELS:
         raise HTTPException(status_code=400, detail="Invalid model name")
 
-    model_id = AVAILABLE_MODELS[request.model_name]["id"]
-    model_data = load_model(model_id)
-
+    model_config = AVAILABLE_MODELS[request.model_name]
+    backend = model_config.get("backend", "transformers")
+    
     messages_dict = [
         {"role": "system", "content": "You are a helpful AI assistant."}
     ] + [{"role": msg.role, "content": msg.content} for msg in request.messages]
 
-    return EventSourceResponse(
-        generate_response_streaming(
-            model_data["model"],
-            model_data["tokenizer"],
-            messages_dict,
-            request.temperature,
-            request.max_tokens,
-            request.top_p,
-            request.top_k,
-            raw_request,
+    # Route to appropriate backend
+    if backend == "llamacpp":
+        # Use llama.cpp backend for GGUF models
+        inference = load_llama_model(request.model_name)
+        return EventSourceResponse(
+            generate_response_streaming_llama(
+                inference,
+                messages_dict,
+                request.temperature,
+                request.max_tokens,
+                request.top_p,
+                request.top_k,
+                raw_request,
+            )
         )
-    )
+    else:
+        # Use transformers backend for standard models
+        model_id = model_config["id"]
+        model_data = load_model(model_id)
+        return EventSourceResponse(
+            generate_response_streaming(
+                model_data["model"],
+                model_data["tokenizer"],
+                messages_dict,
+                request.temperature,
+                request.max_tokens,
+                request.top_p,
+                request.top_k,
+                raw_request,
+            )
+        )
 
 
 @app.post("/api/ner")
