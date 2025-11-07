@@ -428,6 +428,8 @@ async function sendMessage(userMessage) {
     const requestStartTime = Date.now();
     let inferenceStartTime = null;
     let modelLoadTime = null;
+    let loadingTimerInterval = null;
+    let modelLoadStartTime = null;
     
     // Create AbortController for instant cancellation
     currentAbortController = new AbortController();
@@ -475,10 +477,28 @@ async function sendMessage(userMessage) {
                                 break;
                             }
                             
-                            if (data.model_loaded) {
-                                // Model just loaded, save timing and start tracking inference
+                            if (data.model_loading_start) {
+                                // Model loading started, show loading indicator with timer
+                                modelLoadStartTime = Date.now();
+                                const streamingContent = document.getElementById('streaming-content');
+                                
+                                // Start timer that updates every 100ms
+                                loadingTimerInterval = setInterval(() => {
+                                    const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
+                                    streamingContent.innerHTML = `<em style="color: #888;">⏳ Loading model... ${elapsed}s</em>`;
+                                }, 100);
+                            }
+                            
+                            if (data.model_loading_end) {
+                                // Model loading completed, stop timer
+                                if (loadingTimerInterval) {
+                                    clearInterval(loadingTimerInterval);
+                                    loadingTimerInterval = null;
+                                }
                                 modelLoadTime = data.load_time;
                                 inferenceStartTime = Date.now();
+                                // Clear the loading message
+                                document.getElementById('streaming-content').innerHTML = '&nbsp;';
                             }
                             
                             if (data.text) {
@@ -593,6 +613,12 @@ async function sendMessage(userMessage) {
             }
         }
     } finally {
+        // Clean up loading timer if still running
+        if (loadingTimerInterval) {
+            clearInterval(loadingTimerInterval);
+            loadingTimerInterval = null;
+        }
+        
         currentReader = null;
         currentAbortController = null;
         isGenerating = false;
@@ -758,6 +784,9 @@ function setupNER() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Extracting...';
         
+        let loadingTimerInterval = null;
+        let modelLoadStartTime = null;
+        
         try {
             const response = await fetch('/api/ner', {
                 method: 'POST',
@@ -767,25 +796,73 @@ function setupNER() {
                 body: JSON.stringify({ text, model: selectedNERModel })
             });
             
-            let data;
-            try {
-                data = await response.json();
-            } catch (parseError) {
-                const textData = await response.text();
-                displayNERError(textData || 'Error extracting entities');
-                return;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let finalData = null;
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('data: ')) {
+                        const jsonStr = trimmedLine.substring(6).trim();
+                        if (jsonStr) {
+                            try {
+                                const data = JSON.parse(jsonStr);
+                                
+                                if (data.error) {
+                                    displayNERError(data.error);
+                                    break;
+                                }
+                                
+                                if (data.model_loading_start) {
+                                    // Show loading indicator
+                                    modelLoadStartTime = Date.now();
+                                    submitBtn.textContent = 'Loading model...';
+                                    
+                                    loadingTimerInterval = setInterval(() => {
+                                        const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
+                                        submitBtn.textContent = `Loading model... ${elapsed}s`;
+                                    }, 100);
+                                }
+                                
+                                if (data.model_loading_end) {
+                                    // Stop loading timer
+                                    if (loadingTimerInterval) {
+                                        clearInterval(loadingTimerInterval);
+                                        loadingTimerInterval = null;
+                                    }
+                                    submitBtn.textContent = 'Extracting...';
+                                }
+                                
+                                if (data.done) {
+                                    finalData = data;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing NER SSE data:', e);
+                            }
+                        }
+                    }
+                }
             }
             
-            if (!response.ok) {
-                displayNERError(data.detail || 'Error extracting entities');
-                return;
+            if (finalData) {
+                displayNERResults(finalData);
             }
-            
-            displayNERResults(data);
         } catch (error) {
             console.error('NER error:', error);
             displayNERError('Network error. Please try again.');
         } finally {
+            if (loadingTimerInterval) {
+                clearInterval(loadingTimerInterval);
+            }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Extract Entities';
         }
@@ -903,6 +980,9 @@ function setupOCR() {
         const isLayout = selectedOCREngine === 'paddleocr';
         submitBtn.textContent = isLayout ? 'Analyzing...' : 'Extracting...';
         
+        let loadingTimerInterval = null;
+        let modelLoadStartTime = null;
+        
         try {
             const formData = new FormData();
             formData.append('file', ocrSelectedFile);
@@ -913,26 +993,74 @@ function setupOCR() {
                 body: formData
             });
             
-            let data;
-            try {
-                data = await response.json();
-            } catch (parseError) {
-                const textData = await response.text();
-                displayOCRError(textData || 'Error extracting text');
-                return;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let finalData = null;
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('data: ')) {
+                        const jsonStr = trimmedLine.substring(6).trim();
+                        if (jsonStr) {
+                            try {
+                                const data = JSON.parse(jsonStr);
+                                
+                                if (data.error) {
+                                    displayOCRError(data.error);
+                                    break;
+                                }
+                                
+                                if (data.model_loading_start) {
+                                    // Show loading indicator
+                                    modelLoadStartTime = Date.now();
+                                    submitBtn.textContent = 'Loading model...';
+                                    
+                                    loadingTimerInterval = setInterval(() => {
+                                        const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
+                                        submitBtn.textContent = `Loading model... ${elapsed}s`;
+                                    }, 100);
+                                }
+                                
+                                if (data.model_loading_end) {
+                                    // Stop loading timer
+                                    if (loadingTimerInterval) {
+                                        clearInterval(loadingTimerInterval);
+                                        loadingTimerInterval = null;
+                                    }
+                                    submitBtn.textContent = isLayout ? 'Analyzing...' : 'Extracting...';
+                                }
+                                
+                                if (data.done) {
+                                    finalData = data;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing OCR SSE data:', e);
+                            }
+                        }
+                    }
+                }
             }
             
-            if (!response.ok) {
-                displayOCRError(data.detail || 'Error extracting text');
-                return;
+            if (finalData) {
+                displayOCRResults(finalData);
+                await loadOCRHistory();
             }
-            
-            displayOCRResults(data);
-            await loadOCRHistory();
         } catch (error) {
             console.error('OCR error:', error);
             displayOCRError('Network error. Please try again.');
         } finally {
+            if (loadingTimerInterval) {
+                clearInterval(loadingTimerInterval);
+            }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Extract Text';
         }

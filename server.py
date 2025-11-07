@@ -382,17 +382,21 @@ def load_ner_model(model_name="BERT Base NER"):
     
     model_id = NER_MODELS[model_name]["id"]
     
-    if model_id not in ner_pipelines:
-        try:
-            ner_pipelines[model_id] = pipeline(
-                "ner",
-                model=model_id,
-                aggregation_strategy="simple",
-                device=-1
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
-    return ner_pipelines[model_id]
+    if model_id in ner_pipelines:
+        return ner_pipelines[model_id], None
+    
+    try:
+        start_time = time.time()
+        ner_pipelines[model_id] = pipeline(
+            "ner",
+            model=model_id,
+            aggregation_strategy="simple",
+            device=-1
+        )
+        load_time = time.time() - start_time
+        return ner_pipelines[model_id], load_time
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
 
 
 def load_ocr_model(config_name="English Only"):
@@ -420,12 +424,16 @@ def load_ocr_model(config_name="English Only"):
         
         languages = tuple(config["languages"])
         
-        if languages not in ocr_readers:
-            try:
-                ocr_readers[languages] = easyocr.Reader(list(languages), gpu=False)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error loading EasyOCR: {str(e)}")
-        return ocr_readers[languages]
+        if languages in ocr_readers:
+            return ocr_readers[languages], None
+        
+        try:
+            start_time = time.time()
+            ocr_readers[languages] = easyocr.Reader(list(languages), gpu=False)
+            load_time = time.time() - start_time
+            return ocr_readers[languages], load_time
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error loading EasyOCR: {str(e)}")
     
     elif engine == "paddleocr":
         if not PADDLEOCR_AVAILABLE:
@@ -434,12 +442,16 @@ def load_ocr_model(config_name="English Only"):
                 detail="PaddleOCR not installed. Please install: pip install paddleocr"
             )
         
-        if "paddleocr" not in ocr_readers:
-            try:
-                ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
-        return ocr_readers["paddleocr"]
+        if "paddleocr" in ocr_readers:
+            return ocr_readers["paddleocr"], None
+        
+        try:
+            start_time = time.time()
+            ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+            load_time = time.time() - start_time
+            return ocr_readers["paddleocr"], load_time
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
     
     else:
         raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
@@ -475,10 +487,10 @@ async def generate_response_streaming(
 ):
     """Generate a streaming response from the model"""
     try:
-        # Send model loaded event if this was a fresh load
+        # Send model loading events if this was a fresh load
         if load_time is not None:
             print(f"[DEBUG] Model loaded in {load_time:.2f}s")
-            yield json.dumps({'model_loaded': True, 'load_time': load_time})
+            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
         
         print(f"[DEBUG] Starting transformers streaming generation")
         prompt = format_prompt(messages, tokenizer)
@@ -534,10 +546,10 @@ async def generate_response_streaming_llama(
 ):
     """Generate a streaming response using llama.cpp backend"""
     try:
-        # Send model loaded event if this was a fresh load
+        # Send model loading events if this was a fresh load
         if load_time is not None:
             print(f"[DEBUG] Model loaded in {load_time:.2f}s")
-            yield json.dumps({'model_loaded': True, 'load_time': load_time})
+            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
         
         print(f"[DEBUG] Starting llama.cpp streaming generation")
         token_count = 0
@@ -573,10 +585,10 @@ async def generate_response_streaming_bitnet_cpp(
 ):
     """Generate a streaming response using bitnet.cpp compiled binary backend"""
     try:
-        # Send model loaded event if this was a fresh load
+        # Send model loading events if this was a fresh load
         if load_time is not None:
             print(f"[DEBUG] Model loaded in {load_time:.2f}s")
-            yield json.dumps({'model_loaded': True, 'load_time': load_time})
+            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
         
         print(f"[DEBUG] Starting bitnet.cpp streaming generation")
         token_count = 0
@@ -670,6 +682,91 @@ async def get_layout_config():
     }
 
 
+async def stream_with_loading_wrapper_transformers(
+    model_id, messages, temperature, max_tokens, top_p, top_k, request
+):
+    """Wrapper generator that handles model loading and emits loading events"""
+    # Check if model needs to be loaded
+    is_cached = model_id in loaded_models
+    
+    if not is_cached:
+        # Emit model loading start event
+        yield json.dumps({'model_loading_start': True})
+    
+    # Load the model (returns cached model if already loaded)
+    model_data, load_time = load_model(model_id)
+    
+    # Stream the actual generation
+    async for chunk in generate_response_streaming(
+        model_data["model"],
+        model_data["tokenizer"],
+        messages,
+        temperature,
+        max_tokens,
+        top_p,
+        top_k,
+        request,
+        load_time,
+    ):
+        yield chunk
+
+
+async def stream_with_loading_wrapper_llama(
+    model_name, messages, temperature, max_tokens, top_p, top_k, request
+):
+    """Wrapper generator that handles model loading and emits loading events"""
+    # Check if model needs to be loaded
+    is_cached = model_name in loaded_llama_models
+    
+    if not is_cached:
+        # Emit model loading start event
+        yield json.dumps({'model_loading_start': True})
+    
+    # Load the model (returns cached model if already loaded)
+    inference, load_time = load_llama_model(model_name)
+    
+    # Stream the actual generation
+    async for chunk in generate_response_streaming_llama(
+        inference,
+        messages,
+        temperature,
+        max_tokens,
+        top_p,
+        top_k,
+        request,
+        load_time,
+    ):
+        yield chunk
+
+
+async def stream_with_loading_wrapper_bitnet(
+    model_name, messages, temperature, max_tokens, top_p, top_k, request
+):
+    """Wrapper generator that handles model loading and emits loading events"""
+    # Check if model needs to be loaded
+    is_cached = model_name in loaded_bitnet_models
+    
+    if not is_cached:
+        # Emit model loading start event
+        yield json.dumps({'model_loading_start': True})
+    
+    # Load the model (returns cached model if already loaded)
+    bridge, load_time = load_bitnet_cpp_model(model_name)
+    
+    # Stream the actual generation
+    async for chunk in generate_response_streaming_bitnet_cpp(
+        bridge,
+        messages,
+        temperature,
+        max_tokens,
+        top_p,
+        top_k,
+        request,
+        load_time,
+    ):
+        yield chunk
+
+
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest, raw_request: Request):
     """Stream chat completions"""
@@ -686,55 +783,48 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
             {"role": "system", "content": "You are a helpful AI assistant."}
         ] + [{"role": msg.role, "content": msg.content} for msg in request.messages]
 
-        # Route to appropriate backend
+        # Route to appropriate backend with loading wrappers
         if backend == "llamacpp":
             # Use llama.cpp backend for GGUF models
-            print(f"[DEBUG] Loading llama.cpp model: {request.model_name}")
-            inference, load_time = load_llama_model(request.model_name)
+            print(f"[DEBUG] Using llama.cpp backend for: {request.model_name}")
             return EventSourceResponse(
-                generate_response_streaming_llama(
-                    inference,
+                stream_with_loading_wrapper_llama(
+                    request.model_name,
                     messages_dict,
                     request.temperature,
                     request.max_tokens,
                     request.top_p,
                     request.top_k,
                     raw_request,
-                    load_time,
                 )
             )
         elif backend == "bitnet_cpp":
             # Use bitnet.cpp compiled binary backend
-            print(f"[DEBUG] Loading bitnet.cpp model: {request.model_name}")
-            bridge, load_time = load_bitnet_cpp_model(request.model_name)
+            print(f"[DEBUG] Using bitnet.cpp backend for: {request.model_name}")
             return EventSourceResponse(
-                generate_response_streaming_bitnet_cpp(
-                    bridge,
+                stream_with_loading_wrapper_bitnet(
+                    request.model_name,
                     messages_dict,
                     request.temperature,
                     request.max_tokens,
                     request.top_p,
                     request.top_k,
                     raw_request,
-                    load_time,
                 )
             )
         else:
             # Use transformers backend for standard models
-            print(f"[DEBUG] Loading transformers model: {request.model_name}")
+            print(f"[DEBUG] Using transformers backend for: {request.model_name}")
             model_id = model_config["id"]
-            model_data, load_time = load_model(model_id)
             return EventSourceResponse(
-                generate_response_streaming(
-                    model_data["model"],
-                    model_data["tokenizer"],
+                stream_with_loading_wrapper_transformers(
+                    model_id,
                     messages_dict,
                     request.temperature,
                     request.max_tokens,
                     request.top_p,
                     request.top_k,
                     raw_request,
-                    load_time,
                 )
             )
     except Exception as e:
@@ -744,11 +834,24 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/ner")
-async def extract_entities(request: NERRequest):
-    """Extract named entities from text"""
+async def stream_ner_extraction(request: NERRequest):
+    """Stream NER extraction with model loading events"""
     try:
-        ner_model = load_ner_model(request.model)
+        # Check if model needs to be loaded
+        model_id = NER_MODELS[request.model]["id"]
+        is_cached = model_id in ner_pipelines
+        
+        if not is_cached:
+            # Emit model loading start event
+            yield json.dumps({'model_loading_start': True})
+        
+        # Load the model (returns cached model if already loaded)
+        ner_model, load_time = load_ner_model(request.model)
+        
+        # Emit model loading end event if this was a fresh load
+        if load_time is not None:
+            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
+        
         start_time = time.time()
         
         entities = ner_model(request.text)
@@ -774,35 +877,63 @@ async def extract_entities(request: NERRequest):
             processing_time
         )
         
-        return {
+        # Send the results
+        yield json.dumps({
+            "done": True,
             "entities": formatted_entities,
             "processing_time": processing_time,
             "text_length": len(request.text),
             "model": request.model,
             "id": ner_id
-        }
-    except HTTPException:
-        raise
+        })
+    except HTTPException as e:
+        yield json.dumps({'error': str(e.detail)})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during NER: {str(e)}")
+        yield json.dumps({'error': f"Error during NER: {str(e)}"})
 
 
-@app.post("/api/ocr")
-async def extract_text_from_image(file: UploadFile = File(...), config: str = "English Only"):
-    """Extract text from uploaded image using OCR"""
+@app.post("/api/ner")
+async def extract_entities(request: NERRequest):
+    """Extract named entities from text (streaming)"""
+    return EventSourceResponse(stream_ner_extraction(request))
+
+
+async def stream_ocr_extraction(file_contents, filename, config):
+    """Stream OCR extraction with model loading events"""
     try:
-        ocr_model = load_ocr_model(config)
+        # Check if model needs to be loaded
+        ocr_config = OCR_CONFIGS[config]
+        engine = ocr_config["engine"]
+        
+        # Determine cache key
+        if engine == "easyocr":
+            cache_key = tuple(ocr_config["languages"])
+            is_cached = cache_key in ocr_readers
+        elif engine == "paddleocr":
+            cache_key = "paddleocr"
+            is_cached = cache_key in ocr_readers
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
+        
+        if not is_cached:
+            # Emit model loading start event
+            yield json.dumps({'model_loading_start': True})
+        
+        # Load the model (returns cached model if already loaded)
+        ocr_model, load_time = load_ocr_model(config)
+        
+        # Emit model loading end event if this was a fresh load
+        if load_time is not None:
+            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
+        
         start_time = time.time()
         
-        contents = await file.read()
         if not PILLOW_AVAILABLE:
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
         
-        engine = OCR_CONFIGS[config]["engine"]
-        
         if engine == "easyocr":
             import numpy as np
-            image = Image.open(io.BytesIO(contents))
+            image = Image.open(io.BytesIO(file_contents))
             img_array = np.array(image)
             results = ocr_model.readtext(img_array)
             
@@ -818,7 +949,7 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
         
         elif engine == "paddleocr":
             import numpy as np
-            image = Image.open(io.BytesIO(contents))
+            image = Image.open(io.BytesIO(file_contents))
             img_array = np.array(image)
             
             results = ocr_model.ocr(img_array, cls=True)
@@ -842,16 +973,13 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
             
             extracted_text = " ".join(extracted_text_parts)
         
-        else:
-            raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
-        
         end_time = time.time()
         processing_time = end_time - start_time
         
         # Save to history
         ocr_id = save_ocr_analysis(
-            contents,
-            file.filename,
+            file_contents,
+            filename,
             extracted_text,
             bounding_boxes,
             config,
@@ -859,18 +987,27 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
             len(bounding_boxes)
         )
         
-        return {
+        # Send the results
+        yield json.dumps({
+            "done": True,
             "text": extracted_text,
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
             "num_detections": len(bounding_boxes),
             "config": config,
             "id": ocr_id
-        }
-    except HTTPException:
-        raise
+        })
+    except HTTPException as e:
+        yield json.dumps({'error': str(e.detail)})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during OCR: {str(e)}")
+        yield json.dumps({'error': f"Error during OCR: {str(e)}"})
+
+
+@app.post("/api/ocr")
+async def extract_text_from_image(file: UploadFile = File(...), config: str = "English Only"):
+    """Extract text from uploaded image using OCR (streaming)"""
+    contents = await file.read()
+    return EventSourceResponse(stream_ocr_extraction(contents, file.filename, config))
 
 
 @app.post("/api/conversations/save")
