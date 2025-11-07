@@ -343,6 +343,82 @@ with col1:
                 st.rerun()
                 st.stop()
     
+    if "pending_prompt" in st.session_state:
+        user_input = st.session_state.pending_prompt
+        del st.session_state.pending_prompt
+        
+        import time
+        
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        
+        messages_for_model = [
+            {"role": "system", "content": "You are a helpful AI assistant."}
+        ] + st.session_state.messages
+        
+        start_time = time.time()
+        
+        for idx, message in enumerate(st.session_state.messages):
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+                if message["role"] == "assistant":
+                    metrics = message.get("metrics")
+                    if metrics:
+                        tokens_per_sec = metrics.get('tokens_per_sec', 0)
+                        if tokens_per_sec > 0 and tokens_per_sec < 1:
+                            speed_display = f"{1/tokens_per_sec:.1f} sec/token"
+                        elif tokens_per_sec >= 1:
+                            speed_display = f"{tokens_per_sec:.1f} tokens/sec"
+                        else:
+                            speed_display = "N/A"
+                        st.caption(f"Time: {metrics['time']:.1f}s | Tokens: {metrics['tokens']} | Speed: {speed_display}")
+                    else:
+                        st.caption("_No metrics available for this response_")
+        
+        with st.chat_message("assistant"):
+            response_text = st.write_stream(
+                generate_response_streaming(
+                    model, 
+                    tokenizer, 
+                    messages_for_model, 
+                    temperature, 
+                    max_tokens,
+                    top_p,
+                    top_k
+                )
+            )
+            
+            end_time = time.time()
+            generation_time = end_time - start_time
+            
+            if not isinstance(response_text, str):
+                response_text = ""
+            num_tokens = len(tokenizer.encode(response_text)) if response_text else 0
+            tokens_per_second = num_tokens / generation_time if generation_time > 0 and num_tokens > 0 else 0
+            
+            metrics = {
+                "time": generation_time,
+                "tokens": num_tokens,
+                "tokens_per_sec": tokens_per_second
+            }
+            
+            if tokens_per_second > 0 and tokens_per_second < 1:
+                speed_display = f"{1/tokens_per_second:.1f} sec/token"
+            elif tokens_per_second >= 1:
+                speed_display = f"{tokens_per_second:.1f} tokens/sec"
+            else:
+                speed_display = "N/A"
+            st.caption(f"Time: {generation_time:.1f}s | Tokens: {num_tokens} | Speed: {speed_display}")
+        
+        st.session_state.messages.append({
+            "role": "assistant", 
+            "content": response_text,
+            "metrics": metrics
+        })
+        
+        save_conversation(st.session_state.session_id, st.session_state.messages)
+        st.rerun()
+        st.stop()
+    
     for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -362,10 +438,6 @@ with col1:
     
     user_input = st.chat_input("Type your message here...")
     
-    if "pending_prompt" in st.session_state:
-        user_input = st.session_state.pending_prompt
-        del st.session_state.pending_prompt
-    
     if user_input:
         import time
         
@@ -376,6 +448,23 @@ with col1:
         ] + st.session_state.messages
         
         start_time = time.time()
+        
+        for idx, message in enumerate(st.session_state.messages):
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+                if message["role"] == "assistant":
+                    metrics = message.get("metrics")
+                    if metrics:
+                        tokens_per_sec = metrics.get('tokens_per_sec', 0)
+                        if tokens_per_sec > 0 and tokens_per_sec < 1:
+                            speed_display = f"{1/tokens_per_sec:.1f} sec/token"
+                        elif tokens_per_sec >= 1:
+                            speed_display = f"{tokens_per_sec:.1f} tokens/sec"
+                        else:
+                            speed_display = "N/A"
+                        st.caption(f"Time: {metrics['time']:.1f}s | Tokens: {metrics['tokens']} | Speed: {speed_display}")
+                    else:
+                        st.caption("_No metrics available for this response_")
         
         with st.chat_message("assistant"):
             response_text = st.write_stream(
