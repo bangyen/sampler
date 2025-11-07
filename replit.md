@@ -146,6 +146,7 @@ Access at: `http://0.0.0.0:5000`
 - **Dark backdrop:** Appears behind sidebar when open
 - **Auto-close:** Sidebar automatically closes when selecting models or conversations
 - **Manual close:** Via close button (×), backdrop click, or hamburger toggle
+- **Natural page scrolling:** Full-page vertical scrolling (no fixed-height containers with internal scrolling)
 - **Null-safe:** All DOM queries have proper guards to prevent errors
 - **Smooth animations:** 300ms CSS transitions for polished UX
 

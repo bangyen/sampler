@@ -484,6 +484,9 @@ body {
     
     .container {
         flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
     }
     
     .sidebar {
@@ -506,7 +509,8 @@ body {
     
     .main-content {
         width: 100%;
-        flex: 1;
+        flex: none;
+        overflow: visible;
     }
     
     .header {
@@ -521,16 +525,31 @@ body {
     .content-wrapper {
         flex-direction: column;
         gap: 15px;
+        overflow: visible;
+        flex: none;
     }
     
     .chat-container {
         width: 100%;
         max-width: 100%;
+        flex: none;
+        overflow: visible;
+        padding-bottom: 20px;
+    }
+    
+    .chat-messages {
+        max-height: none;
+        overflow: visible;
     }
     
     .settings-panel {
         width: 100%;
         max-width: 100%;
+        flex: none;
+        overflow: visible;
+        border-left: none;
+        border-top: 1px solid #e0e0e0;
+        padding-bottom: 40px;
     }
     
     .chat-input-container {
