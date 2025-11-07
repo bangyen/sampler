@@ -580,14 +580,8 @@ body {
         flex: none;
     }
     
-    .tab-content.active {
-        height: auto;
-    }
-    
     #chat-tab {
         flex-direction: column;
-        overflow: visible;
-        height: auto;
     }
     
     .chat-container {
@@ -596,14 +590,11 @@ body {
         flex: none;
         overflow: visible;
         padding-bottom: 20px;
-        height: auto;
     }
     
     .chat-messages {
         max-height: none;
         overflow: visible;
-        height: auto;
-        flex: none;
     }
     
     .settings-panel {
@@ -614,7 +605,6 @@ body {
         border-left: none;
         border-top: 1px solid #e0e0e0;
         padding-bottom: 40px;
-        height: auto;
     }
     
     .chat-input-container {
