@@ -413,7 +413,7 @@ async function sendMessage(userMessage) {
     assistantDiv.className = 'message assistant';
     assistantDiv.innerHTML = `
         <div class="message-header">Assistant <span class="loading"></span></div>
-        <div class="message-content" id="streaming-content"></div>
+        <div class="message-content" id="streaming-content">&nbsp;</div>
     `;
     chatMessages.appendChild(assistantDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
