@@ -16,7 +16,7 @@ from huggingface_hub import hf_hub_download
 BITNET_BINARY = Path("bin/BitNet/build/bin/main")
 
 # Default model configuration
-DEFAULT_BITNET_REPO = "microsoft/bitnet_b1_58-large"
+DEFAULT_BITNET_REPO = "microsoft/bitnet-b1.58-2B-4T-gguf"
 DEFAULT_BITNET_FILE = "ggml-model-i2_s.gguf"
 
 class BitNetCppBridge:

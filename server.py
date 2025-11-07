@@ -181,13 +181,13 @@ if LLAMA_CPP_AVAILABLE:
 # BitNet GGUF with compiled bitnet.cpp binary
 if BITNET_CPP_AVAILABLE:
     AVAILABLE_MODELS["BitNet b1.58 2B (GGUF - Fastest)"] = {
-        "id": "microsoft/bitnet_b1_58-large",
+        "id": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "params": "2B",
         "quantization": "i2_s (1.58-bit GGUF)",
-        "memory": "~400MB",
+        "memory": "~1.2GB",
         "description": "BitNet with custom bitnet.cpp - Ultimate 1.58-bit quantization!",
         "backend": "bitnet_cpp",
-        "gguf_repo": "microsoft/bitnet_b1_58-large",
+        "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "gguf_file": "ggml-model-i2_s.gguf"
     }
 
