@@ -129,8 +129,15 @@ except ImportError:
 app = FastAPI(title="Quantized LLM Comparison API")
 
 AVAILABLE_MODELS = {
-    # Fallback transformers-based models (shown when GGUF backends unavailable)
-    # These are hidden by default when faster GGUF versions are available
+    # Qwen 0.5B always available as lightweight option
+    "Qwen 2.5 0.5B": {
+        "id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "params": "0.5B",
+        "quantization": "FP16",
+        "memory": "~1GB",
+        "description": "Alibaba's smallest model, great for quick responses",
+        "backend": "transformers"
+    }
 }
 
 # Add GGUF models if backends are available
@@ -169,16 +176,6 @@ if BITNET_CPP_AVAILABLE:
         "backend": "bitnet_cpp",
         "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "gguf_file": "ggml-model-i2_s.gguf"
-    }
-else:
-    # Fallback to Qwen as lightweight alternative if BitNet not available
-    AVAILABLE_MODELS["Qwen 2.5 0.5B"] = {
-        "id": "Qwen/Qwen2.5-0.5B-Instruct",
-        "params": "0.5B",
-        "quantization": "FP16",
-        "memory": "~1GB",
-        "description": "Alibaba's smallest model, great for quick responses (transformers fallback)",
-        "backend": "transformers"
     }
 
 NER_MODELS = {
