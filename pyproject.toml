@@ -8,15 +8,12 @@ dependencies = [
     "uvicorn>=0.24.0",
     "sse-starlette>=1.8.0",
     "python-multipart>=0.0.6",
-    "torch>=2.0.0",
-    "transformers>=4.45.0",
-    "accelerate>=0.20.0",
+    "torch",
+    "transformers @ git+https://github.com/shumingma/transformers.git",
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
-    "Pillow>=10.0.0",
     "easyocr>=1.7.0",
-    "paddleocr>=2.7.0",
-    "sentencepiece>=0.1.99",
+    "Pillow>=10.0.0",
 ]
 
 [[tool.uv.index]]

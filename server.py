@@ -5,8 +5,9 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import asyncio
 import torch
-from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer, AutoModelForTokenClassification
+from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
+from transformers.pipelines import pipeline
 from threading import Thread
 import json
 import uuid
@@ -32,7 +33,6 @@ try:
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
-
 
 try:
     from database import (
@@ -111,6 +111,13 @@ from layout_storage import (
 app = FastAPI(title="Quantized LLM Comparison API")
 
 AVAILABLE_MODELS = {
+    "BitNet b1.58 2B": {
+        "id": "microsoft/bitnet-b1.58-2B-4T-bf16",
+        "params": "2B",
+        "quantization": "1.58-bit",
+        "memory": "~400MB",
+        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}",
+    },
     "SmolLM2 1.7B": {
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
         "params": "1.7B",
@@ -176,11 +183,6 @@ OCR_CONFIGS = {
         "languages": ["en", "es", "fr", "de", "it", "pt"],
         "description": "Common European languages (slower)",
     },
-    "PaddleOCR": {
-        "engine": "paddleocr",
-        "languages": ["en"],
-        "description": "Advanced layout analysis with PaddleOCR (CPU-optimized)",
-    },
 }
 
 LAYOUT_CONFIG = {
@@ -232,14 +234,11 @@ def load_model(model_id: str):
         return loaded_models[model_id]
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
 
         try:
             model = AutoModelForCausalLM.from_pretrained(
-                model_id, 
-                torch_dtype=torch.float32, 
-                low_cpu_mem_usage=True,
-                trust_remote_code=True
+                model_id, torch_dtype=torch.float32, low_cpu_mem_usage=True
             )
         except (ImportError, OSError) as e:
             if "accelerate" in str(e).lower():
@@ -248,7 +247,6 @@ def load_model(model_id: str):
                     torch_dtype=torch.float32,
                     low_cpu_mem_usage=True,
                     _fast_init=False,
-                    trust_remote_code=True
                 )
             else:
                 raise
@@ -263,7 +261,7 @@ def load_model(model_id: str):
 
 
 def load_ner_model(model_name="BERT Base NER"):
-    """Load NER model without using pipeline to avoid torchvision dependency"""
+    """Load NER model using transformers pipeline"""
     global ner_pipelines
     
     if model_name not in NER_MODELS:
@@ -273,10 +271,12 @@ def load_ner_model(model_name="BERT Base NER"):
     
     if model_id not in ner_pipelines:
         try:
-            tokenizer = AutoTokenizer.from_pretrained(model_id)
-            model = AutoModelForTokenClassification.from_pretrained(model_id)
-            model.eval()
-            ner_pipelines[model_id] = {"model": model, "tokenizer": tokenizer}
+            ner_pipelines[model_id] = pipeline(
+                "ner",
+                model=model_id,
+                aggregation_strategy="simple",
+                device=-1
+            )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
     return ner_pipelines[model_id]
@@ -470,72 +470,6 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
     )
 
 
-def perform_ner_inference(model_dict, text):
-    """Perform NER inference without pipeline to avoid torchvision dependency"""
-    model = model_dict["model"]
-    tokenizer = model_dict["tokenizer"]
-    
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-    
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    predictions = torch.argmax(outputs.logits, dim=-1)
-    tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
-    
-    id2label = model.config.id2label
-    
-    entities = []
-    current_entity = None
-    current_text = []
-    current_start = 0
-    
-    for idx, (token, pred) in enumerate(zip(tokens, predictions[0])):
-        if token in [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]:
-            continue
-        
-        label = id2label[pred.item()]
-        
-        if label.startswith("B-"):
-            if current_entity:
-                entity_text = tokenizer.convert_tokens_to_string(current_text)
-                entities.append({
-                    "word": entity_text,
-                    "entity_group": current_entity,
-                    "score": 1.0,
-                    "start": current_start,
-                    "end": current_start + len(entity_text)
-                })
-            current_entity = label[2:]
-            current_text = [token]
-            current_start = text.find(token.replace("##", ""))
-        elif label.startswith("I-") and current_entity == label[2:]:
-            current_text.append(token)
-        elif label == "O":
-            if current_entity:
-                entity_text = tokenizer.convert_tokens_to_string(current_text)
-                entities.append({
-                    "word": entity_text,
-                    "entity_group": current_entity,
-                    "score": 1.0,
-                    "start": current_start,
-                    "end": current_start + len(entity_text)
-                })
-                current_entity = None
-                current_text = []
-    
-    if current_entity:
-        entity_text = tokenizer.convert_tokens_to_string(current_text)
-        entities.append({
-            "word": entity_text,
-            "entity_group": current_entity,
-            "score": 1.0,
-            "start": current_start,
-            "end": current_start + len(entity_text)
-        })
-    
-    return entities
-
 @app.post("/api/ner")
 async def extract_entities(request: NERRequest):
     """Extract named entities from text"""
@@ -543,7 +477,7 @@ async def extract_entities(request: NERRequest):
         ner_model = load_ner_model(request.model)
         start_time = time.time()
         
-        entities = perform_ner_inference(ner_model, request.text)
+        entities = ner_model(request.text)
         
         end_time = time.time()
         processing_time = end_time - start_time
@@ -746,62 +680,55 @@ async def delete_ocr(ocr_id: str):
 
 
 @app.post("/api/layout")
-async def analyze_layout(file: UploadFile = File(...), config: str = "PaddleOCR"):
-    """Analyze document layout using various engines"""
+async def analyze_layout(file: UploadFile = File(...)):
+    """Analyze document layout using PaddleOCR"""
     try:
-        if config not in LAYOUT_CONFIG:
-            raise HTTPException(status_code=400, detail=f"Invalid layout configuration: {config}")
+        # Use PaddleOCR config
+        if not PADDLEOCR_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="PaddleOCR not installed. Please install: pip install paddleocr"
+            )
         
         if not PILLOW_AVAILABLE:
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
         
-        layout_cfg = LAYOUT_CONFIG[config]
-        engine = layout_cfg["engine"]
+        # Load PaddleOCR model
+        if "paddleocr" not in ocr_readers:
+            try:
+                ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
+        
+        ocr_model = ocr_readers["paddleocr"]
         start_time = time.time()
         
         contents = await file.read()
+        
+        import numpy as np
         image = Image.open(io.BytesIO(contents))
+        img_array = np.array(image)
         
-        # Process based on engine type
-        if engine == "paddleocr":
-            if not PADDLEOCR_AVAILABLE:
-                raise HTTPException(status_code=503, detail="PaddleOCR not installed")
-            
-            import numpy as np
-            lang = layout_cfg["languages"][0]
-            cache_key = f"paddleocr_{lang}"
-            
-            if cache_key not in ocr_readers:
-                try:
-                    ocr_readers[cache_key] = PaddleOCR(use_angle_cls=True, lang=lang, use_gpu=False, show_log=False)
-                except Exception as e:
-                    raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
-            
-            ocr_model = ocr_readers[cache_key]
-            img_array = np.array(image)
-            results = ocr_model.ocr(img_array, cls=True)
-            
-            extracted_text_parts = []
-            bounding_boxes = []
-            
-            if results and results[0]:
-                for line in results[0]:
-                    bbox_coords = line[0]
-                    text_info = line[1]
-                    text = text_info[0]
-                    confidence = text_info[1]
-                    
-                    extracted_text_parts.append(text)
-                    bounding_boxes.append({
-                        "text": text,
-                        "confidence": float(confidence),
-                        "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
-                    })
-            
-            extracted_text = " ".join(extracted_text_parts)
+        results = ocr_model.ocr(img_array, cls=True)
         
-        else:
-            raise HTTPException(status_code=400, detail=f"Unknown layout engine: {engine}")
+        extracted_text_parts = []
+        bounding_boxes = []
+        
+        if results and results[0]:
+            for line in results[0]:
+                bbox_coords = line[0]
+                text_info = line[1]
+                text = text_info[0]
+                confidence = text_info[1]
+                
+                extracted_text_parts.append(text)
+                bounding_boxes.append({
+                    "text": text,
+                    "confidence": float(confidence),
+                    "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
+                })
+        
+        extracted_text = " ".join(extracted_text_parts)
         
         end_time = time.time()
         processing_time = end_time - start_time
@@ -813,8 +740,7 @@ async def analyze_layout(file: UploadFile = File(...), config: str = "PaddleOCR"
             extracted_text,
             bounding_boxes,
             processing_time,
-            len(bounding_boxes),
-            config
+            len(bounding_boxes)
         )
         
         return {
@@ -822,7 +748,6 @@ async def analyze_layout(file: UploadFile = File(...), config: str = "PaddleOCR"
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
             "num_detections": len(bounding_boxes),
-            "config": config,
             "id": layout_id
         }
     except HTTPException:

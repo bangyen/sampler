@@ -49,6 +49,9 @@ async function loadModels() {
         const response = await fetch('/api/models');
         const data = await response.json();
         
+        document.getElementById('persistence-type').textContent = 
+            `Using ${data.persistence_type} persistence`;
+        
         const modelList = document.getElementById('model-list');
         modelList.innerHTML = '';
         
@@ -188,23 +191,9 @@ async function loadConversationList() {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
-            const preview = conv.preview || `${conv.message_count} messages`;
-            
             const btn = document.createElement('button');
             btn.className = `conversation-btn ${conv.session_id === sessionId ? 'active' : ''}`;
-            
-            const previewDiv = document.createElement('div');
-            previewDiv.style.fontSize = '13px';
-            previewDiv.style.marginBottom = '4px';
-            previewDiv.textContent = preview;
-            
-            const countDiv = document.createElement('div');
-            countDiv.style.fontSize = '11px';
-            countDiv.style.color = '#888';
-            countDiv.textContent = `${conv.message_count} messages`;
-            
-            btn.appendChild(previewDiv);
-            btn.appendChild(countDiv);
+            btn.textContent = `${conv.message_count} messages`;
             btn.onclick = () => loadConversationById(conv.session_id);
             
             const deleteBtn = document.createElement('button');
@@ -890,19 +879,10 @@ async function loadNERHistory() {
             
             const btn = document.createElement('button');
             btn.className = 'conversation-btn';
-            
-            const textDiv = document.createElement('div');
-            textDiv.style.fontSize = '13px';
-            textDiv.style.marginBottom = '4px';
-            textDiv.textContent = analysis.text_preview;
-            
-            const metaDiv = document.createElement('div');
-            metaDiv.style.fontSize = '11px';
-            metaDiv.style.color = '#888';
-            metaDiv.textContent = `${analysis.entity_count} entities | ${analysis.model}`;
-            
-            btn.appendChild(textDiv);
-            btn.appendChild(metaDiv);
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.text_preview}</div>
+                <div style="font-size: 11px; color: #888;">${analysis.entity_count} entities | ${analysis.model}</div>
+            `;
             btn.onclick = () => loadNERAnalysis(analysis.id);
             
             const deleteBtn = document.createElement('button');
