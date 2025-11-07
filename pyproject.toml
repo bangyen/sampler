@@ -12,11 +12,7 @@ dependencies = [
     "transformers @ git+https://github.com/shumingma/transformers.git",
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
-    "easyocr>=1.7.0",
     "Pillow>=10.0.0",
-    "paddleocr",
-    "pytesseract",
-    "surya-ocr",
 ]
 
 [[tool.uv.index]]

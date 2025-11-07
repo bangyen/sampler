@@ -535,7 +535,11 @@ async def get_ner_models():
 @app.get("/api/ocr/configs")
 async def get_ocr_configs():
     """Get list of available OCR configurations"""
+    print(f"DEBUG: EASYOCR_AVAILABLE = {EASYOCR_AVAILABLE}")
+    print(f"DEBUG: Total OCR_CONFIGS items = {len(OCR_CONFIGS)}")
     available_configs = {k: v for k, v in OCR_CONFIGS.items() if v.get("available", True)}
+    print(f"DEBUG: Available configs after filtering = {len(available_configs)}")
+    print(f"DEBUG: Available configs = {list(available_configs.keys())}")
     return {
         "configs": available_configs
     }
