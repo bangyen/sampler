@@ -114,13 +114,54 @@ AVAILABLE_MODELS = {
     },
 }
 
+NER_MODELS = {
+    "BERT Base NER": {
+        "id": "dslim/bert-base-NER",
+        "params": "110M",
+        "memory": "~420MB",
+        "description": "Fast and accurate BERT-based NER (Person, Organization, Location, Misc)",
+    },
+    "BERT Large NER": {
+        "id": "dslim/bert-large-NER",
+        "params": "340M",
+        "memory": "~1.3GB",
+        "description": "More accurate large BERT model for entity recognition",
+    },
+    "RoBERTa Large NER": {
+        "id": "Jean-Baptiste/roberta-large-ner-english",
+        "params": "355M",
+        "memory": "~1.4GB",
+        "description": "RoBERTa-based NER with high accuracy on English text",
+    },
+}
+
+OCR_CONFIGS = {
+    "English Only": {
+        "languages": ["en"],
+        "description": "Fastest - English text only",
+    },
+    "English + Spanish": {
+        "languages": ["en", "es"],
+        "description": "English and Spanish text recognition",
+    },
+    "English + Chinese": {
+        "languages": ["en", "ch_sim"],
+        "description": "English and Simplified Chinese text",
+    },
+    "Multi-Language": {
+        "languages": ["en", "es", "fr", "de", "it", "pt"],
+        "description": "Common European languages (slower)",
+    },
+}
+
 loaded_models = {}
-ner_pipeline = None
-ocr_reader = None
+ner_pipelines = {}
+ocr_readers = {}
 
 
 class NERRequest(BaseModel):
     text: str
+    model: str = "BERT Base NER"
 
 
 class OCRResponse(BaseModel):
@@ -180,36 +221,49 @@ def load_model(model_id: str):
         raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
 
 
-def load_ner_model():
+def load_ner_model(model_name="BERT Base NER"):
     """Load NER model using transformers pipeline"""
-    global ner_pipeline
-    if ner_pipeline is None:
+    global ner_pipelines
+    
+    if model_name not in NER_MODELS:
+        raise HTTPException(status_code=400, detail=f"Invalid NER model: {model_name}")
+    
+    model_id = NER_MODELS[model_name]["id"]
+    
+    if model_id not in ner_pipelines:
         try:
-            ner_pipeline = pipeline(
+            ner_pipelines[model_id] = pipeline(
                 "ner",
-                model="dslim/bert-base-NER",
+                model=model_id,
                 aggregation_strategy="simple",
                 device=-1
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
-    return ner_pipeline
+    return ner_pipelines[model_id]
 
 
-def load_ocr_model():
-    """Load EasyOCR reader"""
-    global ocr_reader
+def load_ocr_model(config_name="English Only"):
+    """Load EasyOCR reader with specified language configuration"""
+    global ocr_readers
+    
     if not EASYOCR_AVAILABLE or not PILLOW_AVAILABLE:
         raise HTTPException(
             status_code=503, 
             detail="OCR dependencies not installed. Please install: pip install easyocr Pillow"
         )
-    if ocr_reader is None:
+    
+    if config_name not in OCR_CONFIGS:
+        raise HTTPException(status_code=400, detail=f"Invalid OCR configuration: {config_name}")
+    
+    languages = tuple(OCR_CONFIGS[config_name]["languages"])
+    
+    if languages not in ocr_readers:
         try:
-            ocr_reader = easyocr.Reader(['en'], gpu=False)
+            ocr_readers[languages] = easyocr.Reader(list(languages), gpu=False)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading OCR model: {str(e)}")
-    return ocr_reader
+    return ocr_readers[languages]
 
 
 def format_prompt(messages: List[Dict], tokenizer):
@@ -292,10 +346,26 @@ async def read_root():
 
 @app.get("/api/models")
 async def get_models():
-    """Get list of available models"""
+    """Get list of available LLM models"""
     return {
         "models": AVAILABLE_MODELS,
         "persistence_type": PERSISTENCE_TYPE,
+    }
+
+
+@app.get("/api/ner/models")
+async def get_ner_models():
+    """Get list of available NER models"""
+    return {
+        "models": NER_MODELS
+    }
+
+
+@app.get("/api/ocr/configs")
+async def get_ocr_configs():
+    """Get list of available OCR configurations"""
+    return {
+        "configs": OCR_CONFIGS
     }
 
 
@@ -330,7 +400,7 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
 async def extract_entities(request: NERRequest):
     """Extract named entities from text"""
     try:
-        ner_model = load_ner_model()
+        ner_model = load_ner_model(request.model)
         start_time = time.time()
         
         entities = ner_model(request.text)
@@ -351,7 +421,8 @@ async def extract_entities(request: NERRequest):
         return {
             "entities": formatted_entities,
             "processing_time": processing_time,
-            "text_length": len(request.text)
+            "text_length": len(request.text),
+            "model": request.model
         }
     except HTTPException:
         raise
@@ -360,10 +431,10 @@ async def extract_entities(request: NERRequest):
 
 
 @app.post("/api/ocr")
-async def extract_text_from_image(file: UploadFile = File(...)):
+async def extract_text_from_image(file: UploadFile = File(...), config: str = "English Only"):
     """Extract text from uploaded image using OCR"""
     try:
-        ocr_model = load_ocr_model()
+        ocr_model = load_ocr_model(config)
         start_time = time.time()
         
         contents = await file.read()
@@ -390,7 +461,8 @@ async def extract_text_from_image(file: UploadFile = File(...)):
             "text": extracted_text,
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
-            "num_detections": len(results)
+            "num_detections": len(results),
+            "config": config
         }
     except HTTPException:
         raise
