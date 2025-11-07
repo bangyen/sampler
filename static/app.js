@@ -531,6 +531,234 @@ function setupEventListeners() {
         settings.topK = parseInt(e.target.value);
         topKValue.textContent = settings.topK;
     });
+    
+    setupTabs();
+    setupNER();
+    setupOCR();
+}
+
+function setupTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+            
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            btn.classList.add('active');
+            document.getElementById(`${targetTab}-tab`).classList.add('active');
+        });
+    });
+}
+
+function setupNER() {
+    const submitBtn = document.getElementById('ner-submit-btn');
+    const textInput = document.getElementById('ner-text-input');
+    
+    submitBtn.addEventListener('click', async () => {
+        const text = textInput.value.trim();
+        if (!text) {
+            alert('Please enter some text to analyze');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Extracting...';
+        
+        try {
+            const response = await fetch('/api/ner', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                const textData = await response.text();
+                displayNERError(textData || 'Error extracting entities');
+                return;
+            }
+            
+            if (!response.ok) {
+                displayNERError(data.detail || 'Error extracting entities');
+                return;
+            }
+            
+            displayNERResults(data);
+        } catch (error) {
+            console.error('NER error:', error);
+            displayNERError('Network error. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Extract Entities';
+        }
+    });
+}
+
+function displayNERError(message) {
+    const resultsDiv = document.getElementById('ner-results');
+    const entitiesDiv = document.getElementById('ner-entities');
+    const metricsDiv = document.getElementById('ner-metrics');
+    
+    resultsDiv.style.display = 'block';
+    entitiesDiv.innerHTML = `<div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;"><strong>Error:</strong> ${message}</div>`;
+    metricsDiv.innerHTML = '';
+}
+
+function displayNERResults(data) {
+    const resultsDiv = document.getElementById('ner-results');
+    const entitiesDiv = document.getElementById('ner-entities');
+    const metricsDiv = document.getElementById('ner-metrics');
+    
+    resultsDiv.style.display = 'block';
+    
+    if (data.entities && data.entities.length > 0) {
+        entitiesDiv.innerHTML = data.entities.map(entity => `
+            <div class="entity-tag ${entity.label}">
+                <span>${entity.text}</span>
+                <span class="entity-label">${entity.label}</span>
+            </div>
+        `).join('');
+        
+        metricsDiv.innerHTML = `
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+            <div><strong>Entities Found:</strong> ${data.entities.length}</div>
+            <div><strong>Text Length:</strong> ${data.text_length} characters</div>
+        `;
+    } else {
+        entitiesDiv.innerHTML = '<p>No entities detected in the text.</p>';
+        metricsDiv.innerHTML = `
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+        `;
+    }
+}
+
+function setupOCR() {
+    const dropZone = document.getElementById('ocr-drop-zone');
+    const fileInput = document.getElementById('ocr-file-input');
+    const submitBtn = document.getElementById('ocr-submit-btn');
+    const previewDiv = document.getElementById('ocr-preview');
+    const previewImg = document.getElementById('ocr-preview-img');
+    let selectedFile = null;
+    
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            handleFileSelect(file);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    });
+    
+    function handleFileSelect(file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            previewDiv.style.display = 'block';
+            submitBtn.style.display = 'block';
+            dropZone.querySelector('p').textContent = '✓ Image loaded. Click "Extract Text" to process';
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    submitBtn.addEventListener('click', async () => {
+        if (!selectedFile) {
+            alert('Please select an image first');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Extracting...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            const response = await fetch('/api/ocr', {
+                method: 'POST',
+                body: formData
+            });
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                const textData = await response.text();
+                displayOCRError(textData || 'Error extracting text');
+                return;
+            }
+            
+            if (!response.ok) {
+                displayOCRError(data.detail || 'Error extracting text');
+                return;
+            }
+            
+            displayOCRResults(data);
+        } catch (error) {
+            console.error('OCR error:', error);
+            displayOCRError('Network error. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Extract Text';
+        }
+    });
+}
+
+function displayOCRError(message) {
+    const resultsDiv = document.getElementById('ocr-results');
+    const textDiv = document.getElementById('ocr-text');
+    const metricsDiv = document.getElementById('ocr-metrics');
+    
+    resultsDiv.style.display = 'block';
+    textDiv.innerHTML = `<div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;"><strong>Error:</strong> ${message}</div>`;
+    metricsDiv.innerHTML = '';
+}
+
+function displayOCRResults(data) {
+    const resultsDiv = document.getElementById('ocr-results');
+    const textDiv = document.getElementById('ocr-text');
+    const metricsDiv = document.getElementById('ocr-metrics');
+    
+    resultsDiv.style.display = 'block';
+    
+    if (data.text) {
+        textDiv.textContent = data.text;
+        metricsDiv.innerHTML = `
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+            <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+        `;
+    } else {
+        textDiv.textContent = 'No text detected in the image.';
+        metricsDiv.innerHTML = `
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+        `;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);

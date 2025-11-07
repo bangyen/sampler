@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
@@ -6,12 +6,27 @@ from typing import List, Optional, Dict, Any
 import asyncio
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
-from transformers import TextIteratorStreamer
+from transformers.generation.streamers import TextIteratorStreamer
+from transformers.pipelines import pipeline
 from threading import Thread
 import json
 import uuid
 import time
 from sse_starlette.sse import EventSourceResponse
+import io
+import base64
+
+try:
+    import easyocr
+    EASYOCR_AVAILABLE = True
+except ImportError:
+    EASYOCR_AVAILABLE = False
+    
+try:
+    from PIL import Image
+    PILLOW_AVAILABLE = True
+except ImportError:
+    PILLOW_AVAILABLE = False
 
 try:
     from database import (
@@ -100,6 +115,17 @@ AVAILABLE_MODELS = {
 }
 
 loaded_models = {}
+ner_pipeline = None
+ocr_reader = None
+
+
+class NERRequest(BaseModel):
+    text: str
+
+
+class OCRResponse(BaseModel):
+    text: str
+    bounding_boxes: List[Dict[str, Any]]
 
 
 class ChatMessage(BaseModel):
@@ -152,6 +178,38 @@ def load_model(model_id: str):
         return loaded_models[model_id]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
+
+
+def load_ner_model():
+    """Load NER model using transformers pipeline"""
+    global ner_pipeline
+    if ner_pipeline is None:
+        try:
+            ner_pipeline = pipeline(
+                "ner",
+                model="dslim/bert-base-NER",
+                aggregation_strategy="simple",
+                device=-1
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
+    return ner_pipeline
+
+
+def load_ocr_model():
+    """Load EasyOCR reader"""
+    global ocr_reader
+    if not EASYOCR_AVAILABLE or not PILLOW_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="OCR dependencies not installed. Please install: pip install easyocr Pillow"
+        )
+    if ocr_reader is None:
+        try:
+            ocr_reader = easyocr.Reader(['en'], gpu=False)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error loading OCR model: {str(e)}")
+    return ocr_reader
 
 
 def format_prompt(messages: List[Dict], tokenizer):
@@ -266,6 +324,78 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
             raw_request,
         )
     )
+
+
+@app.post("/api/ner")
+async def extract_entities(request: NERRequest):
+    """Extract named entities from text"""
+    try:
+        ner_model = load_ner_model()
+        start_time = time.time()
+        
+        entities = ner_model(request.text)
+        
+        end_time = time.time()
+        processing_time = end_time - start_time
+        
+        formatted_entities = []
+        for entity in entities:
+            formatted_entities.append({
+                "text": entity["word"],
+                "label": entity["entity_group"],
+                "score": float(entity["score"]),
+                "start": entity["start"],
+                "end": entity["end"]
+            })
+        
+        return {
+            "entities": formatted_entities,
+            "processing_time": processing_time,
+            "text_length": len(request.text)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during NER: {str(e)}")
+
+
+@app.post("/api/ocr")
+async def extract_text_from_image(file: UploadFile = File(...)):
+    """Extract text from uploaded image using OCR"""
+    try:
+        ocr_model = load_ocr_model()
+        start_time = time.time()
+        
+        contents = await file.read()
+        if not PILLOW_AVAILABLE:
+            raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
+        image = Image.open(io.BytesIO(contents))
+        
+        results = ocr_model.readtext(image)
+        
+        end_time = time.time()
+        processing_time = end_time - start_time
+        
+        extracted_text = " ".join([text for (bbox, text, conf) in results])
+        
+        bounding_boxes = []
+        for (bbox, text, confidence) in results:
+            bounding_boxes.append({
+                "text": text,
+                "confidence": float(confidence),
+                "bbox": [[int(point[0]), int(point[1])] for point in bbox]
+            })
+        
+        return {
+            "text": extracted_text,
+            "bounding_boxes": bounding_boxes,
+            "processing_time": processing_time,
+            "num_detections": len(results)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during OCR: {str(e)}")
 
 
 @app.post("/api/conversations/save")
