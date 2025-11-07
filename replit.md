@@ -15,8 +15,8 @@ The application features a modern JavaScript frontend (HTML/CSS/JS) with a tabbe
 The backend is built with FastAPI, providing REST APIs and Server-Sent Events (SSE) for real-time token streaming during LLM inference. Model loading is handled automatically from Hugging Face, with CPU-only inference for BitNet, SmolLM2, and Qwen2.5 models. The chat interface uses `TextIteratorStreamer` for token-by-token generation. Advanced generation parameters like temperature, top-p, top-k, and max tokens are configurable. Performance metrics (time, tokens, tokens/second) are tracked and displayed.
 
 **Inference Optimization**: The application now supports dual inference backends for maximum performance:
-- **llama.cpp backend** (via llama-cpp-python): Optimized GGUF models deliver 2-6x faster inference compared to standard PyTorch. Uses specialized CPU kernels with SIMD optimizations for extremely efficient computation.
-- **Transformers backend**: Standard Hugging Face transformers for maximum compatibility with all models.
+- **llama.cpp backend** (via llama-cpp-python): Optimized GGUF models deliver 2-6x faster inference compared to standard PyTorch. Uses specialized CPU kernels with SIMD optimizations for extremely efficient computation. **Status: Integration complete, awaiting llama-cpp-python installation.**
+- **Transformers backend**: Standard Hugging Face transformers for maximum compatibility with all models. Currently active for all models.
 
 ### Feature Specifications
 - **LLM Chat:** Interactive chat with multiple model selection including optimized GGUF models (BitNet b1.58 2B GGUF - Fast) and standard transformers models (SmolLM2 1.7B, Qwen2.5 1.5B/0.5B). Features streaming responses and configurable generation parameters.
