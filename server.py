@@ -21,6 +21,12 @@ try:
     EASYOCR_AVAILABLE = True
 except ImportError:
     EASYOCR_AVAILABLE = False
+
+try:
+    from paddleocr import PaddleOCR
+    PADDLEOCR_AVAILABLE = True
+except ImportError:
+    PADDLEOCR_AVAILABLE = False
     
 try:
     from PIL import Image
@@ -151,20 +157,29 @@ NER_MODELS = {
 
 OCR_CONFIGS = {
     "English Only": {
+        "engine": "easyocr",
         "languages": ["en"],
         "description": "Fastest - English text only",
     },
     "English + Spanish": {
+        "engine": "easyocr",
         "languages": ["en", "es"],
         "description": "English and Spanish text recognition",
     },
     "English + Chinese": {
+        "engine": "easyocr",
         "languages": ["en", "ch_sim"],
         "description": "English and Simplified Chinese text",
     },
     "Multi-Language": {
+        "engine": "easyocr",
         "languages": ["en", "es", "fr", "de", "it", "pt"],
         "description": "Common European languages (slower)",
+    },
+    "PaddleOCR (Layout Analysis)": {
+        "engine": "paddleocr",
+        "languages": ["en"],
+        "description": "Advanced layout analysis with PaddleOCR (CPU)",
     },
 }
 
@@ -258,26 +273,53 @@ def load_ner_model(model_name="BERT Base NER"):
 
 
 def load_ocr_model(config_name="English Only"):
-    """Load EasyOCR reader with specified language configuration"""
+    """Load OCR engine (EasyOCR or PaddleOCR) with specified configuration"""
     global ocr_readers
     
-    if not EASYOCR_AVAILABLE or not PILLOW_AVAILABLE:
+    if not PILLOW_AVAILABLE:
         raise HTTPException(
             status_code=503, 
-            detail="OCR dependencies not installed. Please install: pip install easyocr Pillow"
+            detail="PIL/Pillow not installed. Please install: pip install Pillow"
         )
     
     if config_name not in OCR_CONFIGS:
         raise HTTPException(status_code=400, detail=f"Invalid OCR configuration: {config_name}")
     
-    languages = tuple(OCR_CONFIGS[config_name]["languages"])
+    config = OCR_CONFIGS[config_name]
+    engine = config["engine"]
     
-    if languages not in ocr_readers:
-        try:
-            ocr_readers[languages] = easyocr.Reader(list(languages), gpu=False)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error loading OCR model: {str(e)}")
-    return ocr_readers[languages]
+    if engine == "easyocr":
+        if not EASYOCR_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="EasyOCR not installed. Please install: pip install easyocr"
+            )
+        
+        languages = tuple(config["languages"])
+        
+        if languages not in ocr_readers:
+            try:
+                ocr_readers[languages] = easyocr.Reader(list(languages), gpu=False)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error loading EasyOCR: {str(e)}")
+        return ocr_readers[languages]
+    
+    elif engine == "paddleocr":
+        if not PADDLEOCR_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="PaddleOCR not installed. Please install: pip install paddleocr"
+            )
+        
+        if "paddleocr" not in ocr_readers:
+            try:
+                ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
+        return ocr_readers["paddleocr"]
+    
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
 
 
 def format_prompt(messages: List[Dict], tokenizer):
@@ -463,22 +505,54 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
         contents = await file.read()
         if not PILLOW_AVAILABLE:
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
-        image = Image.open(io.BytesIO(contents))
         
-        results = ocr_model.readtext(image)
+        engine = OCR_CONFIGS[config]["engine"]
+        
+        if engine == "easyocr":
+            image = Image.open(io.BytesIO(contents))
+            results = ocr_model.readtext(image)
+            
+            extracted_text = " ".join([text for (bbox, text, conf) in results])
+            
+            bounding_boxes = []
+            for (bbox, text, confidence) in results:
+                bounding_boxes.append({
+                    "text": text,
+                    "confidence": float(confidence),
+                    "bbox": [[int(point[0]), int(point[1])] for point in bbox]
+                })
+        
+        elif engine == "paddleocr":
+            import numpy as np
+            image = Image.open(io.BytesIO(contents))
+            img_array = np.array(image)
+            
+            results = ocr_model.ocr(img_array, cls=True)
+            
+            extracted_text_parts = []
+            bounding_boxes = []
+            
+            if results and results[0]:
+                for line in results[0]:
+                    bbox_coords = line[0]
+                    text_info = line[1]
+                    text = text_info[0]
+                    confidence = text_info[1]
+                    
+                    extracted_text_parts.append(text)
+                    bounding_boxes.append({
+                        "text": text,
+                        "confidence": float(confidence),
+                        "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
+                    })
+            
+            extracted_text = " ".join(extracted_text_parts)
+        
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
         
         end_time = time.time()
         processing_time = end_time - start_time
-        
-        extracted_text = " ".join([text for (bbox, text, conf) in results])
-        
-        bounding_boxes = []
-        for (bbox, text, confidence) in results:
-            bounding_boxes.append({
-                "text": text,
-                "confidence": float(confidence),
-                "bbox": [[int(point[0]), int(point[1])] for point in bbox]
-            })
         
         # Save to history
         ocr_id = save_ocr_analysis(
@@ -488,14 +562,14 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
             bounding_boxes,
             config,
             processing_time,
-            len(results)
+            len(bounding_boxes)
         )
         
         return {
             "text": extracted_text,
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
-            "num_detections": len(results),
+            "num_detections": len(bounding_boxes),
             "config": config,
             "id": ocr_id
         }
