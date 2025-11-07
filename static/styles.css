@@ -656,7 +656,7 @@ body {
     height: 100%;
 }
 
-#chat-tab {
+#chat-tab.active {
     display: flex;
     overflow: hidden;
 }
