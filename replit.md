@@ -198,6 +198,11 @@ Access at: `http://0.0.0.0:5000`
 - ✅ Fixed duplicate spinner issue - removed explicit spinner, uses Streamlit's automatic cache spinner only
 - ✅ Fixed SSE parsing and formatting in FastAPI backend
 - ✅ Fixed example prompts recreation after clearing chat
+- ✅ Added Stop button to abort generation in progress
+- ✅ Improved mobile header spacing (70px padding-left)
+- ✅ Shortened mobile title to "LLM Comparison" to prevent wrapping
+- ✅ Replaced Advanced Settings triangle with rotating chevron (›)
+- ✅ Fixed Advanced Settings bottom padding (only added when expanded)
 **Status:** ✅ All resolved
 
 ## Performance Characteristics

@@ -2,6 +2,7 @@ let sessionId = generateUUID();
 let messages = [];
 let selectedModel = 'Qwen 2.5 0.5B';
 let isGenerating = false;
+let currentReader = null;
 
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
@@ -249,7 +250,8 @@ async function sendMessage(userMessage) {
     if (!userMessage.trim() || isGenerating) return;
     
     isGenerating = true;
-    document.getElementById('send-btn').disabled = true;
+    document.getElementById('send-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display = 'inline-block';
     document.getElementById('chat-input').disabled = true;
     
     messages.push({
@@ -288,12 +290,12 @@ async function sendMessage(userMessage) {
             })
         });
         
-        const reader = response.body.getReader();
+        currentReader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         
         while (true) {
-            const { done, value } = await reader.read();
+            const { done, value } = await currentReader.read();
             if (done) break;
             
             buffer += decoder.decode(value, { stream: true });
@@ -351,13 +353,25 @@ async function sendMessage(userMessage) {
         
     } catch (error) {
         console.error('Error sending message:', error);
-        document.getElementById('streaming-content').textContent = 
-            `Error: ${error.message}`;
+        const streamingContent = document.getElementById('streaming-content');
+        if (streamingContent) {
+            streamingContent.textContent = error.name === 'AbortError' ? 
+                'Generation stopped by user' : `Error: ${error.message}`;
+        }
     } finally {
+        currentReader = null;
         isGenerating = false;
-        document.getElementById('send-btn').disabled = false;
+        document.getElementById('send-btn').style.display = 'inline-block';
+        document.getElementById('stop-btn').style.display = 'none';
         document.getElementById('chat-input').disabled = false;
         document.getElementById('chat-input').value = '';
+    }
+}
+
+function stopGeneration() {
+    if (currentReader) {
+        currentReader.cancel();
+        currentReader = null;
     }
 }
 
@@ -374,6 +388,10 @@ function setupEventListeners() {
     
     sendBtn.addEventListener('click', () => {
         sendMessage(chatInput.value);
+    });
+    
+    document.getElementById('stop-btn').addEventListener('click', () => {
+        stopGeneration();
     });
     
     document.getElementById('clear-chat-btn').addEventListener('click', async () => {

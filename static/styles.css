@@ -165,6 +165,10 @@ body {
     margin-bottom: 8px;
 }
 
+.header h1 .short-title {
+    display: none;
+}
+
 .header p {
     color: #666;
     font-size: 14px;
@@ -338,7 +342,7 @@ body {
 
 .advanced-settings {
     margin-top: 20px;
-    padding: 15px;
+    padding: 15px 15px 0 15px;
     background: #f8f9fa;
     border-radius: 8px;
 }
@@ -347,6 +351,30 @@ body {
     cursor: pointer;
     font-weight: 500;
     margin-bottom: 15px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.advanced-settings summary::-webkit-details-marker {
+    display: none;
+}
+
+.advanced-settings summary::before {
+    content: '›';
+    font-size: 20px;
+    font-weight: bold;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+.advanced-settings[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.advanced-settings[open] {
+    padding-bottom: 15px;
 }
 
 .btn {
@@ -380,6 +408,15 @@ body {
 
 .btn-secondary:hover {
     background: #5a6268;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
 }
 
 .loading {
@@ -515,7 +552,19 @@ body {
     
     .header {
         position: relative;
-        padding-left: 50px;
+        padding-left: 70px;
+    }
+    
+    .header h1 {
+        font-size: 20px;
+    }
+    
+    .header h1 .full-title {
+        display: none;
+    }
+    
+    .header h1 .short-title {
+        display: inline;
     }
     
     .header-content {
