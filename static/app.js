@@ -42,6 +42,8 @@ async function init() {
     await loadConversationList();
     setupEventListeners();
     setupNERExamples();
+    setupOCRExamples();
+    setupLayoutExamples();
 }
 
 async function loadModels() {
@@ -1198,6 +1200,56 @@ function setupNERExamples() {
             const text = btn.dataset.nerText;
             document.getElementById('ner-text-input').value = text;
             document.getElementById('ner-submit-btn').click();
+        });
+    });
+}
+
+async function setupOCRExamples() {
+    const exampleBtns = document.querySelectorAll('[data-ocr-image]');
+    exampleBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const imageUrl = btn.dataset.ocrImage;
+            try {
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const file = new File([blob], imageUrl.split('/').pop(), { type: blob.type });
+                
+                ocrFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('ocr-preview-img').src = e.target.result;
+                    document.getElementById('ocr-preview').style.display = 'block';
+                    document.getElementById('ocr-submit-btn').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Error loading sample image:', error);
+            }
+        });
+    });
+}
+
+async function setupLayoutExamples() {
+    const exampleBtns = document.querySelectorAll('[data-layout-image]');
+    exampleBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const imageUrl = btn.dataset.layoutImage;
+            try {
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const file = new File([blob], imageUrl.split('/').pop(), { type: blob.type });
+                
+                layoutFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('layout-preview-img').src = e.target.result;
+                    document.getElementById('layout-preview').style.display = 'block';
+                    document.getElementById('layout-submit-btn').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Error loading sample image:', error);
+            }
         });
     });
 }
