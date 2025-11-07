@@ -45,6 +45,7 @@ async function init() {
     setupEventListeners();
     setupNERExamples();
     setupOCRExamples();
+    closeMobileMenuHelper();
 }
 
 async function loadModels() {
