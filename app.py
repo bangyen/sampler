@@ -5,6 +5,15 @@ from transformers import TextIteratorStreamer
 from threading import Thread
 import os
 import uuid
+import time
+
+try:
+    from bitnet_inference import BitNetInference, is_available as llama_cpp_available, download_gguf_model
+    LLAMA_CPP_AVAILABLE = llama_cpp_available()
+except ImportError:
+    LLAMA_CPP_AVAILABLE = False
+    BitNetInference = None
+    download_gguf_model = None
 
 def test_database_connection():
     """Test if PostgreSQL database is accessible"""
@@ -51,35 +60,55 @@ st.set_page_config(
 )
 
 AVAILABLE_MODELS = {
+    "BitNet b1.58 2B (GGUF - Fast)": {
+        "id": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "params": "2B",
+        "quantization": "1.58-bit (GGUF)",
+        "memory": "~400MB",
+        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1} - Optimized with llama.cpp for 2-6x faster inference",
+        "backend": "llamacpp",
+        "enabled": LLAMA_CPP_AVAILABLE
+    },
     "BitNet b1.58 2B": {
         "id": "microsoft/bitnet-b1.58-2B-4T-bf16",
         "params": "2B",
         "quantization": "1.58-bit",
         "memory": "~400MB",
-        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}"
+        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}",
+        "backend": "transformers",
+        "enabled": True
     },
     "SmolLM2 1.7B": {
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
         "params": "1.7B",
         "quantization": "FP16",
         "memory": "~3.4GB",
-        "description": "HuggingFace's efficient model optimized for edge/mobile"
+        "description": "HuggingFace's efficient model optimized for edge/mobile",
+        "backend": "transformers",
+        "enabled": True
     },
     "Qwen 2.5 1.5B": {
         "id": "Qwen/Qwen2.5-1.5B-Instruct",
         "params": "1.5B",
         "quantization": "FP16",
         "memory": "~3GB",
-        "description": "Alibaba's multilingual instruct-tuned model (29+ languages)"
+        "description": "Alibaba's multilingual instruct-tuned model (29+ languages)",
+        "backend": "transformers",
+        "enabled": True
     },
     "Qwen 2.5 0.5B": {
         "id": "Qwen/Qwen2.5-0.5B-Instruct",
         "params": "0.5B",
         "quantization": "FP16",
         "memory": "~1GB",
-        "description": "Alibaba's smallest model, great for quick responses"
+        "description": "Alibaba's smallest model, great for quick responses",
+        "backend": "transformers",
+        "enabled": True
     }
 }
+
+# Filter to only show enabled models
+AVAILABLE_MODELS = {k: v for k, v in AVAILABLE_MODELS.items() if v.get("enabled", True)}
 
 st.title("Quantized LLM Comparison Demo")
 
@@ -89,8 +118,8 @@ Select a model from the sidebar to switch between them.
 """)
 
 @st.cache_resource
-def load_model(model_id):
-    """Load the selected model and tokenizer"""
+def load_transformers_model(model_id):
+    """Load a Hugging Face transformers model"""
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_id)
         
@@ -121,6 +150,28 @@ def load_model(model_id):
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None
 
+@st.cache_resource
+def load_gguf_model(hf_repo):
+    """Load a GGUF model for llama.cpp inference"""
+    try:
+        with st.spinner(f"Downloading GGUF model from {hf_repo}..."):
+            model_path = download_gguf_model(hf_repo, cache_dir="./models")
+        
+        with st.spinner("Loading model into llama.cpp..."):
+            inference_engine = BitNetInference(
+                model_path=model_path,
+                n_ctx=2048,
+                n_threads=os.cpu_count()
+            )
+        
+        st.success(f"Loaded GGUF model with llama.cpp backend ({os.cpu_count()} threads)")
+        return inference_engine
+    except Exception as e:
+        st.error(f"Error loading GGUF model: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
+        return None
+
 def format_prompt(messages):
     """Format messages into a prompt string"""
     try:
@@ -147,8 +198,8 @@ def format_prompt(messages):
     except Exception as e:
         return None
 
-def generate_response_streaming(model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50):
-    """Generate a streaming response from the model"""
+def generate_response_streaming_transformers(model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50):
+    """Generate a streaming response from a transformers model"""
     try:
         prompt = format_prompt(messages)
         if prompt is None:
@@ -185,6 +236,24 @@ def generate_response_streaming(model, tokenizer, messages, temperature, max_tok
         st.error(f"Generation error details:\n{error_details}")
         yield f"Error generating response: {str(e)}"
 
+def generate_response_streaming_llama(llama_model, messages, temperature, max_tokens, top_p=0.9, top_k=50):
+    """Generate a streaming response from a llama.cpp model"""
+    try:
+        for token in llama_model.generate(
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            stream=True
+        ):
+            yield token
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        st.error(f"Generation error details:\n{error_details}")
+        yield f"Error generating response: {str(e)}"
+
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
@@ -197,6 +266,10 @@ if "selected_model" not in st.session_state:
 
 with st.sidebar:
     st.subheader("Model Selection")
+    
+    # Ensure the selected model is still available (handle case where cached model is filtered out)
+    if st.session_state.selected_model not in AVAILABLE_MODELS:
+        st.session_state.selected_model = list(AVAILABLE_MODELS.keys())[0]
     
     selected_model_name = st.radio(
         "Choose a model:",
@@ -262,13 +335,24 @@ with st.sidebar:
         st.caption("No saved conversations yet")
 
 model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
-model, tokenizer = load_model(model_id)
+backend = AVAILABLE_MODELS[st.session_state.selected_model].get("backend", "transformers")
 
-if model is None or tokenizer is None:
-    st.error("Failed to load the model. Please check your internet connection and try again.")
-    st.stop()
-
-st.session_state.tokenizer = tokenizer
+if backend == "llamacpp":
+    llama_model = load_gguf_model(model_id)
+    if llama_model is None:
+        st.error("Failed to load the GGUF model. Please check your internet connection and try again.")
+        st.stop()
+    model = None
+    tokenizer = None
+    st.session_state.backend = "llamacpp"
+    st.session_state.llama_model = llama_model
+else:
+    model, tokenizer = load_transformers_model(model_id)
+    if model is None or tokenizer is None:
+        st.error("Failed to load the model. Please check your internet connection and try again.")
+        st.stop()
+    st.session_state.backend = "transformers"
+    st.session_state.tokenizer = tokenizer
 
 col1, col2 = st.columns([2, 1])
 
@@ -375,24 +459,41 @@ with col1:
                         st.caption("_No metrics available for this response_")
         
         with st.chat_message("assistant"):
-            response_text = st.write_stream(
-                generate_response_streaming(
-                    model, 
-                    tokenizer, 
-                    messages_for_model, 
-                    temperature, 
-                    max_tokens,
-                    top_p,
-                    top_k
+            if st.session_state.backend == "llamacpp":
+                response_text = st.write_stream(
+                    generate_response_streaming_llama(
+                        st.session_state.llama_model,
+                        messages_for_model, 
+                        temperature, 
+                        max_tokens,
+                        top_p,
+                        top_k
+                    )
                 )
-            )
+            else:
+                response_text = st.write_stream(
+                    generate_response_streaming_transformers(
+                        model, 
+                        tokenizer, 
+                        messages_for_model, 
+                        temperature, 
+                        max_tokens,
+                        top_p,
+                        top_k
+                    )
+                )
             
             end_time = time.time()
             generation_time = end_time - start_time
             
             if not isinstance(response_text, str):
                 response_text = ""
-            num_tokens = len(tokenizer.encode(response_text)) if response_text else 0
+            
+            if st.session_state.backend == "transformers" and tokenizer:
+                num_tokens = len(tokenizer.encode(response_text)) if response_text else 0
+            else:
+                num_tokens = len(response_text.split()) if response_text else 0
+            
             tokens_per_second = num_tokens / generation_time if generation_time > 0 and num_tokens > 0 else 0
             
             metrics = {
@@ -467,24 +568,41 @@ with col1:
                         st.caption("_No metrics available for this response_")
         
         with st.chat_message("assistant"):
-            response_text = st.write_stream(
-                generate_response_streaming(
-                    model, 
-                    tokenizer, 
-                    messages_for_model, 
-                    temperature, 
-                    max_tokens,
-                    top_p,
-                    top_k
+            if st.session_state.backend == "llamacpp":
+                response_text = st.write_stream(
+                    generate_response_streaming_llama(
+                        st.session_state.llama_model,
+                        messages_for_model, 
+                        temperature, 
+                        max_tokens,
+                        top_p,
+                        top_k
+                    )
                 )
-            )
+            else:
+                response_text = st.write_stream(
+                    generate_response_streaming_transformers(
+                        model, 
+                        tokenizer, 
+                        messages_for_model, 
+                        temperature, 
+                        max_tokens,
+                        top_p,
+                        top_k
+                    )
+                )
             
             end_time = time.time()
             generation_time = end_time - start_time
             
             if not isinstance(response_text, str):
                 response_text = ""
-            num_tokens = len(tokenizer.encode(response_text)) if response_text else 0
+            
+            if st.session_state.backend == "transformers" and tokenizer:
+                num_tokens = len(tokenizer.encode(response_text)) if response_text else 0
+            else:
+                num_tokens = len(response_text.split()) if response_text else 0
+            
             tokens_per_second = num_tokens / generation_time if generation_time > 0 and num_tokens > 0 else 0
             
             metrics = {

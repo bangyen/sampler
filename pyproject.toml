@@ -15,12 +15,18 @@ dependencies = [
     "psycopg2-binary>=2.9.0",
     "easyocr",
     "Pillow>=10.0.0",
+    "llama-cpp-python>=0.2.0",
+    "huggingface-hub",
+    "streamlit>=1.28.0",
 ]
 
 [[tool.uv.index]]
 explicit = true
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
+
+[tool.uv]
+environments = ["python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'linux'"]
 
 [tool.uv.sources]
 AA-module = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
