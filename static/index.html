@@ -7,8 +7,11 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <div class="backdrop"></div>
+    
     <div class="container">
         <aside class="sidebar">
+            <button class="close-sidebar" aria-label="Close sidebar">×</button>
             <div class="sidebar-header">
                 <h2>Model Selection</h2>
             </div>
@@ -32,8 +35,15 @@
 
         <main class="main-content">
             <div class="header">
-                <h1>Quantized LLM Comparison Demo</h1>
-                <p>Compare different quantized and efficient LLM models to see how they perform.</p>
+                <button class="hamburger-menu" aria-label="Open menu" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="header-content">
+                    <h1>Quantized LLM Comparison Demo</h1>
+                    <p>Compare different quantized and efficient LLM models to see how they perform.</p>
+                </div>
             </div>
 
             <div class="content-wrapper">

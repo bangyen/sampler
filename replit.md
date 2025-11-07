@@ -10,6 +10,7 @@ A FastAPI web application with JavaScript frontend demonstrating multiple quanti
 The application successfully runs with all core features:
 - ✅ FastAPI REST API backend with SSE streaming
 - ✅ Modern JavaScript frontend (HTML/CSS/JS)
+- ✅ **Fully responsive mobile design** with hamburger menu and off-canvas sidebar
 - ✅ Multiple model support (BitNet, SmolLM2, Qwen2.5 models)
 - ✅ Interactive chat interface with streaming responses
 - ✅ Real-time Server-Sent Events (SSE) for token streaming
@@ -137,6 +138,16 @@ Access at: `http://0.0.0.0:5000`
 - `GET /api/conversations` - List all conversations
 - `POST /api/conversations/save` - Save conversation
 - `DELETE /api/conversations/{session_id}` - Delete conversation
+
+### Mobile Responsive Design
+- **Breakpoint:** < 900px triggers mobile layout
+- **Hamburger menu:** Three-line icon in header opens sidebar
+- **Off-canvas sidebar:** Slides in from left (80vw width, max 320px)
+- **Dark backdrop:** Appears behind sidebar when open
+- **Auto-close:** Sidebar automatically closes when selecting models or conversations
+- **Manual close:** Via close button (×), backdrop click, or hamburger toggle
+- **Null-safe:** All DOM queries have proper guards to prevent errors
+- **Smooth animations:** 300ms CSS transitions for polished UX
 
 ## Dependencies
 

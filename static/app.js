@@ -3,6 +3,18 @@ let messages = [];
 let selectedModel = 'Qwen 2.5 0.5B';
 let isGenerating = false;
 
+function closeMobileMenuHelper() {
+    if (window.innerWidth <= 900) {
+        const sidebar = document.querySelector('.sidebar');
+        const backdrop = document.querySelector('.backdrop');
+        const hamburgerMenu = document.querySelector('.hamburger-menu');
+        
+        if (sidebar) sidebar.classList.remove('open');
+        if (backdrop) backdrop.classList.remove('active');
+        if (hamburgerMenu) hamburgerMenu.setAttribute('aria-expanded', 'false');
+    }
+}
+
 const settings = {
     temperature: 0.7,
     maxTokens: 150,
@@ -60,6 +72,10 @@ function selectModel(name, evt) {
     });
     
     evt.target.closest('.model-option').classList.add('selected');
+    
+    setTimeout(() => {
+        closeMobileMenuHelper();
+    }, 100);
 }
 
 async function loadConversation() {
@@ -122,6 +138,8 @@ async function loadConversationById(convSessionId) {
     sessionId = convSessionId;
     await loadConversation();
     await loadConversationList();
+    
+    closeMobileMenuHelper();
 }
 
 async function deleteConversation(convSessionId) {
@@ -370,6 +388,42 @@ function setupEventListeners() {
         messages = [];
         renderMessages();
         loadConversationList();
+        closeMobileMenuHelper();
+    });
+    
+    const hamburgerMenu = document.querySelector('.hamburger-menu');
+    const closeSidebar = document.querySelector('.close-sidebar');
+    const backdrop = document.querySelector('.backdrop');
+    const sidebar = document.querySelector('.sidebar');
+    
+    function openMobileMenu() {
+        if (!sidebar || !backdrop || !hamburgerMenu) return;
+        sidebar.classList.add('open');
+        backdrop.classList.add('active');
+        hamburgerMenu.setAttribute('aria-expanded', 'true');
+    }
+    
+    function closeMobileMenu() {
+        if (!sidebar || !backdrop || !hamburgerMenu) return;
+        sidebar.classList.remove('open');
+        backdrop.classList.remove('active');
+        hamburgerMenu.setAttribute('aria-expanded', 'false');
+    }
+    
+    if (hamburgerMenu) {
+        hamburgerMenu.addEventListener('click', openMobileMenu);
+    }
+    if (closeSidebar) {
+        closeSidebar.addEventListener('click', closeMobileMenu);
+    }
+    if (backdrop) {
+        backdrop.addEventListener('click', closeMobileMenu);
+    }
+    
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) {
+            closeMobileMenu();
+        }
     });
     
     const temperatureSlider = document.getElementById('temperature-slider');
