@@ -41,6 +41,7 @@ async function init() {
     await loadConversation();
     await loadConversationList();
     setupEventListeners();
+    setupNERExamples();
 }
 
 async function loadModels() {
@@ -328,7 +329,7 @@ function escapeHtml(text) {
 }
 
 async function sendMessage(userMessage) {
-    if (!userMessage.trim() || isGenerating) return;
+    if (!userMessage || !userMessage.trim() || isGenerating) return;
     
     isGenerating = true;
     document.getElementById('send-btn').style.display = 'none';
@@ -615,6 +616,7 @@ function setupEventListeners() {
     setupTabs();
     setupNER();
     setupOCR();
+    setupLayoutTab();
 }
 
 function setupTabs() {
@@ -638,6 +640,8 @@ function setupTabs() {
                 loadNERHistory();
             } else if (targetTab === 'ocr') {
                 loadOCRHistory();
+            } else if (targetTab === 'layout') {
+                loadLayoutHistory();
             }
         });
     });
@@ -997,6 +1001,208 @@ async function deleteOCRAnalysis(ocrId) {
     } catch (error) {
         console.error('Error deleting OCR analysis:', error);
     }
+}
+
+function setupLayoutTab() {
+    const dropZone = document.getElementById('layout-drop-zone');
+    const fileInput = document.getElementById('layout-file-input');
+    const submitBtn = document.getElementById('layout-submit-btn');
+    const previewDiv = document.getElementById('layout-preview');
+    const previewImg = document.getElementById('layout-preview-img');
+    
+    let selectedFile = null;
+    
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#4a9eff';
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = '#ddd';
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ddd';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelection(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelection(e.target.files[0]);
+        }
+    });
+    
+    function handleFileSelection(file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            previewDiv.style.display = 'block';
+            submitBtn.style.display = 'inline-block';
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    submitBtn.addEventListener('click', async () => {
+        if (!selectedFile) {
+            alert('Please select an image first');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Analyzing...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            const response = await fetch('/api/layout', {
+                method: 'POST',
+                body: formData
+            });
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                const textData = await response.text();
+                displayLayoutError(textData || 'Error analyzing layout');
+                return;
+            }
+            
+            if (!response.ok) {
+                displayLayoutError(data.detail || 'Error analyzing layout');
+                return;
+            }
+            
+            displayLayoutResults(data);
+        } catch (error) {
+            console.error('Layout analysis error:', error);
+            displayLayoutError('Network error. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Analyze Layout';
+        }
+    });
+}
+
+function displayLayoutError(message) {
+    const resultsDiv = document.getElementById('layout-results');
+    const textDiv = document.getElementById('layout-text');
+    const metricsDiv = document.getElementById('layout-metrics');
+    
+    resultsDiv.style.display = 'block';
+    textDiv.innerHTML = `<div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;"><strong>Error:</strong> ${message}</div>`;
+    metricsDiv.innerHTML = '';
+}
+
+function displayLayoutResults(data) {
+    const resultsDiv = document.getElementById('layout-results');
+    const textDiv = document.getElementById('layout-text');
+    const metricsDiv = document.getElementById('layout-metrics');
+    
+    resultsDiv.style.display = 'block';
+    
+    if (data.text) {
+        textDiv.textContent = data.text;
+        metricsDiv.innerHTML = `
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+            <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+        `;
+    } else {
+        textDiv.textContent = 'No text detected in the document.';
+        metricsDiv.innerHTML = `
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+        `;
+    }
+    
+    loadLayoutHistory();
+}
+
+async function loadLayoutHistory() {
+    try {
+        const response = await fetch('/api/layout/history');
+        const data = await response.json();
+        
+        const historyList = document.getElementById('layout-history-list');
+        historyList.innerHTML = '';
+        
+        if (!data.analyses || data.analyses.length === 0) {
+            historyList.innerHTML = '<small style="color: #888;">No analyses yet</small>';
+            return;
+        }
+        
+        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} analysis/analyses</small>`;
+        
+        data.analyses.forEach(analysis => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            
+            const btn = document.createElement('button');
+            btn.className = 'conversation-btn';
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
+                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections</div>
+            `;
+            btn.onclick = () => loadLayoutAnalysis(analysis.id);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteLayoutAnalysis(analysis.id);
+            };
+            
+            item.appendChild(btn);
+            item.appendChild(deleteBtn);
+            historyList.appendChild(item);
+        });
+    } catch (error) {
+        console.error('Error loading layout history:', error);
+    }
+}
+
+async function loadLayoutAnalysis(layoutId) {
+    try {
+        const response = await fetch(`/api/layout/history/${layoutId}`);
+        const data = await response.json();
+        
+        displayLayoutResults(data);
+        
+        closeMobileMenuHelper();
+    } catch (error) {
+        console.error('Error loading layout analysis:', error);
+    }
+}
+
+async function deleteLayoutAnalysis(layoutId) {
+    try {
+        await fetch(`/api/layout/history/${layoutId}`, {
+            method: 'DELETE'
+        });
+        
+        await loadLayoutHistory();
+    } catch (error) {
+        console.error('Error deleting layout analysis:', error);
+    }
+}
+
+function setupNERExamples() {
+    const exampleBtns = document.querySelectorAll('[data-ner-text]');
+    exampleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const text = btn.dataset.nerText;
+            document.getElementById('ner-text-input').value = text;
+            document.getElementById('ner-submit-btn').click();
+        });
+    });
 }
 
 document.addEventListener('DOMContentLoaded', init);

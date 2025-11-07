@@ -68,6 +68,21 @@
                     </div>
                 </div>
             </div>
+
+            <div id="layout-sidebar" class="sidebar-content" data-sidebar="layout" style="display: none;">
+                <div class="sidebar-header">
+                    <h2>Layout Analysis Options</h2>
+                    <p style="font-size: 13px; color: #888; margin-top: 10px;">Using PaddleOCR for advanced document analysis</p>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="sidebar-section">
+                    <h3>Recent Analyses</h3>
+                    <div id="layout-history-list" class="conversation-list">
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <main class="main-content">
@@ -84,9 +99,10 @@
             </div>
 
             <div class="tabs">
-                <button class="tab-btn active" data-tab="chat">LLM Chat</button>
+                <button class="tab-btn active" data-tab="chat">LLM</button>
                 <button class="tab-btn" data-tab="ner">NER</button>
                 <button class="tab-btn" data-tab="ocr">OCR</button>
+                <button class="tab-btn" data-tab="layout">Layout Analysis</button>
             </div>
 
             <div class="content-wrapper">
@@ -164,6 +180,16 @@
                             <p>Extract entities like people, organizations, and locations from text</p>
                         </div>
                         
+                        <div class="example-prompts" style="margin-bottom: 20px;">
+                            <div class="info-message">Try one of these example texts:</div>
+                            <div class="example-grid">
+                                <button class="example-prompt" data-ner-text="Apple Inc. was founded by Steve Jobs in Cupertino, California.">Company founding story</button>
+                                <button class="example-prompt" data-ner-text="Microsoft was established by Bill Gates and Paul Allen in Seattle, Washington.">Tech company history</button>
+                                <button class="example-prompt" data-ner-text="The United Nations headquarters is located in New York City.">Organization location</button>
+                                <button class="example-prompt" data-ner-text="Albert Einstein was born in Germany and later moved to the United States.">Person biography</button>
+                            </div>
+                        </div>
+                        
                         <div class="ner-input-section">
                             <label for="ner-text-input">Input Text:</label>
                             <textarea id="ner-text-input" placeholder="Enter or paste text here to extract entities..." rows="8"></textarea>
@@ -185,6 +211,16 @@
                             <p>Extract text from images using OCR</p>
                         </div>
                         
+                        <div class="example-prompts" style="margin-bottom: 20px;">
+                            <div class="info-message">Try uploading one of these types of images:</div>
+                            <div class="example-grid">
+                                <div class="example-prompt">Scanned documents</div>
+                                <div class="example-prompt">Screenshots with text</div>
+                                <div class="example-prompt">Photos of signs</div>
+                                <div class="example-prompt">Handwritten notes</div>
+                            </div>
+                        </div>
+                        
                         <div class="ocr-upload-section">
                             <div id="ocr-drop-zone" class="drop-zone">
                                 <p>Drag and drop an image here, or click to select</p>
@@ -202,6 +238,44 @@
                             <h3>Extracted Text</h3>
                             <div id="ocr-text" class="extracted-text"></div>
                             <div id="ocr-metrics" class="metrics-display"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="layout-tab" class="tab-content">
+                    <div class="layout-container">
+                        <div class="layout-header">
+                            <h2>Layout Analysis</h2>
+                            <p>Advanced document layout analysis with PaddleOCR</p>
+                        </div>
+                        
+                        <div class="example-prompts" style="margin-bottom: 20px;">
+                            <div class="info-message">Best for analyzing:</div>
+                            <div class="example-grid">
+                                <div class="example-prompt">Complex documents</div>
+                                <div class="example-prompt">Multi-column layouts</div>
+                                <div class="example-prompt">Tables and forms</div>
+                                <div class="example-prompt">Mixed content pages</div>
+                            </div>
+                        </div>
+                        
+                        <div class="layout-upload-section">
+                            <div id="layout-drop-zone" class="drop-zone">
+                                <p>Drag and drop a document image here, or click to select</p>
+                                <input type="file" id="layout-file-input" accept="image/*" style="display: none;">
+                            </div>
+                            <button id="layout-submit-btn" class="btn btn-primary" style="display: none;">Analyze Layout</button>
+                        </div>
+                        
+                        <div id="layout-preview" class="layout-preview" style="display: none;">
+                            <h3>Image Preview</h3>
+                            <img id="layout-preview-img" alt="Preview">
+                        </div>
+                        
+                        <div id="layout-results" class="layout-results" style="display: none;">
+                            <h3>Extracted Text</h3>
+                            <div id="layout-text" class="extracted-text"></div>
+                            <div id="layout-metrics" class="metrics-display"></div>
                         </div>
                     </div>
                 </div>

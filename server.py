@@ -100,6 +100,13 @@ from ocr_storage import (
     delete_ocr_analysis,
 )
 
+from layout_storage import (
+    save_layout_analysis,
+    load_layout_analysis,
+    get_all_layout_analyses,
+    delete_layout_analysis,
+)
+
 
 app = FastAPI(title="Quantized LLM Comparison API")
 
@@ -176,10 +183,13 @@ OCR_CONFIGS = {
         "languages": ["en", "es", "fr", "de", "it", "pt"],
         "description": "Common European languages (slower)",
     },
-    "PaddleOCR (Layout Analysis)": {
+}
+
+LAYOUT_CONFIG = {
+    "PaddleOCR": {
         "engine": "paddleocr",
         "languages": ["en"],
-        "description": "Advanced layout analysis with PaddleOCR (CPU)",
+        "description": "Advanced layout analysis with PaddleOCR (CPU-optimized)",
     },
 }
 
@@ -425,6 +435,14 @@ async def get_ocr_configs():
     }
 
 
+@app.get("/api/layout/config")
+async def get_layout_config():
+    """Get layout analysis configuration"""
+    return {
+        "config": LAYOUT_CONFIG
+    }
+
+
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest, raw_request: Request):
     """Stream chat completions"""
@@ -658,6 +676,106 @@ async def get_ocr_analysis(ocr_id: str):
 async def delete_ocr(ocr_id: str):
     """Delete an OCR analysis"""
     success = delete_ocr_analysis(ocr_id)
+    return {"success": success}
+
+
+@app.post("/api/layout")
+async def analyze_layout(file: UploadFile = File(...)):
+    """Analyze document layout using PaddleOCR"""
+    try:
+        # Use PaddleOCR config
+        if not PADDLEOCR_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="PaddleOCR not installed. Please install: pip install paddleocr"
+            )
+        
+        if not PILLOW_AVAILABLE:
+            raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
+        
+        # Load PaddleOCR model
+        if "paddleocr" not in ocr_readers:
+            try:
+                ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
+        
+        ocr_model = ocr_readers["paddleocr"]
+        start_time = time.time()
+        
+        contents = await file.read()
+        
+        import numpy as np
+        image = Image.open(io.BytesIO(contents))
+        img_array = np.array(image)
+        
+        results = ocr_model.ocr(img_array, cls=True)
+        
+        extracted_text_parts = []
+        bounding_boxes = []
+        
+        if results and results[0]:
+            for line in results[0]:
+                bbox_coords = line[0]
+                text_info = line[1]
+                text = text_info[0]
+                confidence = text_info[1]
+                
+                extracted_text_parts.append(text)
+                bounding_boxes.append({
+                    "text": text,
+                    "confidence": float(confidence),
+                    "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
+                })
+        
+        extracted_text = " ".join(extracted_text_parts)
+        
+        end_time = time.time()
+        processing_time = end_time - start_time
+        
+        # Save to history
+        layout_id = save_layout_analysis(
+            contents,
+            file.filename,
+            extracted_text,
+            bounding_boxes,
+            processing_time,
+            len(bounding_boxes)
+        )
+        
+        return {
+            "text": extracted_text,
+            "bounding_boxes": bounding_boxes,
+            "processing_time": processing_time,
+            "num_detections": len(bounding_boxes),
+            "id": layout_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during layout analysis: {str(e)}")
+
+
+@app.get("/api/layout/history")
+async def list_layout_analyses():
+    """List all layout analyses"""
+    analyses = get_all_layout_analyses()
+    return {"analyses": analyses}
+
+
+@app.get("/api/layout/history/{layout_id}")
+async def get_layout_analysis_by_id(layout_id: str):
+    """Load a specific layout analysis"""
+    analysis = load_layout_analysis(layout_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Layout analysis not found")
+    return analysis
+
+
+@app.delete("/api/layout/history/{layout_id}")
+async def delete_layout_analysis_by_id(layout_id: str):
+    """Delete a layout analysis"""
+    success = delete_layout_analysis(layout_id)
     return {"success": success}
 
 
