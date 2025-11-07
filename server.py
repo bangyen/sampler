@@ -35,6 +35,34 @@ except ImportError:
     PILLOW_AVAILABLE = False
 
 try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
+
+try:
+    from surya.ocr import run_ocr
+    from surya.model.detection.model import load_model as load_det_model, load_processor as load_det_processor
+    from surya.model.recognition.model import load_model as load_rec_model
+    from surya.model.recognition.processor import load_processor as load_rec_processor
+    SURYA_AVAILABLE = True
+except ImportError:
+    SURYA_AVAILABLE = False
+
+try:
+    from google.cloud import vision
+    GOOGLE_VISION_AVAILABLE = True
+except ImportError:
+    GOOGLE_VISION_AVAILABLE = False
+
+try:
+    from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+    from msrest.authentication import CognitiveServicesCredentials
+    AZURE_VISION_AVAILABLE = True
+except ImportError:
+    AZURE_VISION_AVAILABLE = False
+
+try:
     from database import (
         save_conversation,
         load_conversation,
@@ -163,25 +191,77 @@ NER_MODELS = {
 }
 
 OCR_CONFIGS = {
-    "English Only": {
+    "EasyOCR - English Only": {
         "engine": "easyocr",
         "languages": ["en"],
-        "description": "Fastest - English text only",
+        "description": "Fast English text extraction with EasyOCR",
+        "available": EASYOCR_AVAILABLE,
     },
-    "English + Spanish": {
+    "EasyOCR - English + Spanish": {
         "engine": "easyocr",
         "languages": ["en", "es"],
-        "description": "English and Spanish text recognition",
+        "description": "English and Spanish text with EasyOCR",
+        "available": EASYOCR_AVAILABLE,
     },
-    "English + Chinese": {
+    "EasyOCR - English + Chinese": {
         "engine": "easyocr",
         "languages": ["en", "ch_sim"],
-        "description": "English and Simplified Chinese text",
+        "description": "English and Simplified Chinese with EasyOCR",
+        "available": EASYOCR_AVAILABLE,
     },
-    "Multi-Language": {
+    "EasyOCR - Multi-Language": {
         "engine": "easyocr",
         "languages": ["en", "es", "fr", "de", "it", "pt"],
-        "description": "Common European languages (slower)",
+        "description": "Common European languages with EasyOCR",
+        "available": EASYOCR_AVAILABLE,
+    },
+    "Tesseract - English": {
+        "engine": "tesseract",
+        "languages": ["eng"],
+        "description": "Industry-standard Tesseract OCR for English",
+        "available": TESSERACT_AVAILABLE,
+    },
+    "Tesseract - Spanish": {
+        "engine": "tesseract",
+        "languages": ["spa"],
+        "description": "Tesseract OCR optimized for Spanish",
+        "available": TESSERACT_AVAILABLE,
+    },
+    "Tesseract - French": {
+        "engine": "tesseract",
+        "languages": ["fra"],
+        "description": "Tesseract OCR optimized for French",
+        "available": TESSERACT_AVAILABLE,
+    },
+    "Tesseract - Chinese Simplified": {
+        "engine": "tesseract",
+        "languages": ["chi_sim"],
+        "description": "Tesseract OCR for Simplified Chinese",
+        "available": TESSERACT_AVAILABLE,
+    },
+    "Tesseract - Multi-Language": {
+        "engine": "tesseract",
+        "languages": ["eng+spa+fra+deu"],
+        "description": "Multi-language support with Tesseract",
+        "available": TESSERACT_AVAILABLE,
+    },
+    "Surya OCR": {
+        "engine": "surya",
+        "languages": ["multilingual"],
+        "description": "Modern efficient OCR with 90+ language support",
+        "available": SURYA_AVAILABLE,
+    },
+    "Google Cloud Vision": {
+        "engine": "google_vision",
+        "languages": ["auto"],
+        "description": "Google Cloud Vision API (requires API key)",
+        "available": GOOGLE_VISION_AVAILABLE,
+    },
+    "Azure Computer Vision": {
+        "engine": "azure_vision",
+        "languages": ["auto"],
+        "description": "Azure Computer Vision API (requires API key)",
+        "available": AZURE_VISION_AVAILABLE,
     },
 }
 
