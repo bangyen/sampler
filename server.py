@@ -111,13 +111,6 @@ from layout_storage import (
 app = FastAPI(title="Quantized LLM Comparison API")
 
 AVAILABLE_MODELS = {
-    "BitNet b1.58 2B": {
-        "id": "microsoft/bitnet-b1.58-2B-4T-bf16",
-        "params": "2B",
-        "quantization": "1.58-bit",
-        "memory": "~400MB",
-        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}",
-    },
     "SmolLM2 1.7B": {
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
         "params": "1.7B",
@@ -271,23 +264,8 @@ def load_ner_model(model_name="BERT Base NER"):
     
     if model_id not in ner_pipelines:
         try:
-            from transformers import AutoConfig
-            
             tokenizer = AutoTokenizer.from_pretrained(model_id)
-            config = AutoConfig.from_pretrained(model_id)
-            
-            try:
-                model = AutoModelForTokenClassification.from_pretrained(model_id, config=config)
-            except Exception:
-                from transformers import BertForTokenClassification, RobertaForTokenClassification
-                
-                if "bert" in model_id.lower() and "roberta" not in model_id.lower():
-                    model = BertForTokenClassification.from_pretrained(model_id)
-                elif "roberta" in model_id.lower():
-                    model = RobertaForTokenClassification.from_pretrained(model_id)
-                else:
-                    raise
-            
+            model = AutoModelForTokenClassification.from_pretrained(model_id)
             model.eval()
             ner_pipelines[model_id] = {"model": model, "tokenizer": tokenizer}
         except Exception as e:
