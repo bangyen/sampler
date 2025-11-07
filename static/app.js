@@ -734,13 +734,14 @@ function displayNERResults(data) {
     loadNERHistory();
 }
 
+let ocrSelectedFile = null;
+
 function setupOCR() {
     const dropZone = document.getElementById('ocr-drop-zone');
     const fileInput = document.getElementById('ocr-file-input');
     const submitBtn = document.getElementById('ocr-submit-btn');
     const previewDiv = document.getElementById('ocr-preview');
     const previewImg = document.getElementById('ocr-preview-img');
-    let selectedFile = null;
     
     dropZone.addEventListener('click', () => fileInput.click());
     
@@ -770,7 +771,7 @@ function setupOCR() {
     });
     
     function handleFileSelect(file) {
-        selectedFile = file;
+        ocrSelectedFile = file;
         const reader = new FileReader();
         reader.onload = (e) => {
             previewImg.src = e.target.result;
@@ -782,7 +783,7 @@ function setupOCR() {
     }
     
     submitBtn.addEventListener('click', async () => {
-        if (!selectedFile) {
+        if (!ocrSelectedFile) {
             alert('Please select an image first');
             return;
         }
@@ -792,7 +793,7 @@ function setupOCR() {
         
         try {
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            formData.append('file', ocrSelectedFile);
             
             const response = await fetch(`/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`, {
                 method: 'POST',
@@ -1002,14 +1003,14 @@ async function deleteOCRAnalysis(ocrId) {
     }
 }
 
+let layoutSelectedFile = null;
+
 function setupLayoutTab() {
     const dropZone = document.getElementById('layout-drop-zone');
     const fileInput = document.getElementById('layout-file-input');
     const submitBtn = document.getElementById('layout-submit-btn');
     const previewDiv = document.getElementById('layout-preview');
     const previewImg = document.getElementById('layout-preview-img');
-    
-    let selectedFile = null;
     
     dropZone.addEventListener('click', () => fileInput.click());
     
@@ -1038,7 +1039,7 @@ function setupLayoutTab() {
     });
     
     function handleFileSelection(file) {
-        selectedFile = file;
+        layoutSelectedFile = file;
         const reader = new FileReader();
         reader.onload = (e) => {
             previewImg.src = e.target.result;
@@ -1049,7 +1050,7 @@ function setupLayoutTab() {
     }
     
     submitBtn.addEventListener('click', async () => {
-        if (!selectedFile) {
+        if (!layoutSelectedFile) {
             alert('Please select an image first');
             return;
         }
@@ -1059,7 +1060,7 @@ function setupLayoutTab() {
         
         try {
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            formData.append('file', layoutSelectedFile);
             
             const response = await fetch('/api/layout', {
                 method: 'POST',
@@ -1214,7 +1215,7 @@ async function setupOCRExamples() {
                 const blob = await response.blob();
                 const file = new File([blob], imageUrl.split('/').pop(), { type: blob.type });
                 
-                ocrFile = file;
+                ocrSelectedFile = file;
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     document.getElementById('ocr-preview-img').src = e.target.result;
@@ -1239,7 +1240,7 @@ async function setupLayoutExamples() {
                 const blob = await response.blob();
                 const file = new File([blob], imageUrl.split('/').pop(), { type: blob.type });
                 
-                layoutFile = file;
+                layoutSelectedFile = file;
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     document.getElementById('layout-preview-img').src = e.target.result;

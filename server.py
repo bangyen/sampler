@@ -527,8 +527,10 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
         engine = OCR_CONFIGS[config]["engine"]
         
         if engine == "easyocr":
+            import numpy as np
             image = Image.open(io.BytesIO(contents))
-            results = ocr_model.readtext(image)
+            img_array = np.array(image)
+            results = ocr_model.readtext(img_array)
             
             extracted_text = " ".join([text for (bbox, text, conf) in results])
             
