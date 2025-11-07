@@ -903,7 +903,7 @@ async function loadNERAnalysis(nerId) {
         const response = await fetch(`/api/ner/history/${nerId}`);
         const data = await response.json();
         
-        document.getElementById('ner-input').value = data.text;
+        document.getElementById('ner-text-input').value = data.text;
         selectedNERModel = data.model;
         await loadNERModels();
         
