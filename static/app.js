@@ -255,7 +255,10 @@ async function loadConversationList() {
             
             const btn = document.createElement('button');
             btn.className = `conversation-btn ${conv.session_id === sessionId ? 'active' : ''}`;
-            btn.textContent = `${conv.message_count} messages`;
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${conv.first_message || 'No messages'}</div>
+                <div style="font-size: 11px; color: #888;">${conv.message_count} messages</div>
+            `;
             btn.onclick = () => loadConversationById(conv.session_id);
             
             const deleteBtn = document.createElement('button');

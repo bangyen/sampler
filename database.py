@@ -120,11 +120,20 @@ def get_all_conversations():
         result = []
         for conv in conversations:
             message_count = db_session.query(Message).filter_by(session_id=conv.session_id).count()
+            
+            first_user_message = db_session.query(Message).filter_by(
+                session_id=conv.session_id, 
+                role='user'
+            ).order_by(Message.created_at).first()
+            
+            first_message_preview = first_user_message.content[:60] if first_user_message else "No messages"
+            
             result.append({
                 "session_id": conv.session_id,
                 "created_at": conv.created_at,
                 "updated_at": conv.updated_at,
-                "message_count": message_count
+                "message_count": message_count,
+                "first_message": first_message_preview
             })
         
         db_session.close()

@@ -51,9 +51,14 @@ def get_all_conversations():
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
+                messages = data.get("messages", [])
+                first_user_message = next((msg for msg in messages if msg.get("role") == "user"), None)
+                first_message_preview = first_user_message["content"][:60] if first_user_message else "No messages"
+                
                 conversations.append({
                     "session_id": data["session_id"],
-                    "message_count": len(data.get("messages", [])),
+                    "message_count": len(messages),
+                    "first_message": first_message_preview,
                     "updated_at": datetime.fromisoformat(data.get("updated_at", datetime.utcnow().isoformat())),
                     "created_at": datetime.fromisoformat(data.get("updated_at", datetime.utcnow().isoformat()))
                 })
