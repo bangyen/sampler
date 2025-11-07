@@ -49,18 +49,6 @@ try:
 except ImportError:
     SURYA_AVAILABLE = False
 
-try:
-    from google.cloud import vision
-    GOOGLE_VISION_AVAILABLE = True
-except ImportError:
-    GOOGLE_VISION_AVAILABLE = False
-
-try:
-    from azure.cognitiveservices.vision.computervision import ComputerVisionClient
-    from msrest.authentication import CognitiveServicesCredentials
-    AZURE_VISION_AVAILABLE = True
-except ImportError:
-    AZURE_VISION_AVAILABLE = False
 
 try:
     from database import (
@@ -250,18 +238,6 @@ OCR_CONFIGS = {
         "languages": ["multilingual"],
         "description": "Modern efficient OCR with 90+ language support",
         "available": SURYA_AVAILABLE,
-    },
-    "Google Cloud Vision": {
-        "engine": "google_vision",
-        "languages": ["auto"],
-        "description": "Google Cloud Vision API (requires API key)",
-        "available": GOOGLE_VISION_AVAILABLE,
-    },
-    "Azure Computer Vision": {
-        "engine": "azure_vision",
-        "languages": ["auto"],
-        "description": "Azure Computer Vision API (requires API key)",
-        "available": AZURE_VISION_AVAILABLE,
     },
 }
 
@@ -534,23 +510,17 @@ async def get_ner_models():
 
 @app.get("/api/ocr/configs")
 async def get_ocr_configs():
-    """Get list of available OCR configurations"""
-    print(f"DEBUG: EASYOCR_AVAILABLE = {EASYOCR_AVAILABLE}")
-    print(f"DEBUG: Total OCR_CONFIGS items = {len(OCR_CONFIGS)}")
-    available_configs = {k: v for k, v in OCR_CONFIGS.items() if v.get("available", True)}
-    print(f"DEBUG: Available configs after filtering = {len(available_configs)}")
-    print(f"DEBUG: Available configs = {list(available_configs.keys())}")
+    """Get list of available OCR configurations - returns all with availability flag"""
     return {
-        "configs": available_configs
+        "configs": OCR_CONFIGS
     }
 
 
 @app.get("/api/layout/config")
 async def get_layout_config():
-    """Get layout analysis configuration"""
-    available_configs = {k: v for k, v in LAYOUT_CONFIG.items() if v.get("available", True)}
+    """Get layout analysis configuration - returns all with availability flag"""
     return {
-        "config": available_configs
+        "config": LAYOUT_CONFIG
     }
 
 
@@ -719,66 +689,6 @@ async def extract_text_from_image(file: UploadFile = File(...), config: str = "E
                     "confidence": float(pred.confidence) if hasattr(pred, 'confidence') else 1.0,
                     "bbox": [[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]]]
                 })
-            extracted_text = " ".join(extracted_text_parts)
-        
-        elif engine == "google_vision":
-            if not GOOGLE_VISION_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Google Cloud Vision not installed")
-            import os
-            if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-                raise HTTPException(status_code=503, detail="GOOGLE_APPLICATION_CREDENTIALS not set")
-            
-            client = vision.ImageAnnotatorClient()
-            image_content = vision.Image(content=contents)
-            response = client.text_detection(image=image_content)
-            
-            if response.error.message:
-                raise HTTPException(status_code=500, detail=response.error.message)
-            
-            texts = response.text_annotations
-            extracted_text = texts[0].description if texts else ""
-            
-            bounding_boxes = []
-            for text in texts[1:]:
-                vertices = text.bounding_poly.vertices
-                bounding_boxes.append({
-                    "text": text.description,
-                    "confidence": 1.0,
-                    "bbox": [[v.x, v.y] for v in vertices]
-                })
-        
-        elif engine == "azure_vision":
-            if not AZURE_VISION_AVAILABLE:
-                raise HTTPException(status_code=503, detail="Azure Computer Vision not installed")
-            import os
-            endpoint = os.getenv("AZURE_VISION_ENDPOINT")
-            key = os.getenv("AZURE_VISION_KEY")
-            if not endpoint or not key:
-                raise HTTPException(status_code=503, detail="AZURE_VISION_ENDPOINT or AZURE_VISION_KEY not set")
-            
-            client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(key))
-            read_result = client.read_in_stream(io.BytesIO(contents), raw=True)
-            operation_id = read_result.headers["Operation-Location"].split("/")[-1]
-            
-            import asyncio
-            while True:
-                result = client.get_read_result(operation_id)
-                if result.status.lower() not in ['notstarted', 'running']:
-                    break
-                await asyncio.sleep(1)
-            
-            extracted_text_parts = []
-            bounding_boxes = []
-            if result.analyze_result:
-                for page in result.analyze_result.read_results:
-                    for line in page.lines:
-                        extracted_text_parts.append(line.text)
-                        bbox = line.bounding_box
-                        bounding_boxes.append({
-                            "text": line.text,
-                            "confidence": 1.0,
-                            "bbox": [[bbox[i], bbox[i+1]] for i in range(0, len(bbox), 2)]
-                        })
             extracted_text = " ".join(extracted_text_parts)
         
         else:
