@@ -582,6 +582,8 @@ body {
     
     #chat-tab {
         flex-direction: column;
+        overflow: visible;
+        height: auto;
     }
     
     .chat-container {
