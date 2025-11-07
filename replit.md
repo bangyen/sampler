@@ -199,6 +199,7 @@ Access at: `http://0.0.0.0:5000`
 - ✅ Fixed SSE parsing and formatting in FastAPI backend
 - ✅ Fixed example prompts recreation after clearing chat
 - ✅ Added Stop button to abort generation in progress
+- ✅ Fixed Stop button perpetual loading state - now properly removes spinner and re-enables UI
 - ✅ Improved mobile header spacing (70px padding-left)
 - ✅ Shortened mobile title to "LLM Comparison" to prevent wrapping
 - ✅ Replaced Advanced Settings triangle with rotating chevron (›)

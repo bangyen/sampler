@@ -272,6 +272,7 @@ async function sendMessage(userMessage) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
     let fullResponse = '';
+    let wasAborted = false;
     const startTime = Date.now();
     
     try {
@@ -329,34 +330,81 @@ async function sendMessage(userMessage) {
             }
         }
         
-        const endTime = Date.now();
-        const generationTime = (endTime - startTime) / 1000;
+        // Remove loading spinner
+        const loadingSpinner = assistantDiv.querySelector('.loading');
+        if (loadingSpinner) {
+            loadingSpinner.remove();
+        }
         
-        const tokens = fullResponse.split(/\s+/).length;
-        const tokensPerSecond = tokens / generationTime;
-        
-        const metrics = {
-            time: generationTime,
-            tokens: tokens,
-            tokens_per_sec: tokensPerSecond
-        };
-        
-        messages.push({
-            role: 'assistant',
-            content: fullResponse,
-            metrics: metrics
-        });
-        
-        await saveConversation();
-        await loadConversationList();
-        renderMessages();
+        // Only save if we have a response
+        if (fullResponse.trim()) {
+            const endTime = Date.now();
+            const generationTime = (endTime - startTime) / 1000;
+            
+            const tokens = fullResponse.split(/\s+/).length;
+            const tokensPerSecond = tokens / generationTime;
+            
+            const metrics = {
+                time: generationTime,
+                tokens: tokens,
+                tokens_per_sec: tokensPerSecond
+            };
+            
+            messages.push({
+                role: 'assistant',
+                content: fullResponse,
+                metrics: metrics
+            });
+            
+            await saveConversation();
+            await loadConversationList();
+            renderMessages();
+        } else {
+            // No response, remove the empty assistant div
+            assistantDiv.remove();
+        }
         
     } catch (error) {
         console.error('Error sending message:', error);
+        wasAborted = error.name === 'AbortError';
+        
+        // Remove loading spinner
+        const loadingSpinner = assistantDiv.querySelector('.loading');
+        if (loadingSpinner) {
+            loadingSpinner.remove();
+        }
+        
         const streamingContent = document.getElementById('streaming-content');
         if (streamingContent) {
-            streamingContent.textContent = error.name === 'AbortError' ? 
-                'Generation stopped by user' : `Error: ${error.message}`;
+            if (wasAborted) {
+                streamingContent.textContent = 'Generation stopped by user';
+                // If we have partial response, save it
+                if (fullResponse.trim()) {
+                    const endTime = Date.now();
+                    const generationTime = (endTime - startTime) / 1000;
+                    const tokens = fullResponse.split(/\s+/).length;
+                    const tokensPerSecond = tokens / generationTime;
+                    
+                    messages.push({
+                        role: 'assistant',
+                        content: fullResponse,
+                        metrics: {
+                            time: generationTime,
+                            tokens: tokens,
+                            tokens_per_sec: tokensPerSecond
+                        }
+                    });
+                    
+                    await saveConversation();
+                    await loadConversationList();
+                    renderMessages();
+                } else {
+                    // No partial response, just remove the div after a moment
+                    setTimeout(() => assistantDiv.remove(), 1500);
+                }
+            } else {
+                streamingContent.textContent = `Error: ${error.message}`;
+            }
         }
     } finally {
         currentReader = null;
