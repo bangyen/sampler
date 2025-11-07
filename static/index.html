@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantized LLM Comparison Demo</title>
+    <title>Efficient LLM Comparison Demo</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -71,11 +71,9 @@
 
             <div id="layout-sidebar" class="sidebar-content" data-sidebar="layout" style="display: none;">
                 <div class="sidebar-header">
-                    <h2>Layout Analysis Options</h2>
-                    <p style="font-size: 13px; color: #888; margin-top: 10px;">Using PaddleOCR for advanced document analysis</p>
+                    <h2>Layout Options</h2>
+                    <p style="font-size: 13px; color: #888; margin-top: 10px;">Using PaddleOCR for document analysis</p>
                 </div>
-                
-                <div class="divider"></div>
                 
                 <div class="sidebar-section">
                     <h3>Recent Analyses</h3>
@@ -93,8 +91,8 @@
                     <span></span>
                 </button>
                 <div class="header-content">
-                    <h1><span class="full-title">Quantized LLM Comparison</span><span class="short-title">LLM Comparison</span></h1>
-                    <p>Compare different quantized and efficient LLM models to see how they perform.</p>
+                    <h1><span class="full-title">Efficient LLM Comparison</span><span class="short-title">LLM Comparison</span></h1>
+                    <p>Compare different quantized and efficient LLM models</p>
                 </div>
             </div>
 
@@ -102,7 +100,7 @@
                 <button class="tab-btn active" data-tab="chat">LLM</button>
                 <button class="tab-btn" data-tab="ner">NER</button>
                 <button class="tab-btn" data-tab="ocr">OCR</button>
-                <button class="tab-btn" data-tab="layout">Layout Analysis</button>
+                <button class="tab-btn" data-tab="layout">Layout</button>
             </div>
 
             <div class="content-wrapper">
@@ -211,16 +209,6 @@
                             <p>Extract text from images using OCR</p>
                         </div>
                         
-                        <div class="example-prompts" style="margin-bottom: 20px;">
-                            <div class="info-message">Try uploading one of these types of images:</div>
-                            <div class="example-grid">
-                                <div class="example-prompt">Scanned documents</div>
-                                <div class="example-prompt">Screenshots with text</div>
-                                <div class="example-prompt">Photos of signs</div>
-                                <div class="example-prompt">Handwritten notes</div>
-                            </div>
-                        </div>
-                        
                         <div class="ocr-upload-section">
                             <div id="ocr-drop-zone" class="drop-zone">
                                 <p>Drag and drop an image here, or click to select</p>
@@ -245,18 +233,8 @@
                 <div id="layout-tab" class="tab-content">
                     <div class="layout-container">
                         <div class="layout-header">
-                            <h2>Layout Analysis</h2>
-                            <p>Advanced document layout analysis with PaddleOCR</p>
-                        </div>
-                        
-                        <div class="example-prompts" style="margin-bottom: 20px;">
-                            <div class="info-message">Best for analyzing:</div>
-                            <div class="example-grid">
-                                <div class="example-prompt">Complex documents</div>
-                                <div class="example-prompt">Multi-column layouts</div>
-                                <div class="example-prompt">Tables and forms</div>
-                                <div class="example-prompt">Mixed content pages</div>
-                            </div>
+                            <h2>Layout</h2>
+                            <p>Document layout analysis with PaddleOCR</p>
                         </div>
                         
                         <div class="layout-upload-section">

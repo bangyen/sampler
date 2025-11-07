@@ -51,9 +51,17 @@ def get_all_conversations():
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
+                messages = data.get("messages", [])
+                first_user_message = ""
+                for msg in messages:
+                    if msg.get("role") == "user":
+                        first_user_message = msg.get("content", "")[:50]
+                        break
+                
                 conversations.append({
                     "session_id": data["session_id"],
-                    "message_count": len(data.get("messages", [])),
+                    "message_count": len(messages),
+                    "preview": first_user_message,
                     "updated_at": datetime.fromisoformat(data.get("updated_at", datetime.utcnow().isoformat())),
                     "created_at": datetime.fromisoformat(data.get("updated_at", datetime.utcnow().isoformat()))
                 })

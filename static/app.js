@@ -191,9 +191,26 @@ async function loadConversationList() {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
+            const preview = conv.preview || `${conv.message_count} messages`;
+            const truncatedPreview = preview.length > 40 
+                ? preview.substring(0, 40) + '...' 
+                : preview;
+            
             const btn = document.createElement('button');
             btn.className = `conversation-btn ${conv.session_id === sessionId ? 'active' : ''}`;
-            btn.textContent = `${conv.message_count} messages`;
+            
+            const previewDiv = document.createElement('div');
+            previewDiv.style.fontSize = '13px';
+            previewDiv.style.marginBottom = '4px';
+            previewDiv.textContent = truncatedPreview;
+            
+            const countDiv = document.createElement('div');
+            countDiv.style.fontSize = '11px';
+            countDiv.style.color = '#888';
+            countDiv.textContent = `${conv.message_count} messages`;
+            
+            btn.appendChild(previewDiv);
+            btn.appendChild(countDiv);
             btn.onclick = () => loadConversationById(conv.session_id);
             
             const deleteBtn = document.createElement('button');
@@ -877,12 +894,25 @@ async function loadNERHistory() {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
+            const truncatedText = analysis.text_preview.length > 50 
+                ? analysis.text_preview.substring(0, 50) + '...' 
+                : analysis.text_preview;
+            
             const btn = document.createElement('button');
             btn.className = 'conversation-btn';
-            btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.text_preview}</div>
-                <div style="font-size: 11px; color: #888;">${analysis.entity_count} entities | ${analysis.model}</div>
-            `;
+            
+            const textDiv = document.createElement('div');
+            textDiv.style.fontSize = '13px';
+            textDiv.style.marginBottom = '4px';
+            textDiv.textContent = truncatedText;
+            
+            const metaDiv = document.createElement('div');
+            metaDiv.style.fontSize = '11px';
+            metaDiv.style.color = '#888';
+            metaDiv.textContent = `${analysis.entity_count} entities | ${analysis.model}`;
+            
+            btn.appendChild(textDiv);
+            btn.appendChild(metaDiv);
             btn.onclick = () => loadNERAnalysis(analysis.id);
             
             const deleteBtn = document.createElement('button');

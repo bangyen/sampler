@@ -28,7 +28,6 @@ body {
 
 .sidebar-header {
     padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
 }
 
 .sidebar-header h2 {
@@ -186,6 +185,7 @@ body {
     flex-direction: column;
     padding: 20px;
     overflow: hidden;
+    max-width: 800px;
 }
 
 .chat-header {
@@ -309,7 +309,9 @@ body {
     padding: 20px;
     background: white;
     border-left: 1px solid #e0e0e0;
+    border-radius: 8px;
     overflow-y: auto;
+    max-width: 400px;
 }
 
 .settings-panel h2 {
@@ -650,14 +652,16 @@ body {
 
 /* NER Styles */
 .ner-container,
-.ocr-container {
+.ocr-container,
+.layout-container {
     max-width: 900px;
     margin: 0 auto;
     padding: 30px;
 }
 
 .ner-header,
-.ocr-header {
+.ocr-header,
+.layout-header {
     margin-bottom: 30px;
 }
 
@@ -832,7 +836,8 @@ body {
     }
     
     .ner-container,
-    .ocr-container {
+    .ocr-container,
+    .layout-container {
         padding: 20px 15px;
     }
 }
