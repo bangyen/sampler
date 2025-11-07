@@ -1,18 +1,23 @@
-# BitNet LLM Demo Project
+# Quantized LLM Comparison Demo
 
 ## Project Overview
-A complete Streamlit application demonstrating Microsoft's BitNet b1.58 2B LLM, a revolutionary 1-bit Large Language Model with 2 billion parameters.
+A FastAPI web application with JavaScript frontend demonstrating multiple quantized and efficient LLM models, including Microsoft's BitNet b1.58 2B (1-bit LLM), SmolLM2, and Qwen2.5 models.
 
-## Current Status: ✅ FULLY FUNCTIONAL
+## Current Status: ✅ FULLY FUNCTIONAL (FastAPI + JavaScript Frontend)
 
-The application successfully runs with all core features implemented and working:
-- ✅ Multiple model support with selector (BitNet, SmolLM2, Qwen2.5 models)
-- ✅ BitNet model loading and inference (CPU-only)
-- ✅ Interactive chat interface
-- ✅ Real-time streaming responses
+**Major Update (November 2025):** Successfully migrated from Streamlit to FastAPI backend with JavaScript frontend while maintaining all functionality.
+
+The application successfully runs with all core features:
+- ✅ FastAPI REST API backend with SSE streaming
+- ✅ Modern JavaScript frontend (HTML/CSS/JS)
+- ✅ Multiple model support (BitNet, SmolLM2, Qwen2.5 models)
+- ✅ Interactive chat interface with streaming responses
+- ✅ Real-time Server-Sent Events (SSE) for token streaming
 - ✅ Advanced generation parameters (temperature, top-p, top-k, max tokens)
 - ✅ Performance metrics tracking (time, tokens, tokens/second)
-- ✅ Conversation persistence (JSON file-based storage - fully functional)
+- ✅ Conversation persistence (JSON file-based storage)
+- ✅ Conversation history sidebar with management
+- ✅ Default model: Qwen 2.5 0.5B (fastest, no accelerate dependency)
 
 ## Technical Implementation
 
@@ -103,11 +108,15 @@ The application successfully runs with all core features implemented and working
 
 ```
 .
-├── app.py                 # Main Streamlit application
-├── database.py            # PostgreSQL persistence (disabled)
+├── server.py              # FastAPI backend with REST API and SSE endpoints
+├── static/
+│   ├── index.html         # Main HTML page with chat interface
+│   ├── app.js            # JavaScript frontend (SSE, model selection, conversations)
+│   └── styles.css        # Modern CSS styling
+├── database.py            # PostgreSQL persistence (fallback available)
+├── json_storage.py        # JSON file-based conversation storage
 ├── pyproject.toml         # Python dependencies
-├── .streamlit/
-│   └── config.toml        # Streamlit configuration
+├── conversations/         # JSON conversation storage directory
 └── replit.md             # This file
 ```
 
@@ -116,10 +125,18 @@ The application successfully runs with all core features implemented and working
 The application automatically runs via the configured workflow:
 
 ```bash
-streamlit run app.py --server.port 5000
+python server.py
 ```
 
 Access at: `http://0.0.0.0:5000`
+
+### API Endpoints
+- `GET /` - Serves main HTML page
+- `GET /api/models` - Returns available models and persistence type
+- `POST /api/chat/stream` - SSE streaming chat endpoint
+- `GET /api/conversations` - List all conversations
+- `POST /api/conversations/save` - Save conversation
+- `DELETE /api/conversations/{session_id}` - Delete conversation
 
 ## Dependencies
 
@@ -128,7 +145,9 @@ Access at: `http://0.0.0.0:5000`
 - `psutil==7.1.3` (dependency of accelerate)
 
 ### Managed via pyproject.toml:
-- `streamlit>=1.51.0`
+- `fastapi>=0.104.0`
+- `uvicorn[standard]>=0.24.0`
+- `sse-starlette>=1.6.5`
 - `torch` (CPU-only from PyTorch index)
 - `transformers @ git+https://github.com/shumingma/transformers.git`
 - `sqlalchemy>=2.0.0` (declared but not installed)
@@ -165,6 +184,8 @@ Access at: `http://0.0.0.0:5000`
 - ✅ Added division-by-zero protection in all metrics calculations
 - ✅ Removed duplicate messages during generation
 - ✅ Fixed duplicate spinner issue - removed explicit spinner, uses Streamlit's automatic cache spinner only
+- ✅ Fixed SSE parsing and formatting in FastAPI backend
+- ✅ Fixed example prompts recreation after clearing chat
 **Status:** ✅ All resolved
 
 ## Performance Characteristics
@@ -257,12 +278,15 @@ Assistant: {assistant_response}
 
 ## Conclusion
 
-This project successfully demonstrates BitNet's revolutionary 1-bit LLM technology in a production-ready Streamlit application. Despite the database persistence limitation (due to package manager issues), all core AI features work flawlessly:
+This project successfully demonstrates BitNet's revolutionary 1-bit LLM technology in a production-ready FastAPI web application with a modern JavaScript frontend. The migration from Streamlit to FastAPI provides better performance, scalability, and deployment flexibility while maintaining all features:
 
-- ✅ Model loads and generates responses
-- ✅ Streaming inference provides real-time feedback
-- ✅ Advanced controls offer fine-tuned generation
-- ✅ Performance metrics track efficiency
+- ✅ FastAPI backend with REST API and SSE streaming
+- ✅ Modern JavaScript frontend with responsive design
+- ✅ Model loading and generation with multiple LLM options
+- ✅ Real-time streaming inference via Server-Sent Events
+- ✅ Advanced generation controls for fine-tuned output
+- ✅ Performance metrics tracking and display
+- ✅ Conversation persistence with JSON storage
 - ✅ Clean, intuitive user interface
 
-The application is ready for demonstration and can serve as a foundation for further BitNet exploration and optimization.
+The application is production-ready and can serve as a foundation for further BitNet exploration, optimization, and deployment at scale.
