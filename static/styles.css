@@ -606,8 +606,10 @@ body {
     }
     
     #chat-tab.active {
-        display: block;
+        display: flex !important;
+        flex-direction: column !important;
         overflow: visible;
+        gap: 0;
     }
     
     .chat-container {
@@ -616,6 +618,7 @@ body {
         flex: none;
         overflow: visible;
         padding-bottom: 20px;
+        order: 1;
     }
     
     .chat-messages {
@@ -624,13 +627,14 @@ body {
     }
     
     .settings-panel {
-        width: 100%;
-        max-width: 100%;
-        flex: none;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
         overflow: visible;
         border-left: none;
         border-top: 1px solid #e0e0e0;
         padding-bottom: 20px;
+        order: 2;
     }
     
     .chat-input-container {
