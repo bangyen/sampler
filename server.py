@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import asyncio
 import torch
-from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
+from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer, AutoModelForTokenClassification
 from transformers.generation.streamers import TextIteratorStreamer
 from threading import Thread
 import json
@@ -261,7 +261,7 @@ def load_model(model_id: str):
 
 
 def load_ner_model(model_name="BERT Base NER"):
-    """Load NER model using transformers pipeline"""
+    """Load NER model without using pipeline to avoid torchvision dependency"""
     global ner_pipelines
     
     if model_name not in NER_MODELS:
@@ -271,13 +271,25 @@ def load_ner_model(model_name="BERT Base NER"):
     
     if model_id not in ner_pipelines:
         try:
-            from transformers.pipelines import pipeline
-            ner_pipelines[model_id] = pipeline(
-                "ner",
-                model=model_id,
-                aggregation_strategy="simple",
-                device=-1
-            )
+            from transformers import AutoConfig
+            
+            tokenizer = AutoTokenizer.from_pretrained(model_id)
+            config = AutoConfig.from_pretrained(model_id)
+            
+            try:
+                model = AutoModelForTokenClassification.from_pretrained(model_id, config=config)
+            except Exception:
+                from transformers import BertForTokenClassification, RobertaForTokenClassification
+                
+                if "bert" in model_id.lower() and "roberta" not in model_id.lower():
+                    model = BertForTokenClassification.from_pretrained(model_id)
+                elif "roberta" in model_id.lower():
+                    model = RobertaForTokenClassification.from_pretrained(model_id)
+                else:
+                    raise
+            
+            model.eval()
+            ner_pipelines[model_id] = {"model": model, "tokenizer": tokenizer}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
     return ner_pipelines[model_id]
@@ -471,6 +483,72 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
     )
 
 
+def perform_ner_inference(model_dict, text):
+    """Perform NER inference without pipeline to avoid torchvision dependency"""
+    model = model_dict["model"]
+    tokenizer = model_dict["tokenizer"]
+    
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+    
+    with torch.no_grad():
+        outputs = model(**inputs)
+    
+    predictions = torch.argmax(outputs.logits, dim=-1)
+    tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+    
+    id2label = model.config.id2label
+    
+    entities = []
+    current_entity = None
+    current_text = []
+    current_start = 0
+    
+    for idx, (token, pred) in enumerate(zip(tokens, predictions[0])):
+        if token in [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]:
+            continue
+        
+        label = id2label[pred.item()]
+        
+        if label.startswith("B-"):
+            if current_entity:
+                entity_text = tokenizer.convert_tokens_to_string(current_text)
+                entities.append({
+                    "word": entity_text,
+                    "entity_group": current_entity,
+                    "score": 1.0,
+                    "start": current_start,
+                    "end": current_start + len(entity_text)
+                })
+            current_entity = label[2:]
+            current_text = [token]
+            current_start = text.find(token.replace("##", ""))
+        elif label.startswith("I-") and current_entity == label[2:]:
+            current_text.append(token)
+        elif label == "O":
+            if current_entity:
+                entity_text = tokenizer.convert_tokens_to_string(current_text)
+                entities.append({
+                    "word": entity_text,
+                    "entity_group": current_entity,
+                    "score": 1.0,
+                    "start": current_start,
+                    "end": current_start + len(entity_text)
+                })
+                current_entity = None
+                current_text = []
+    
+    if current_entity:
+        entity_text = tokenizer.convert_tokens_to_string(current_text)
+        entities.append({
+            "word": entity_text,
+            "entity_group": current_entity,
+            "score": 1.0,
+            "start": current_start,
+            "end": current_start + len(entity_text)
+        })
+    
+    return entities
+
 @app.post("/api/ner")
 async def extract_entities(request: NERRequest):
     """Extract named entities from text"""
@@ -478,7 +556,7 @@ async def extract_entities(request: NERRequest):
         ner_model = load_ner_model(request.model)
         start_time = time.time()
         
-        entities = ner_model(request.text)
+        entities = perform_ner_inference(ner_model, request.text)
         
         end_time = time.time()
         processing_time = end_time - start_time
