@@ -16,7 +16,7 @@ def get_layout_file(layout_id):
     """Get the file path for a layout analysis"""
     return STORAGE_DIR / f"{layout_id}.json"
 
-def save_layout_analysis(image_data, filename, extracted_text, bounding_boxes, processing_time, num_detections):
+def save_layout_analysis(image_data, filename, extracted_text, bounding_boxes, processing_time, num_detections, config="PaddleOCR - English"):
     """Save layout analysis to JSON file with base64 encoded image"""
     try:
         layout_id = generate_layout_id(image_data)
@@ -32,6 +32,7 @@ def save_layout_analysis(image_data, filename, extracted_text, bounding_boxes, p
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
             "num_detections": num_detections,
+            "config": config,
             "created_at": datetime.utcnow().isoformat()
         }
         
