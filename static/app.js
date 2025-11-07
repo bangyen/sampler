@@ -365,11 +365,16 @@ function renderMessages() {
                     speedDisplay = `${tokensPerSec.toFixed(1)} tokens/sec`;
                 }
                 
+                let modelLoadInfo = '';
+                if (msg.metrics.model_load_time) {
+                    modelLoadInfo = ` | Model load: ${msg.metrics.model_load_time.toFixed(1)}s`;
+                }
+                
                 metricsHtml = `
                     <div class="message-metrics">
-                        Time: ${msg.metrics.time.toFixed(1)}s | 
+                        Inference: ${msg.metrics.time.toFixed(1)}s | 
                         Tokens: ${msg.metrics.tokens} | 
-                        Speed: ${speedDisplay}
+                        Speed: ${speedDisplay}${modelLoadInfo}
                     </div>
                 `;
             }
@@ -420,7 +425,9 @@ async function sendMessage(userMessage) {
     
     let fullResponse = '';
     let wasAborted = false;
-    const startTime = Date.now();
+    const requestStartTime = Date.now();
+    let inferenceStartTime = null;
+    let modelLoadTime = null;
     
     // Create AbortController for instant cancellation
     currentAbortController = new AbortController();
@@ -468,7 +475,17 @@ async function sendMessage(userMessage) {
                                 break;
                             }
                             
+                            if (data.model_loaded) {
+                                // Model just loaded, save timing and start tracking inference
+                                modelLoadTime = data.load_time;
+                                inferenceStartTime = Date.now();
+                            }
+                            
                             if (data.text) {
+                                // Start tracking inference if not already started
+                                if (inferenceStartTime === null) {
+                                    inferenceStartTime = Date.now();
+                                }
                                 fullResponse += data.text;
                                 document.getElementById('streaming-content').textContent = fullResponse;
                                 chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -490,16 +507,24 @@ async function sendMessage(userMessage) {
         // Only save if we have a response
         if (fullResponse.trim()) {
             const endTime = Date.now();
-            const generationTime = (endTime - startTime) / 1000;
+            // Use inference time only (excluding model load time)
+            const inferenceTime = inferenceStartTime 
+                ? (endTime - inferenceStartTime) / 1000 
+                : (endTime - requestStartTime) / 1000;
             
             const tokens = fullResponse.split(/\s+/).length;
-            const tokensPerSecond = tokens / generationTime;
+            const tokensPerSecond = tokens / inferenceTime;
             
             const metrics = {
-                time: generationTime,
+                time: inferenceTime,
                 tokens: tokens,
                 tokens_per_sec: tokensPerSecond
             };
+            
+            // Add model load time to metrics if available
+            if (modelLoadTime !== null) {
+                metrics.model_load_time = modelLoadTime;
+            }
             
             messages.push({
                 role: 'assistant',
@@ -532,18 +557,28 @@ async function sendMessage(userMessage) {
                 // If we have partial response, save it
                 if (fullResponse.trim()) {
                     const endTime = Date.now();
-                    const generationTime = (endTime - startTime) / 1000;
+                    // Use inference time only (excluding model load time)
+                    const inferenceTime = inferenceStartTime 
+                        ? (endTime - inferenceStartTime) / 1000 
+                        : (endTime - requestStartTime) / 1000;
                     const tokens = fullResponse.split(/\s+/).length;
-                    const tokensPerSecond = tokens / generationTime;
+                    const tokensPerSecond = tokens / inferenceTime;
+                    
+                    const metricsAborted = {
+                        time: inferenceTime,
+                        tokens: tokens,
+                        tokens_per_sec: tokensPerSecond
+                    };
+                    
+                    // Add model load time if available
+                    if (modelLoadTime !== null) {
+                        metricsAborted.model_load_time = modelLoadTime;
+                    }
                     
                     messages.push({
                         role: 'assistant',
                         content: fullResponse,
-                        metrics: {
-                            time: generationTime,
-                            tokens: tokens,
-                            tokens_per_sec: tokensPerSecond
-                        }
+                        metrics: metricsAborted
                     });
                     
                     await saveConversation();

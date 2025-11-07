@@ -270,9 +270,10 @@ class ConversationRequest(BaseModel):
 def load_model(model_id: str):
     """Load the selected model and tokenizer"""
     if model_id in loaded_models:
-        return loaded_models[model_id]
+        return loaded_models[model_id], None
 
     try:
+        start_time = time.time()
         tokenizer = AutoTokenizer.from_pretrained(model_id)
 
         try:
@@ -292,9 +293,11 @@ def load_model(model_id: str):
 
         model.to("cpu")
         model.eval()
+        
+        load_time = time.time() - start_time
 
         loaded_models[model_id] = {"model": model, "tokenizer": tokenizer}
-        return loaded_models[model_id]
+        return loaded_models[model_id], load_time
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
 
@@ -308,9 +311,10 @@ def load_llama_model(model_name: str):
         )
     
     if model_name in loaded_llama_models:
-        return loaded_llama_models[model_name]
+        return loaded_llama_models[model_name], None
     
     try:
+        start_time = time.time()
         model_config = AVAILABLE_MODELS[model_name]
         gguf_repo = model_config.get("gguf_repo")
         gguf_file = model_config.get("gguf_file")
@@ -324,8 +328,10 @@ def load_llama_model(model_name: str):
         # Initialize BitNet inference engine
         inference = BitNetInference(model_path, n_ctx=2048)
         
+        load_time = time.time() - start_time
+        
         loaded_llama_models[model_name] = inference
-        return inference
+        return inference, load_time
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading GGUF model: {str(e)}")
 
@@ -339,9 +345,10 @@ def load_bitnet_cpp_model(model_name: str):
         )
     
     if model_name in loaded_bitnet_models:
-        return loaded_bitnet_models[model_name]
+        return loaded_bitnet_models[model_name], None
     
     try:
+        start_time = time.time()
         model_config = AVAILABLE_MODELS[model_name]
         gguf_repo = model_config.get("gguf_repo")
         gguf_file = model_config.get("gguf_file")
@@ -352,8 +359,10 @@ def load_bitnet_cpp_model(model_name: str):
         # Load BitNet model (downloads if needed)
         bridge = load_bitnet_model(gguf_repo, gguf_file)
         
+        load_time = time.time() - start_time
+        
         loaded_bitnet_models[model_name] = bridge
-        return bridge
+        return bridge, load_time
     except FileNotFoundError as e:
         # Binary not found - give clear guidance
         raise HTTPException(
@@ -462,10 +471,15 @@ def format_prompt(messages: List[Dict], tokenizer):
 
 
 async def generate_response_streaming(
-    model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None
+    model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
 ):
     """Generate a streaming response from the model"""
     try:
+        # Send model loaded event if this was a fresh load
+        if load_time is not None:
+            print(f"[DEBUG] Model loaded in {load_time:.2f}s")
+            yield json.dumps({'model_loaded': True, 'load_time': load_time})
+        
         print(f"[DEBUG] Starting transformers streaming generation")
         prompt = format_prompt(messages, tokenizer)
         if prompt is None:
@@ -516,10 +530,15 @@ async def generate_response_streaming(
 
 
 async def generate_response_streaming_llama(
-    inference, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None
+    inference, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
 ):
     """Generate a streaming response using llama.cpp backend"""
     try:
+        # Send model loaded event if this was a fresh load
+        if load_time is not None:
+            print(f"[DEBUG] Model loaded in {load_time:.2f}s")
+            yield json.dumps({'model_loaded': True, 'load_time': load_time})
+        
         print(f"[DEBUG] Starting llama.cpp streaming generation")
         token_count = 0
         
@@ -550,10 +569,15 @@ async def generate_response_streaming_llama(
 
 
 async def generate_response_streaming_bitnet_cpp(
-    bridge, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None
+    bridge, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
 ):
     """Generate a streaming response using bitnet.cpp compiled binary backend"""
     try:
+        # Send model loaded event if this was a fresh load
+        if load_time is not None:
+            print(f"[DEBUG] Model loaded in {load_time:.2f}s")
+            yield json.dumps({'model_loaded': True, 'load_time': load_time})
+        
         print(f"[DEBUG] Starting bitnet.cpp streaming generation")
         token_count = 0
         
@@ -666,7 +690,7 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
         if backend == "llamacpp":
             # Use llama.cpp backend for GGUF models
             print(f"[DEBUG] Loading llama.cpp model: {request.model_name}")
-            inference = load_llama_model(request.model_name)
+            inference, load_time = load_llama_model(request.model_name)
             return EventSourceResponse(
                 generate_response_streaming_llama(
                     inference,
@@ -676,12 +700,13 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
                     request.top_p,
                     request.top_k,
                     raw_request,
+                    load_time,
                 )
             )
         elif backend == "bitnet_cpp":
             # Use bitnet.cpp compiled binary backend
             print(f"[DEBUG] Loading bitnet.cpp model: {request.model_name}")
-            bridge = load_bitnet_cpp_model(request.model_name)
+            bridge, load_time = load_bitnet_cpp_model(request.model_name)
             return EventSourceResponse(
                 generate_response_streaming_bitnet_cpp(
                     bridge,
@@ -691,13 +716,14 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
                     request.top_p,
                     request.top_k,
                     raw_request,
+                    load_time,
                 )
             )
         else:
             # Use transformers backend for standard models
             print(f"[DEBUG] Loading transformers model: {request.model_name}")
             model_id = model_config["id"]
-            model_data = load_model(model_id)
+            model_data, load_time = load_model(model_id)
             return EventSourceResponse(
                 generate_response_streaming(
                     model_data["model"],
@@ -708,6 +734,7 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
                     request.top_p,
                     request.top_k,
                     raw_request,
+                    load_time,
                 )
             )
     except Exception as e:
