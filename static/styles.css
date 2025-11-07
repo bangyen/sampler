@@ -605,12 +605,9 @@ body {
         flex: none;
     }
     
-    #chat-tab {
-        flex-direction: column;
-    }
-    
     #chat-tab.active {
-        grid-template-columns: 1fr;
+        display: block;
+        overflow: visible;
     }
     
     .chat-container {
