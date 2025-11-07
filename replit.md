@@ -4,7 +4,7 @@
 This project is a FastAPI web application with a JavaScript frontend that demonstrates multiple quantized and efficient Large Language Models (LLMs), including Microsoft's BitNet b1.58 2B (1-bit LLM), SmolLM2, and Qwen2.5 models. It provides an interactive chat interface with streaming responses, advanced generation parameters, and performance metrics. The application also includes Named Entity Recognition (NER) and Optical Character Recognition (OCR) capabilities. The business vision is to showcase the potential of highly efficient LLMs for real-world applications, highlighting their low memory footprint and potential for deployment on resource-constrained devices.
 
 ## User Preferences
-I want the agent to use a direct and concise communication style. When making changes, prioritize iterative development and ask for confirmation before implementing major architectural shifts. Ensure detailed explanations are provided for complex technical decisions or new feature implementations. Do not modify files in the `conversations/` directory, and avoid making changes to `replit.md` itself.
+I want the agent to use a direct and concise communication style. When making changes, prioritize iterative development and ask for confirmation before implementing major architectural shifts. Ensure detailed explanations are provided for complex technical decisions or new feature implementations. Do not modify files in the `conversations/` directory, and avoid making changes to `replit.md` itself. Do not use emojis in communication.
 
 ## System Architecture
 
