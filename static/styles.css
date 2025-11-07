@@ -647,10 +647,14 @@ body {
 }
 
 .tab-content.active {
-    display: flex;
-    flex-direction: column;
+    display: block;
     width: 100%;
     height: 100%;
+}
+
+#chat-tab {
+    display: flex;
+    overflow: hidden;
 }
 
 /* NER Styles */
