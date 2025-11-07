@@ -1,0 +1,31 @@
+{
+  "id": "b6d075d31a5d999a",
+  "text": "Albert Einstein was born in Germany and later moved to the United States.",
+  "entities": [
+    {
+      "text": "Albert Einstein",
+      "label": "PER",
+      "score": 0.9984809160232544,
+      "start": 0,
+      "end": 15
+    },
+    {
+      "text": "Germany",
+      "label": "LOC",
+      "score": 0.9993933439254761,
+      "start": 28,
+      "end": 35
+    },
+    {
+      "text": "United States",
+      "label": "LOC",
+      "score": 0.9994875192642212,
+      "start": 59,
+      "end": 72
+    }
+  ],
+  "model": "BERT Base NER",
+  "processing_time": 0.11485695838928223,
+  "text_length": 73,
+  "created_at": "2025-11-07T03:49:38.825275"
+}

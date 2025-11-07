@@ -1,0 +1,24 @@
+{
+  "id": "0bff94aec73df0ff",
+  "text": "The United Nations headquarters is located in New York City.",
+  "entities": [
+    {
+      "text": "United Nations",
+      "label": "ORG",
+      "score": 0.9990241527557373,
+      "start": 4,
+      "end": 18
+    },
+    {
+      "text": "New York City",
+      "label": "LOC",
+      "score": 0.9994697570800781,
+      "start": 46,
+      "end": 59
+    }
+  ],
+  "model": "BERT Base NER",
+  "processing_time": 0.04241180419921875,
+  "text_length": 60,
+  "created_at": "2025-11-07T03:49:36.411181"
+}
