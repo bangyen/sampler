@@ -580,6 +580,10 @@ body {
         flex: none;
     }
     
+    #chat-tab {
+        flex-direction: column;
+    }
+    
     .chat-container {
         width: 100%;
         max-width: 900px;
