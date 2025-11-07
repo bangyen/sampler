@@ -1,6 +1,8 @@
 let sessionId = generateUUID();
 let messages = [];
 let selectedModel = 'Qwen 2.5 0.5B';
+let selectedNERModel = 'BERT Base NER';
+let selectedOCRConfig = 'English Only';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
@@ -34,6 +36,8 @@ function generateUUID() {
 
 async function init() {
     await loadModels();
+    await loadNERModels();
+    await loadOCRConfigs();
     await loadConversation();
     await loadConversationList();
     setupEventListeners();
@@ -66,10 +70,86 @@ async function loadModels() {
     }
 }
 
+async function loadNERModels() {
+    try {
+        const response = await fetch('/api/ner/models');
+        const data = await response.json();
+        
+        const modelList = document.getElementById('ner-model-list');
+        modelList.innerHTML = '';
+        
+        Object.entries(data.models).forEach(([name, info]) => {
+            const modelDiv = document.createElement('div');
+            modelDiv.className = `model-option ${name === selectedNERModel ? 'selected' : ''}`;
+            modelDiv.innerHTML = `
+                <h4>${name}</h4>
+                <div class="model-specs">${info.params} params | ${info.memory}</div>
+                <div class="model-description">${info.description}</div>
+            `;
+            modelDiv.onclick = (evt) => selectNERModel(name, evt);
+            modelList.appendChild(modelDiv);
+        });
+    } catch (error) {
+        console.error('Error loading NER models:', error);
+    }
+}
+
+async function loadOCRConfigs() {
+    try {
+        const response = await fetch('/api/ocr/configs');
+        const data = await response.json();
+        
+        const configList = document.getElementById('ocr-config-list');
+        configList.innerHTML = '';
+        
+        Object.entries(data.configs).forEach(([name, info]) => {
+            const configDiv = document.createElement('div');
+            configDiv.className = `model-option ${name === selectedOCRConfig ? 'selected' : ''}`;
+            configDiv.innerHTML = `
+                <h4>${name}</h4>
+                <div class="model-description">${info.description}</div>
+                <div class="model-specs">Languages: ${info.languages.join(', ')}</div>
+            `;
+            configDiv.onclick = (evt) => selectOCRConfig(name, evt);
+            configList.appendChild(configDiv);
+        });
+    } catch (error) {
+        console.error('Error loading OCR configs:', error);
+    }
+}
+
 function selectModel(name, evt) {
     selectedModel = name;
     
-    document.querySelectorAll('.model-option').forEach(el => {
+    document.querySelectorAll('#model-list .model-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    evt.target.closest('.model-option').classList.add('selected');
+    
+    setTimeout(() => {
+        closeMobileMenuHelper();
+    }, 100);
+}
+
+function selectNERModel(name, evt) {
+    selectedNERModel = name;
+    
+    document.querySelectorAll('#ner-model-list .model-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    evt.target.closest('.model-option').classList.add('selected');
+    
+    setTimeout(() => {
+        closeMobileMenuHelper();
+    }, 100);
+}
+
+function selectOCRConfig(name, evt) {
+    selectedOCRConfig = name;
+    
+    document.querySelectorAll('#ocr-config-list .model-option').forEach(el => {
         el.classList.remove('selected');
     });
     
@@ -540,6 +620,7 @@ function setupEventListeners() {
 function setupTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    const sidebarContents = document.querySelectorAll('.sidebar-content');
     
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -547,9 +628,11 @@ function setupTabs() {
             
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
+            sidebarContents.forEach(s => s.style.display = 'none');
             
             btn.classList.add('active');
             document.getElementById(`${targetTab}-tab`).classList.add('active');
+            document.getElementById(`${targetTab}-sidebar`).style.display = 'block';
         });
     });
 }
@@ -574,7 +657,7 @@ function setupNER() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ text })
+                body: JSON.stringify({ text, model: selectedNERModel })
             });
             
             let data;
@@ -700,7 +783,7 @@ function setupOCR() {
             const formData = new FormData();
             formData.append('file', selectedFile);
             
-            const response = await fetch('/api/ocr', {
+            const response = await fetch(`/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`, {
                 method: 'POST',
                 body: formData
             });
