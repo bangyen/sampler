@@ -176,6 +176,11 @@ OCR_CONFIGS = {
         "languages": ["en", "es", "fr", "de", "it", "pt"],
         "description": "Common European languages (slower)",
     },
+    "PaddleOCR": {
+        "engine": "paddleocr",
+        "languages": ["en"],
+        "description": "Advanced layout analysis with PaddleOCR (CPU-optimized)",
+    },
 }
 
 LAYOUT_CONFIG = {
@@ -227,11 +232,14 @@ def load_model(model_id: str):
         return loaded_models[model_id]
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 
         try:
             model = AutoModelForCausalLM.from_pretrained(
-                model_id, torch_dtype=torch.float32, low_cpu_mem_usage=True
+                model_id, 
+                torch_dtype=torch.float32, 
+                low_cpu_mem_usage=True,
+                trust_remote_code=True
             )
         except (ImportError, OSError) as e:
             if "accelerate" in str(e).lower():
@@ -240,6 +248,7 @@ def load_model(model_id: str):
                     torch_dtype=torch.float32,
                     low_cpu_mem_usage=True,
                     _fast_init=False,
+                    trust_remote_code=True
                 )
             else:
                 raise

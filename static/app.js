@@ -49,9 +49,6 @@ async function loadModels() {
         const response = await fetch('/api/models');
         const data = await response.json();
         
-        document.getElementById('persistence-type').textContent = 
-            `Using ${data.persistence_type} persistence`;
-        
         const modelList = document.getElementById('model-list');
         modelList.innerHTML = '';
         
@@ -192,9 +189,6 @@ async function loadConversationList() {
             item.className = 'conversation-item';
             
             const preview = conv.preview || `${conv.message_count} messages`;
-            const truncatedPreview = preview.length > 40 
-                ? preview.substring(0, 40) + '...' 
-                : preview;
             
             const btn = document.createElement('button');
             btn.className = `conversation-btn ${conv.session_id === sessionId ? 'active' : ''}`;
@@ -202,7 +196,7 @@ async function loadConversationList() {
             const previewDiv = document.createElement('div');
             previewDiv.style.fontSize = '13px';
             previewDiv.style.marginBottom = '4px';
-            previewDiv.textContent = truncatedPreview;
+            previewDiv.textContent = preview;
             
             const countDiv = document.createElement('div');
             countDiv.style.fontSize = '11px';
@@ -894,17 +888,13 @@ async function loadNERHistory() {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
-            const truncatedText = analysis.text_preview.length > 50 
-                ? analysis.text_preview.substring(0, 50) + '...' 
-                : analysis.text_preview;
-            
             const btn = document.createElement('button');
             btn.className = 'conversation-btn';
             
             const textDiv = document.createElement('div');
             textDiv.style.fontSize = '13px';
             textDiv.style.marginBottom = '4px';
-            textDiv.textContent = truncatedText;
+            textDiv.textContent = analysis.text_preview;
             
             const metaDiv = document.createElement('div');
             metaDiv.style.fontSize = '11px';
