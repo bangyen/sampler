@@ -103,7 +103,7 @@ async function loadConversationList() {
             return;
         }
         
-        conversationList.innerHTML = `<small style="color: #888;">Found ${data.conversations.length} saved conversation(s)</small>`;
+        conversationList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.conversations.length} saved conversation(s)</small>`;
         
         data.conversations.slice(0, 10).forEach(conv => {
             const item = document.createElement('div');

@@ -202,10 +202,10 @@ Access at: `http://0.0.0.0:5000`
 - ✅ Improved mobile header spacing (70px padding-left)
 - ✅ Shortened mobile title to "LLM Comparison" to prevent wrapping
 - ✅ Replaced Advanced Settings triangle with rotating chevron (›)
-- ✅ Fixed Advanced Settings bottom padding (removed from container, added to last setting-group)
+- ✅ Fixed Advanced Settings bottom padding (10px when open for balanced spacing)
 - ✅ Removed carat prefix from active conversation (blue highlight is sufficient)
-- ✅ Increased conversation list spacing (15px margin-top)
-- ✅ Added balanced padding to persistence info message (10px top and bottom)
+- ✅ Added spacing between "Found X saved conversations" text and conversation list (15px margin-bottom)
+- ✅ Minimized persistence info message padding (5px top/bottom for cleaner look)
 **Status:** ✅ All resolved
 
 ## Performance Characteristics
