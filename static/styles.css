@@ -621,7 +621,7 @@ body {
         max-width: 100%;
         flex: none;
         overflow: visible;
-        padding: 20px 0;
+        padding: 20px 15px;
         margin: 0;
         order: 1;
     }
@@ -638,7 +638,7 @@ body {
         overflow: visible;
         border-left: none;
         border-top: 1px solid #e0e0e0;
-        padding-bottom: 20px;
+        padding: 20px 15px;
         order: 2;
     }
     
