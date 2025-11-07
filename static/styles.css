@@ -268,6 +268,7 @@ body {
     border-radius: 8px;
     background: #f8f9fa;
     line-height: 1.6;
+    min-height: 20px;
 }
 
 .message.user .message-content {
