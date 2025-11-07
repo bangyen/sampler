@@ -633,6 +633,12 @@ function setupTabs() {
             btn.classList.add('active');
             document.getElementById(`${targetTab}-tab`).classList.add('active');
             document.getElementById(`${targetTab}-sidebar`).style.display = 'block';
+            
+            if (targetTab === 'ner') {
+                loadNERHistory();
+            } else if (targetTab === 'ocr') {
+                loadOCRHistory();
+            }
         });
     });
 }
@@ -721,6 +727,8 @@ function displayNERResults(data) {
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
         `;
     }
+    
+    loadNERHistory();
 }
 
 function setupOCR() {
@@ -841,6 +849,153 @@ function displayOCRResults(data) {
         metricsDiv.innerHTML = `
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
         `;
+    }
+    
+    loadOCRHistory();
+}
+
+async function loadNERHistory() {
+    try {
+        const response = await fetch('/api/ner/history');
+        const data = await response.json();
+        
+        const historyList = document.getElementById('ner-history-list');
+        historyList.innerHTML = '';
+        
+        if (!data.analyses || data.analyses.length === 0) {
+            historyList.innerHTML = '<small style="color: #888;">No analyses yet</small>';
+            return;
+        }
+        
+        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} analysis/analyses</small>`;
+        
+        data.analyses.forEach(analysis => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            
+            const btn = document.createElement('button');
+            btn.className = 'conversation-btn';
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.text_preview}</div>
+                <div style="font-size: 11px; color: #888;">${analysis.entity_count} entities | ${analysis.model}</div>
+            `;
+            btn.onclick = () => loadNERAnalysis(analysis.id);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteNERAnalysis(analysis.id);
+            };
+            
+            item.appendChild(btn);
+            item.appendChild(deleteBtn);
+            historyList.appendChild(item);
+        });
+    } catch (error) {
+        console.error('Error loading NER history:', error);
+    }
+}
+
+async function loadNERAnalysis(nerId) {
+    try {
+        const response = await fetch(`/api/ner/history/${nerId}`);
+        const data = await response.json();
+        
+        document.getElementById('ner-input').value = data.text;
+        selectedNERModel = data.model;
+        await loadNERModels();
+        
+        displayNERResults(data);
+        
+        closeMobileMenuHelper();
+    } catch (error) {
+        console.error('Error loading NER analysis:', error);
+    }
+}
+
+async function deleteNERAnalysis(nerId) {
+    try {
+        await fetch(`/api/ner/history/${nerId}`, {
+            method: 'DELETE'
+        });
+        
+        await loadNERHistory();
+    } catch (error) {
+        console.error('Error deleting NER analysis:', error);
+    }
+}
+
+async function loadOCRHistory() {
+    try {
+        const response = await fetch('/api/ocr/history');
+        const data = await response.json();
+        
+        const historyList = document.getElementById('ocr-history-list');
+        historyList.innerHTML = '';
+        
+        if (!data.analyses || data.analyses.length === 0) {
+            historyList.innerHTML = '<small style="color: #888;">No extractions yet</small>';
+            return;
+        }
+        
+        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} extraction(s)</small>`;
+        
+        data.analyses.forEach(analysis => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            
+            const btn = document.createElement('button');
+            btn.className = 'conversation-btn';
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
+                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections | ${analysis.config}</div>
+            `;
+            btn.onclick = () => loadOCRAnalysis(analysis.id);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteOCRAnalysis(analysis.id);
+            };
+            
+            item.appendChild(btn);
+            item.appendChild(deleteBtn);
+            historyList.appendChild(item);
+        });
+    } catch (error) {
+        console.error('Error loading OCR history:', error);
+    }
+}
+
+async function loadOCRAnalysis(ocrId) {
+    try {
+        const response = await fetch(`/api/ocr/history/${ocrId}`);
+        const data = await response.json();
+        
+        selectedOCRConfig = data.config;
+        await loadOCRConfigs();
+        
+        displayOCRResults(data);
+        
+        closeMobileMenuHelper();
+    } catch (error) {
+        console.error('Error loading OCR analysis:', error);
+    }
+}
+
+async function deleteOCRAnalysis(ocrId) {
+    try {
+        await fetch(`/api/ocr/history/${ocrId}`, {
+            method: 'DELETE'
+        });
+        
+        await loadOCRHistory();
+    } catch (error) {
+        console.error('Error deleting OCR analysis:', error);
     }
 }
 
