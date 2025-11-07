@@ -129,38 +129,8 @@ except ImportError:
 app = FastAPI(title="Quantized LLM Comparison API")
 
 AVAILABLE_MODELS = {
-    "BitNet b1.58 2B": {
-        "id": "microsoft/bitnet-b1.58-2B-4T-bf16",
-        "params": "2B",
-        "quantization": "1.58-bit",
-        "memory": "~400MB",
-        "description": "Microsoft's 1-bit LLM with ternary weights {-1, 0, +1}",
-        "backend": "transformers"
-    },
-    "SmolLM2 1.7B": {
-        "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
-        "params": "1.7B",
-        "quantization": "FP16",
-        "memory": "~3.4GB",
-        "description": "HuggingFace's efficient model optimized for edge/mobile",
-        "backend": "transformers"
-    },
-    "Qwen 2.5 1.5B": {
-        "id": "Qwen/Qwen2.5-1.5B-Instruct",
-        "params": "1.5B",
-        "quantization": "FP16",
-        "memory": "~3GB",
-        "description": "Alibaba's multilingual instruct-tuned model (29+ languages)",
-        "backend": "transformers"
-    },
-    "Qwen 2.5 0.5B": {
-        "id": "Qwen/Qwen2.5-0.5B-Instruct",
-        "params": "0.5B",
-        "quantization": "FP16",
-        "memory": "~1GB",
-        "description": "Alibaba's smallest model, great for quick responses",
-        "backend": "transformers"
-    },
+    # Fallback transformers-based models (shown when GGUF backends unavailable)
+    # These are hidden by default when faster GGUF versions are available
 }
 
 # Add GGUF models if backends are available
@@ -177,6 +147,16 @@ if LLAMA_CPP_AVAILABLE:
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf"
     }
+else:
+    # Fallback to transformers version if llama.cpp not available
+    AVAILABLE_MODELS["SmolLM2 1.7B"] = {
+        "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        "params": "1.7B",
+        "quantization": "FP16",
+        "memory": "~3.4GB",
+        "description": "HuggingFace's efficient model (transformers fallback)",
+        "backend": "transformers"
+    }
 
 # BitNet GGUF with compiled bitnet.cpp binary
 if BITNET_CPP_AVAILABLE:
@@ -189,6 +169,16 @@ if BITNET_CPP_AVAILABLE:
         "backend": "bitnet_cpp",
         "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "gguf_file": "ggml-model-i2_s.gguf"
+    }
+else:
+    # Fallback to Qwen as lightweight alternative if BitNet not available
+    AVAILABLE_MODELS["Qwen 2.5 0.5B"] = {
+        "id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "params": "0.5B",
+        "quantization": "FP16",
+        "memory": "~1GB",
+        "description": "Alibaba's smallest model, great for quick responses (transformers fallback)",
+        "backend": "transformers"
     }
 
 NER_MODELS = {

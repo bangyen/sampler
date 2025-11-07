@@ -139,12 +139,12 @@ class BitNetCppBridge:
             total_output = ""  # Track all output to strip prompt
             prompt_stripped = False
             
-            if process.stdout:
+            if process.stdout is not None:
                 # Create incremental UTF-8 decoder to handle multi-byte sequences
                 decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
                 
                 # Read one byte at a time and decode incrementally
-                for byte_char in iter(lambda: process.stdout.read(1), b''):
+                for byte_char in iter(lambda: process.stdout.read(1) if process.stdout else b'', b''):
                     if not byte_char:  # EOF
                         break
                     

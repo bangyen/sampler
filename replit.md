@@ -14,12 +14,14 @@ The application features a modern JavaScript frontend (HTML/CSS/JS) with a tabbe
 ### Technical Implementations
 The backend is built with FastAPI, providing REST APIs and Server-Sent Events (SSE) for real-time token streaming during LLM inference. Model loading is handled automatically from Hugging Face, with CPU-only inference for BitNet, SmolLM2, and Qwen2.5 models. The chat interface uses `TextIteratorStreamer` for token-by-token generation. Advanced generation parameters like temperature, top-p, top-k, and max tokens are configurable. Performance metrics (time, tokens, tokens/second) are tracked and displayed.
 
-**Inference Optimization**: The application now supports dual inference backends for maximum performance:
-- **llama.cpp backend** (via llama-cpp-python): Optimized GGUF models deliver 2-6x faster inference compared to standard PyTorch. Uses specialized CPU kernels with SIMD optimizations for extremely efficient computation. **Status: Integration complete, awaiting llama-cpp-python installation.**
-- **Transformers backend**: Standard Hugging Face transformers for maximum compatibility with all models. Currently active for all models.
+**Inference Optimization**: The application supports three high-performance inference backends:
+- **bitnet.cpp backend** (compiled binary): Microsoft's custom 1.58-bit kernels via subprocess. Delivers fastest inference with ~400MB memory. Includes prompt stripping and UTF-8 streaming. **Status: Active, binary compiled.**
+- **llama.cpp backend** (via llama-cpp-python): Optimized GGUF models deliver 2-6x faster inference compared to standard PyTorch. Uses specialized CPU kernels with SIMD optimizations.
+- **Transformers backend**: Standard Hugging Face transformers (hidden by default, available as fallback).
 
 ### Feature Specifications
-- **LLM Chat:** Interactive chat with multiple model selection including optimized GGUF models (BitNet b1.58 2B GGUF - Fast) and standard transformers models (SmolLM2 1.7B, Qwen2.5 1.5B/0.5B). Features streaming responses and configurable generation parameters.
+- **LLM Chat:** Interactive chat with optimized GGUF models (BitNet b1.58 2B GGUF - Fastest, SmolLM2 1.7B GGUF - Fast). Slower transformers models hidden by default. Features streaming responses and configurable generation parameters.
+- **Build Automation:** `build.sh` script automates BitNet.cpp binary compilation for easy deployment.
 - **Named Entity Recognition (NER):** Extracts Person, Organization, Location, and Miscellaneous entities from text using `dslim/bert-base-NER`.
 - **Optical Character Recognition (OCR):** Extracts text from uploaded images using EasyOCR, providing bounding boxes and confidence scores.
 - **Conversation Persistence:** Conversations are saved and loaded, primarily using JSON file storage as a robust fallback to a PostgreSQL database.
@@ -37,6 +39,7 @@ The project uses a clear separation of concerns with `server.py` for FastAPI log
 - **Hugging Face Transformers:** For loading and interacting with LLM models. A custom fork (`git+https://github.com/shumingma/transformers.git`) is used for BitNet compatibility.
 - **llama-cpp-python:** Python bindings for llama.cpp, enabling optimized GGUF model inference with 2-6x performance improvements.
 - **huggingface-hub:** For downloading GGUF models from Hugging Face repositories.
+- **bitnet.cpp:** Compiled C++ binary (bin/BitNet/build/bin/llama-cli) for 1.58-bit quantization inference. Build with `./build.sh`.
 - **accelerate:** Required by BitNet models for efficient computation.
 - **EasyOCR:** Used for Optical Character Recognition.
 - **Pillow:** Image processing library, a dependency for EasyOCR.
