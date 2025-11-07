@@ -155,16 +155,18 @@ AVAILABLE_MODELS = {
 }
 
 # Add GGUF model if llama.cpp is available
+# NOTE: BitNet GGUF requires bitnet.cpp (not yet compilable on Replit).
+# Using SmolLM2 GGUF instead - fully compatible with llama-cpp-python and 2-3x faster!
 if LLAMA_CPP_AVAILABLE:
-    AVAILABLE_MODELS["BitNet b1.58 2B (GGUF - Fast)"] = {
-        "id": "microsoft/bitnet-b1.58-2B-4T-gguf",
-        "params": "2B",
-        "quantization": "i2_s (GGUF)",
-        "memory": "~1.2GB",
-        "description": "BitNet optimized with llama.cpp - 2-6x faster inference!",
+    AVAILABLE_MODELS["SmolLM2 1.7B (GGUF - Fast)"] = {
+        "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+        "params": "1.7B",
+        "quantization": "Q4_K_M (GGUF)",
+        "memory": "~1.1GB",
+        "description": "SmolLM2 optimized with llama.cpp - 2-3x faster CPU inference!",
         "backend": "llamacpp",
-        "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
-        "gguf_file": "ggml-model-i2_s.gguf"
+        "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+        "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf"
     }
 
 NER_MODELS = {
