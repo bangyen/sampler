@@ -88,13 +88,6 @@ Compare different quantized and efficient LLM models to see how they perform.
 Select a model from the sidebar to switch between them.
 """)
 
-if PERSISTENCE_TYPE == "JSON":
-    st.info("Using JSON file-based persistence (PostgreSQL database unavailable)")
-elif PERSISTENCE_TYPE == "PostgreSQL":
-    st.success("Using PostgreSQL database for persistence")
-elif PERSISTENCE_TYPE == "None":
-    st.warning("Conversation persistence is disabled")
-
 @st.cache_resource
 def load_model(model_id):
     """Load the selected model and tokenizer"""
@@ -192,11 +185,18 @@ def generate_response_streaming(model, tokenizer, messages, temperature, max_tok
         st.error(f"Generation error details:\n{error_details}")
         yield f"Error generating response: {str(e)}"
 
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+if "messages" not in st.session_state:
+    loaded_messages = load_conversation(st.session_state.session_id)
+    st.session_state.messages = loaded_messages if loaded_messages else []
+
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = "BitNet b1.58 2B"
+
 with st.sidebar:
     st.subheader("Model Selection")
-    
-    if "selected_model" not in st.session_state:
-        st.session_state.selected_model = "BitNet b1.58 2B"
     
     selected_model_name = st.radio(
         "Choose a model:",
@@ -208,44 +208,26 @@ with st.sidebar:
     if selected_model_name != st.session_state.selected_model:
         st.session_state.selected_model = selected_model_name
         st.rerun()
+        st.stop()
     
     selected_model_info = AVAILABLE_MODELS[selected_model_name]
     st.caption(f"**{selected_model_info['params']} params | {selected_model_info['quantization']} | {selected_model_info['memory']}**")
     st.caption(selected_model_info['description'])
     
     st.markdown("---")
+    
+    if PERSISTENCE_TYPE == "JSON":
+        st.caption("Using JSON file persistence")
+    elif PERSISTENCE_TYPE == "PostgreSQL":
+        st.caption("Using PostgreSQL database")
+    
     st.subheader("Conversation History")
-
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-if "messages" not in st.session_state:
-    loaded_messages = load_conversation(st.session_state.session_id)
-    st.session_state.messages = loaded_messages if loaded_messages else []
-
-model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
-model, tokenizer = load_model(model_id)
-
-if model is None or tokenizer is None:
-    st.error("Failed to load the model. Please check your internet connection and try again.")
-    st.stop()
-
-st.session_state.tokenizer = tokenizer
-
-st.success(f"Model loaded successfully: {st.session_state.selected_model}")
-
-st.markdown("---")
-
-col1, col2 = st.columns([2, 1])
-
-with st.sidebar:
     
     if st.button("+ New Conversation"):
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
         st.rerun()
-    
-    st.markdown("---")
+        st.stop()
     
     all_conversations = get_all_conversations()
     
@@ -263,6 +245,7 @@ with st.sidebar:
                     st.session_state.session_id = conv["session_id"]
                     st.session_state.messages = load_conversation(conv["session_id"])
                     st.rerun()
+                    st.stop()
             
             with col_b:
                 if st.button("Delete", key=f"del_{i}", use_container_width=True):
@@ -271,11 +254,23 @@ with st.sidebar:
                         st.session_state.session_id = str(uuid.uuid4())
                         st.session_state.messages = []
                     st.rerun()
+                    st.stop()
         
         if len(all_conversations) > 10:
             st.caption(f"Showing 10 of {len(all_conversations)} conversations")
     else:
-        st.info("No saved conversations yet")
+        st.caption("No saved conversations yet")
+
+model_id = AVAILABLE_MODELS[st.session_state.selected_model]["id"]
+model, tokenizer = load_model(model_id)
+
+if model is None or tokenizer is None:
+    st.error("Failed to load the model. Please check your internet connection and try again.")
+    st.stop()
+
+st.session_state.tokenizer = tokenizer
+
+col1, col2 = st.columns([2, 1])
 
 with col2:
     st.subheader("Generation Settings")
@@ -319,20 +314,11 @@ with col2:
     
     st.markdown("---")
     
-    st.subheader("Model Info")
-    current_model = AVAILABLE_MODELS[st.session_state.selected_model]
-    st.markdown(f"""
-    - **Model:** {st.session_state.selected_model}
-    - **Parameters:** {current_model['params']}
-    - **Quantization:** {current_model['quantization']}
-    - **Memory:** {current_model['memory']}
-    - **Model ID:** {current_model['id']}
-    """)
-    
-    if st.button("Clear Chat History"):
+    if st.button("Clear Chat History", use_container_width=True):
         st.session_state.messages = []
         save_conversation(st.session_state.session_id, st.session_state.messages)
         st.rerun()
+        st.stop()
 
 with col1:
     st.subheader("Chat Interface")
@@ -355,6 +341,7 @@ with col1:
             if cols[col_idx].button(prompt, key=f"example_{idx}"):
                 st.session_state.pending_prompt = prompt
                 st.rerun()
+                st.stop()
     
     for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
@@ -433,6 +420,7 @@ with col1:
         
         save_conversation(st.session_state.session_id, st.session_state.messages)
         st.rerun()
+        st.stop()
 
 st.markdown("---")
 st.caption("Built with Streamlit | Model: microsoft/bitnet-b1.58-2B-4T")
