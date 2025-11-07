@@ -136,6 +136,8 @@ class BitNetCppBridge:
             # Use incremental UTF-8 decoder to properly handle multi-byte characters
             buffer = ""
             chunk_size = 5  # Yield every N characters for smooth streaming
+            total_output = ""  # Track all output to strip prompt
+            prompt_stripped = False
             
             if process.stdout:
                 # Create incremental UTF-8 decoder to handle multi-byte sequences
@@ -151,10 +153,18 @@ class BitNetCppBridge:
                     
                     if char:  # Only add if decoder returned a character
                         buffer += char
+                        total_output += char
                         
-                        # Yield chunks of characters for smoother streaming
-                        # This balances responsiveness vs. overhead
-                        if len(buffer) >= chunk_size:
+                        # Strip the prompt prefix (llama.cpp echoes the prompt)
+                        if not prompt_stripped and len(total_output) >= len(full_prompt):
+                            # Check if output starts with the prompt
+                            if total_output.startswith(full_prompt):
+                                # Remove prompt from buffer and mark as stripped
+                                buffer = total_output[len(full_prompt):]
+                                prompt_stripped = True
+                        
+                        # Yield chunks of characters for smoother streaming (only after prompt stripped)
+                        if prompt_stripped and len(buffer) >= chunk_size:
                             yield buffer
                             buffer = ""
                 
@@ -162,6 +172,12 @@ class BitNetCppBridge:
                 final_chars = decoder.decode(b'', True)
                 if final_chars:
                     buffer += final_chars
+                    total_output += final_chars
+                
+                # Final prompt stripping check if not done yet
+                if not prompt_stripped and total_output.startswith(full_prompt):
+                    buffer = total_output[len(full_prompt):]
+                
                 if buffer:
                     yield buffer
             
