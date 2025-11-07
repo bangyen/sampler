@@ -12,23 +12,44 @@
     <div class="container">
         <aside class="sidebar">
             <button class="close-sidebar" aria-label="Close sidebar">×</button>
-            <div class="sidebar-header">
-                <h2>Model Selection</h2>
-            </div>
             
-            <div id="model-list" class="model-list">
+            <div id="chat-sidebar" class="sidebar-content" data-sidebar="chat">
+                <div class="sidebar-header">
+                    <h2>LLM Model Selection</h2>
+                </div>
+                
+                <div id="model-list" class="model-list">
+                </div>
+
+                <div class="divider"></div>
+                
+                <div class="persistence-info">
+                    <small id="persistence-type">Loading...</small>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Conversation History</h3>
+                    <button id="new-conversation-btn" class="btn btn-primary">+ New Conversation</button>
+                    <div id="conversation-list" class="conversation-list">
+                    </div>
+                </div>
             </div>
 
-            <div class="divider"></div>
-            
-            <div class="persistence-info">
-                <small id="persistence-type">Loading...</small>
+            <div id="ner-sidebar" class="sidebar-content" data-sidebar="ner" style="display: none;">
+                <div class="sidebar-header">
+                    <h2>NER Model Selection</h2>
+                </div>
+                
+                <div id="ner-model-list" class="model-list">
+                </div>
             </div>
 
-            <div class="sidebar-section">
-                <h3>Conversation History</h3>
-                <button id="new-conversation-btn" class="btn btn-primary">+ New Conversation</button>
-                <div id="conversation-list" class="conversation-list">
+            <div id="ocr-sidebar" class="sidebar-content" data-sidebar="ocr" style="display: none;">
+                <div class="sidebar-header">
+                    <h2>OCR Configuration</h2>
+                </div>
+                
+                <div id="ocr-config-list" class="model-list">
                 </div>
             </div>
         </aside>
