@@ -420,8 +420,10 @@ async def generate_response_streaming(
 ):
     """Generate a streaming response from the model"""
     try:
+        print(f"[DEBUG] Starting transformers streaming generation")
         prompt = format_prompt(messages, tokenizer)
         if prompt is None:
+            print(f"[ERROR] Could not format prompt")
             yield json.dumps({'error': 'Could not format prompt'})
             return
 
@@ -445,6 +447,7 @@ async def generate_response_streaming(
         thread = Thread(target=model.generate, kwargs=generation_kwargs)
         thread.start()
 
+        token_count = 0
         for new_text in streamer:
             # Check if client disconnected
             if request and await request.is_disconnected():
@@ -453,11 +456,16 @@ async def generate_response_streaming(
             
             if new_text.startswith("Assistant:"):
                 new_text = new_text[len("Assistant:") :].strip()
+            token_count += 1
             yield json.dumps({'text': new_text})
 
         thread.join()
+        print(f"[DEBUG] Transformers generation complete, {token_count} tokens")
         yield json.dumps({'done': True})
     except Exception as e:
+        import traceback
+        print(f"[ERROR] Exception in generate_response_streaming: {e}")
+        print(traceback.format_exc())
         yield json.dumps({'error': str(e)})
 
 
@@ -466,6 +474,9 @@ async def generate_response_streaming_llama(
 ):
     """Generate a streaming response using llama.cpp backend"""
     try:
+        print(f"[DEBUG] Starting llama.cpp streaming generation")
+        token_count = 0
+        
         # Use the BitNetInference generate method
         for token in inference.generate(
             messages=messages,
@@ -477,12 +488,18 @@ async def generate_response_streaming_llama(
         ):
             # Check if client disconnected
             if request and await request.is_disconnected():
+                print(f"[DEBUG] Client disconnected, stopping generation")
                 return
             
+            token_count += 1
             yield json.dumps({'text': token})
         
+        print(f"[DEBUG] llama.cpp generation complete, {token_count} tokens")
         yield json.dumps({'done': True})
     except Exception as e:
+        import traceback
+        print(f"[ERROR] Exception in generate_response_streaming_llama: {e}")
+        print(traceback.format_exc())
         yield json.dumps({'error': str(e)})
 
 
@@ -529,47 +546,57 @@ async def get_layout_config():
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest, raw_request: Request):
     """Stream chat completions"""
-    if request.model_name not in AVAILABLE_MODELS:
-        raise HTTPException(status_code=400, detail="Invalid model name")
+    try:
+        if request.model_name not in AVAILABLE_MODELS:
+            raise HTTPException(status_code=400, detail="Invalid model name")
 
-    model_config = AVAILABLE_MODELS[request.model_name]
-    backend = model_config.get("backend", "transformers")
-    
-    messages_dict = [
-        {"role": "system", "content": "You are a helpful AI assistant."}
-    ] + [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        model_config = AVAILABLE_MODELS[request.model_name]
+        backend = model_config.get("backend", "transformers")
+        
+        print(f"[DEBUG] Using backend: {backend} for model: {request.model_name}")
+        
+        messages_dict = [
+            {"role": "system", "content": "You are a helpful AI assistant."}
+        ] + [{"role": msg.role, "content": msg.content} for msg in request.messages]
 
-    # Route to appropriate backend
-    if backend == "llamacpp":
-        # Use llama.cpp backend for GGUF models
-        inference = load_llama_model(request.model_name)
-        return EventSourceResponse(
-            generate_response_streaming_llama(
-                inference,
-                messages_dict,
-                request.temperature,
-                request.max_tokens,
-                request.top_p,
-                request.top_k,
-                raw_request,
+        # Route to appropriate backend
+        if backend == "llamacpp":
+            # Use llama.cpp backend for GGUF models
+            print(f"[DEBUG] Loading llama.cpp model: {request.model_name}")
+            inference = load_llama_model(request.model_name)
+            return EventSourceResponse(
+                generate_response_streaming_llama(
+                    inference,
+                    messages_dict,
+                    request.temperature,
+                    request.max_tokens,
+                    request.top_p,
+                    request.top_k,
+                    raw_request,
+                )
             )
-        )
-    else:
-        # Use transformers backend for standard models
-        model_id = model_config["id"]
-        model_data = load_model(model_id)
-        return EventSourceResponse(
-            generate_response_streaming(
-                model_data["model"],
-                model_data["tokenizer"],
-                messages_dict,
-                request.temperature,
-                request.max_tokens,
-                request.top_p,
-                request.top_k,
-                raw_request,
+        else:
+            # Use transformers backend for standard models
+            print(f"[DEBUG] Loading transformers model: {request.model_name}")
+            model_id = model_config["id"]
+            model_data = load_model(model_id)
+            return EventSourceResponse(
+                generate_response_streaming(
+                    model_data["model"],
+                    model_data["tokenizer"],
+                    messages_dict,
+                    request.temperature,
+                    request.max_tokens,
+                    request.top_p,
+                    request.top_k,
+                    raw_request,
+                )
             )
-        )
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Exception in chat_stream: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/ner")
