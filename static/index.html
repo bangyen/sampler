@@ -46,28 +46,21 @@
 
             <div id="ocr-sidebar" class="sidebar-content" data-sidebar="ocr" style="display: none;">
                 <div class="sidebar-header">
-                    <h2>OCR Configuration</h2>
+                    <h2>OCR Engine</h2>
                 </div>
                 
-                <div id="ocr-config-list" class="model-list">
+                <div id="ocr-engine-selector" class="model-list">
+                </div>
+                
+                <div id="ocr-config-section" class="sidebar-section">
+                    <h3>Language Configuration</h3>
+                    <div id="ocr-config-list" class="model-list">
+                    </div>
                 </div>
                 
                 <div class="sidebar-section">
                     <h3>Recent Extractions</h3>
                     <div id="ocr-history-list" class="conversation-list">
-                    </div>
-                </div>
-            </div>
-
-            <div id="layout-sidebar" class="sidebar-content" data-sidebar="layout" style="display: none;">
-                <div class="sidebar-header">
-                    <h2>Layout Analysis Options</h2>
-                    <p style="font-size: 13px; color: #888; margin-top: 10px;">Using PaddleOCR for advanced document analysis</p>
-                </div>
-                
-                <div class="sidebar-section">
-                    <h3>Recent Analyses</h3>
-                    <div id="layout-history-list" class="conversation-list">
                     </div>
                 </div>
             </div>
@@ -89,8 +82,7 @@
             <div class="tabs">
                 <button class="tab-btn active" data-tab="chat">LLM</button>
                 <button class="tab-btn" data-tab="ner">NER</button>
-                <button class="tab-btn" data-tab="ocr">OCR</button>
-                <button class="tab-btn" data-tab="layout">Layout Analysis</button>
+                <button class="tab-btn" data-tab="ocr">OCR & Layout</button>
             </div>
 
             <div class="content-wrapper">
@@ -195,8 +187,8 @@
                 <div id="ocr-tab" class="tab-content">
                     <div class="ocr-container">
                         <div class="ocr-header">
-                            <h2>Optical Character Recognition</h2>
-                            <p>Extract text from images using OCR</p>
+                            <h2>Optical Character Recognition & Layout Analysis</h2>
+                            <p>Extract text from images using EasyOCR or advanced layout analysis with PaddleOCR</p>
                         </div>
                         
                         <div class="example-prompts" style="margin-bottom: 20px;">
@@ -230,43 +222,6 @@
                     </div>
                 </div>
 
-                <div id="layout-tab" class="tab-content">
-                    <div class="layout-container">
-                        <div class="layout-header">
-                            <h2>Layout Analysis</h2>
-                            <p>Advanced document layout analysis with PaddleOCR</p>
-                        </div>
-                        
-                        <div class="example-prompts" style="margin-bottom: 20px;">
-                            <div class="info-message">Try one of these example images:</div>
-                            <div class="example-grid">
-                                <button class="example-prompt" data-layout-image="/static/sample_images/business_card_with_text_d675dd72.png">Business card</button>
-                                <button class="example-prompt" data-layout-image="/static/sample_images/printed_document_page_1ad46638.png">Document page</button>
-                                <button class="example-prompt" data-layout-image="/static/sample_images/restaurant_menu_with_prices_89f83133.png">Restaurant menu</button>
-                                <button class="example-prompt" data-layout-image="/static/sample_images/street_sign_with_text_75ba709f.png">Street signs</button>
-                            </div>
-                        </div>
-                        
-                        <div class="layout-upload-section">
-                            <div id="layout-drop-zone" class="drop-zone">
-                                <p>Drag and drop a document image here, or click to select</p>
-                                <input type="file" id="layout-file-input" accept="image/*" style="display: none;">
-                            </div>
-                            <button id="layout-submit-btn" class="btn btn-primary" style="display: none;">Analyze Layout</button>
-                        </div>
-                        
-                        <div id="layout-preview" class="layout-preview" style="display: none;">
-                            <h3>Image Preview</h3>
-                            <img id="layout-preview-img" alt="Preview">
-                        </div>
-                        
-                        <div id="layout-results" class="layout-results" style="display: none;">
-                            <h3>Extracted Text</h3>
-                            <div id="layout-text" class="extracted-text"></div>
-                            <div id="layout-metrics" class="metrics-display"></div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </main>
     </div>

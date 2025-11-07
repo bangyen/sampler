@@ -2,6 +2,7 @@ let sessionId = generateUUID();
 let messages = [];
 let selectedModel = 'Qwen 2.5 0.5B';
 let selectedNERModel = 'BERT Base NER';
+let selectedOCREngine = 'easyocr';
 let selectedOCRConfig = 'English Only';
 let isGenerating = false;
 let currentReader = null;
@@ -37,13 +38,13 @@ function generateUUID() {
 async function init() {
     await loadModels();
     await loadNERModels();
+    await loadOCREngines();
     await loadOCRConfigs();
     await loadConversation();
     await loadConversationList();
     setupEventListeners();
     setupNERExamples();
     setupOCRExamples();
-    setupLayoutExamples();
 }
 
 async function loadModels() {
@@ -91,6 +92,39 @@ async function loadNERModels() {
         });
     } catch (error) {
         console.error('Error loading NER models:', error);
+    }
+}
+
+async function loadOCREngines() {
+    try {
+        const engineSelector = document.getElementById('ocr-engine-selector');
+        engineSelector.innerHTML = '';
+        
+        const engines = {
+            'easyocr': {
+                name: 'EasyOCR',
+                description: 'Fast and accurate OCR with multilingual support'
+            },
+            'paddleocr': {
+                name: 'PaddleOCR',
+                description: 'Advanced layout analysis and document structure detection'
+            }
+        };
+        
+        Object.entries(engines).forEach(([key, info]) => {
+            const engineDiv = document.createElement('div');
+            engineDiv.className = `model-option ${key === selectedOCREngine ? 'selected' : ''}`;
+            engineDiv.innerHTML = `
+                <h4>${info.name}</h4>
+                <div class="model-description">${info.description}</div>
+            `;
+            engineDiv.onclick = (evt) => selectOCREngine(key, evt);
+            engineSelector.appendChild(engineDiv);
+        });
+        
+        updateOCRConfigVisibility();
+    } catch (error) {
+        console.error('Error loading OCR engines:', error);
     }
 }
 
@@ -144,6 +178,35 @@ function selectNERModel(name, evt) {
     setTimeout(() => {
         closeMobileMenuHelper();
     }, 100);
+}
+
+function selectOCREngine(engine, evt) {
+    selectedOCREngine = engine;
+    
+    document.querySelectorAll('#ocr-engine-selector .model-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    evt.target.closest('.model-option').classList.add('selected');
+    
+    updateOCRConfigVisibility();
+    
+    setTimeout(() => {
+        closeMobileMenuHelper();
+    }, 300);
+}
+
+function updateOCRConfigVisibility() {
+    const configSection = document.getElementById('ocr-config-section');
+    if (!configSection) {
+        console.warn('ocr-config-section element not found');
+        return;
+    }
+    if (selectedOCREngine === 'easyocr') {
+        configSection.style.display = 'block';
+    } else {
+        configSection.style.display = 'none';
+    }
 }
 
 function selectOCRConfig(name, evt) {
@@ -615,7 +678,6 @@ function setupEventListeners() {
     setupTabs();
     setupNER();
     setupOCR();
-    setupLayoutTab();
 }
 
 function setupTabs() {
@@ -639,8 +701,6 @@ function setupTabs() {
                 loadNERHistory();
             } else if (targetTab === 'ocr') {
                 loadOCRHistory();
-            } else if (targetTab === 'layout') {
-                loadLayoutHistory();
             }
         });
     });
@@ -789,13 +849,15 @@ function setupOCR() {
         }
         
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Extracting...';
+        const isLayout = selectedOCREngine === 'paddleocr';
+        submitBtn.textContent = isLayout ? 'Analyzing...' : 'Extracting...';
         
         try {
             const formData = new FormData();
             formData.append('file', ocrSelectedFile);
             
-            const response = await fetch(`/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`, {
+            const endpoint = isLayout ? '/api/layout' : `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`;
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
             });
@@ -815,6 +877,7 @@ function setupOCR() {
             }
             
             displayOCRResults(data);
+            await loadOCRHistory();
         } catch (error) {
             console.error('OCR error:', error);
             displayOCRError('Network error. Please try again.');
@@ -855,7 +918,6 @@ function displayOCRResults(data) {
         `;
     }
     
-    loadOCRHistory();
 }
 
 async function loadNERHistory() {
@@ -933,20 +995,29 @@ async function deleteNERAnalysis(nerId) {
 
 async function loadOCRHistory() {
     try {
-        const response = await fetch('/api/ocr/history');
-        const data = await response.json();
+        const [ocrResponse, layoutResponse] = await Promise.all([
+            fetch('/api/ocr/history'),
+            fetch('/api/layout/history')
+        ]);
+        
+        const ocrData = await ocrResponse.json();
+        const layoutData = await layoutResponse.json();
         
         const historyList = document.getElementById('ocr-history-list');
         historyList.innerHTML = '';
         
-        if (!data.analyses || data.analyses.length === 0) {
+        const ocrAnalyses = ocrData.analyses || [];
+        const layoutAnalyses = layoutData.analyses || [];
+        
+        if (ocrAnalyses.length === 0 && layoutAnalyses.length === 0) {
             historyList.innerHTML = '<small style="color: #888;">No extractions yet</small>';
             return;
         }
         
-        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} extraction(s)</small>`;
+        const totalCount = ocrAnalyses.length + layoutAnalyses.length;
+        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${totalCount} extraction(s)</small>`;
         
-        data.analyses.forEach(analysis => {
+        ocrAnalyses.forEach(analysis => {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
@@ -964,6 +1035,31 @@ async function loadOCRHistory() {
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
                 deleteOCRAnalysis(analysis.id);
+            };
+            
+            item.appendChild(btn);
+            item.appendChild(deleteBtn);
+            historyList.appendChild(item);
+        });
+        
+        layoutAnalyses.forEach(analysis => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            
+            const btn = document.createElement('button');
+            btn.className = 'conversation-btn';
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
+                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections | PaddleOCR</div>
+            `;
+            btn.onclick = () => loadLayoutAnalysis(analysis.id);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteLayoutAnalysis(analysis.id);
             };
             
             item.appendChild(btn);
@@ -1003,178 +1099,15 @@ async function deleteOCRAnalysis(ocrId) {
     }
 }
 
-let layoutSelectedFile = null;
-
-function setupLayoutTab() {
-    const dropZone = document.getElementById('layout-drop-zone');
-    const fileInput = document.getElementById('layout-file-input');
-    const submitBtn = document.getElementById('layout-submit-btn');
-    const previewDiv = document.getElementById('layout-preview');
-    const previewImg = document.getElementById('layout-preview-img');
-    
-    dropZone.addEventListener('click', () => fileInput.click());
-    
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = '#4a9eff';
-    });
-    
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = '#ddd';
-    });
-    
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = '#ddd';
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileSelection(files[0]);
-        }
-    });
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileSelection(e.target.files[0]);
-        }
-    });
-    
-    function handleFileSelection(file) {
-        layoutSelectedFile = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            previewImg.src = e.target.result;
-            previewDiv.style.display = 'block';
-            submitBtn.style.display = 'inline-block';
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    submitBtn.addEventListener('click', async () => {
-        if (!layoutSelectedFile) {
-            alert('Please select an image first');
-            return;
-        }
-        
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Analyzing...';
-        
-        try {
-            const formData = new FormData();
-            formData.append('file', layoutSelectedFile);
-            
-            const response = await fetch('/api/layout', {
-                method: 'POST',
-                body: formData
-            });
-            
-            let data;
-            try {
-                data = await response.json();
-            } catch (parseError) {
-                const textData = await response.text();
-                displayLayoutError(textData || 'Error analyzing layout');
-                return;
-            }
-            
-            if (!response.ok) {
-                displayLayoutError(data.detail || 'Error analyzing layout');
-                return;
-            }
-            
-            displayLayoutResults(data);
-        } catch (error) {
-            console.error('Layout analysis error:', error);
-            displayLayoutError('Network error. Please try again.');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Analyze Layout';
-        }
-    });
-}
-
-function displayLayoutError(message) {
-    const resultsDiv = document.getElementById('layout-results');
-    const textDiv = document.getElementById('layout-text');
-    const metricsDiv = document.getElementById('layout-metrics');
-    
-    resultsDiv.style.display = 'block';
-    textDiv.innerHTML = `<div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;"><strong>Error:</strong> ${message}</div>`;
-    metricsDiv.innerHTML = '';
-}
-
-function displayLayoutResults(data) {
-    const resultsDiv = document.getElementById('layout-results');
-    const textDiv = document.getElementById('layout-text');
-    const metricsDiv = document.getElementById('layout-metrics');
-    
-    resultsDiv.style.display = 'block';
-    
-    if (data.text) {
-        textDiv.textContent = data.text;
-        metricsDiv.innerHTML = `
-            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-            <div><strong>Text Detections:</strong> ${data.num_detections}</div>
-        `;
-    } else {
-        textDiv.textContent = 'No text detected in the document.';
-        metricsDiv.innerHTML = `
-            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-        `;
-    }
-    
-    loadLayoutHistory();
-}
-
-async function loadLayoutHistory() {
-    try {
-        const response = await fetch('/api/layout/history');
-        const data = await response.json();
-        
-        const historyList = document.getElementById('layout-history-list');
-        historyList.innerHTML = '';
-        
-        if (!data.analyses || data.analyses.length === 0) {
-            historyList.innerHTML = '<small style="color: #888;">No analyses yet</small>';
-            return;
-        }
-        
-        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} analysis/analyses</small>`;
-        
-        data.analyses.forEach(analysis => {
-            const item = document.createElement('div');
-            item.className = 'conversation-item';
-            
-            const btn = document.createElement('button');
-            btn.className = 'conversation-btn';
-            btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
-                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections</div>
-            `;
-            btn.onclick = () => loadLayoutAnalysis(analysis.id);
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteLayoutAnalysis(analysis.id);
-            };
-            
-            item.appendChild(btn);
-            item.appendChild(deleteBtn);
-            historyList.appendChild(item);
-        });
-    } catch (error) {
-        console.error('Error loading layout history:', error);
-    }
-}
-
 async function loadLayoutAnalysis(layoutId) {
     try {
         const response = await fetch(`/api/layout/history/${layoutId}`);
         const data = await response.json();
         
-        displayLayoutResults(data);
+        selectedOCREngine = 'paddleocr';
+        await loadOCREngines();
+        
+        displayOCRResults(data);
         
         closeMobileMenuHelper();
     } catch (error) {
@@ -1188,7 +1121,7 @@ async function deleteLayoutAnalysis(layoutId) {
             method: 'DELETE'
         });
         
-        await loadLayoutHistory();
+        await loadOCRHistory();
     } catch (error) {
         console.error('Error deleting layout analysis:', error);
     }
@@ -1221,31 +1154,6 @@ async function setupOCRExamples() {
                     document.getElementById('ocr-preview-img').src = e.target.result;
                     document.getElementById('ocr-preview').style.display = 'block';
                     document.getElementById('ocr-submit-btn').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } catch (error) {
-                console.error('Error loading sample image:', error);
-            }
-        });
-    });
-}
-
-async function setupLayoutExamples() {
-    const exampleBtns = document.querySelectorAll('[data-layout-image]');
-    exampleBtns.forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const imageUrl = btn.dataset.layoutImage;
-            try {
-                const response = await fetch(imageUrl);
-                const blob = await response.blob();
-                const file = new File([blob], imageUrl.split('/').pop(), { type: blob.type });
-                
-                layoutSelectedFile = file;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('layout-preview-img').src = e.target.result;
-                    document.getElementById('layout-preview').style.display = 'block';
-                    document.getElementById('layout-submit-btn').style.display = 'block';
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
