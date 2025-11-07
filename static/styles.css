@@ -195,8 +195,7 @@ body {
 
 .chat-container {
     min-width: 0;
-    max-width: 900px;
-    margin: 0 auto;
+    width: 100%;
     display: flex;
     flex-direction: column;
     padding: 30px;
@@ -222,6 +221,7 @@ body {
     background: white;
     border-radius: 8px;
     margin-bottom: 15px;
+    max-width: 100%;
 }
 
 .message {
@@ -686,18 +686,20 @@ body {
 
 #chat-tab.active {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: 900px 320px;
     overflow: hidden;
     gap: 0;
+    width: fit-content;
+    margin: 0 auto;
 }
 
 /* NER Styles */
 .ner-container,
 .ocr-container,
 .layout-container {
-    max-width: 900px !important;
-    width: 100% !important;
-    margin: 0 auto !important;
+    max-width: 1220px;
+    width: 100%;
+    margin: 0 auto;
     padding: 30px;
 }
 
