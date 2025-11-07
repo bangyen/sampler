@@ -83,7 +83,7 @@ body {
 }
 
 .persistence-info {
-    padding: 0 15px 10px;
+    padding: 10px 15px;
     color: #666;
     font-size: 12px;
 }
@@ -101,7 +101,7 @@ body {
 .conversation-list {
     max-height: 300px;
     overflow-y: auto;
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
 .conversation-item {
@@ -374,7 +374,11 @@ body {
 }
 
 .advanced-settings[open] {
-    padding-bottom: 15px;
+    padding-bottom: 0;
+}
+
+.advanced-settings[open] .setting-group:last-child {
+    margin-bottom: 15px;
 }
 
 .btn {
