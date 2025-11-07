@@ -13,7 +13,7 @@ from typing import Iterator, Optional
 from huggingface_hub import hf_hub_download
 
 # Path to compiled BitNet binary
-BITNET_BINARY = Path("bin/BitNet/build/bin/main")
+BITNET_BINARY = Path("bin/BitNet/build/bin/llama-cli")
 
 # Default model configuration
 DEFAULT_BITNET_REPO = "microsoft/bitnet-b1.58-2B-4T-gguf"
@@ -91,6 +91,7 @@ class BitNetCppBridge:
         
         # Build command arguments for BitNet binary
         # Based on llama.cpp interface: ./main -m model.gguf -p "prompt" -n tokens
+        # Note: Logging goes to stderr, generated tokens go to stdout
         cmd = [
             str(BITNET_BINARY),
             "-m", str(self.model_path),
@@ -100,7 +101,6 @@ class BitNetCppBridge:
             "--top-p", str(top_p),
             "--top-k", str(top_k),
             "-t", str(os.cpu_count() or 4),  # Use all CPU threads
-            "--log-disable",  # Disable logging to keep stdout clean
         ]
         
         process = None
