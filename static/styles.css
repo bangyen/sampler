@@ -300,6 +300,15 @@ body {
     background: #f8f9fa;
 }
 
+.example-info {
+    padding: 12px;
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #666;
+}
+
 .chat-input-container {
     display: flex;
     gap: 10px;
