@@ -108,7 +108,7 @@ async function loadOCREngines() {
             },
             'paddleocr': {
                 name: 'PaddleOCR',
-                description: 'Advanced layout analysis and document structure detection'
+                description: 'Advanced OCR with document structure detection'
             }
         };
         
