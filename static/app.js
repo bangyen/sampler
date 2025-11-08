@@ -1344,6 +1344,7 @@ async function setupOCRExamples() {
                     document.getElementById('ocr-preview-img').src = e.target.result;
                     document.getElementById('ocr-preview').style.display = 'block';
                     document.getElementById('ocr-drop-zone').style.display = 'none';
+                    document.getElementById('ocr-submit-btn').click();
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
