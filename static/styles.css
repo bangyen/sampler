@@ -383,7 +383,7 @@ body {
    ======================================== */
 
 .chat-container {
-    width: 1200px;
+    width: 900px;
     max-width: 100%;
     margin: 0 auto;
     display: flex;
@@ -805,7 +805,7 @@ body {
 .ner-container,
 .ocr-container,
 .layout-container {
-    width: 1200px !important;
+    width: 900px !important;
     max-width: 100% !important;
     margin: 0 auto !important;
     padding: var(--space-3xl);
@@ -1117,8 +1117,9 @@ body {
     .ner-container,
     .ocr-container,
     .layout-container {
+        width: 100% !important;
+        max-width: 100% !important;
         padding: var(--space-xl) var(--space-lg);
-        max-width: var(--container-max-width);
     }
     
     .sidebar-section {
