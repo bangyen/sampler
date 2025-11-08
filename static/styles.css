@@ -1095,6 +1095,15 @@ body {
         padding: var(--space-xl) var(--space-lg);
         max-width: var(--container-max-width);
     }
+    
+    .sidebar-section {
+        flex: none;
+    }
+    
+    .conversation-list {
+        overflow-y: visible;
+        flex: none;
+    }
 }
 
 /* ========================================
