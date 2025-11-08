@@ -502,14 +502,13 @@ def load_ocr_model(config_name="English Only"):
             from paddleocr import PaddleOCR as PaddleOCREngine
 
             start_time = time.time()
-            ocr_readers["paddleocr"] = PaddleOCREngine(
-                use_textline_orientation=True, lang="en", use_gpu=False
-            )
+            ocr_readers["paddleocr"] = PaddleOCREngine(lang="en")
             load_time = time.time() - start_time
             return ocr_readers["paddleocr"], load_time
         except Exception as e:
             raise HTTPException(
-                status_code=500, detail=f"Error loading PaddleOCR: {str(e)}"
+                status_code=503,
+                detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}"
             )
 
     else:
@@ -1207,12 +1206,11 @@ async def analyze_layout(file: UploadFile = File(...)):
 
         if "paddleocr" not in ocr_readers:
             try:
-                ocr_readers["paddleocr"] = PaddleOCREngine(
-                    use_textline_orientation=True, lang="en", use_gpu=False
-                )
+                ocr_readers["paddleocr"] = PaddleOCREngine(lang="en")
             except Exception as e:
                 raise HTTPException(
-                    status_code=500, detail=f"Error loading PaddleOCR: {str(e)}"
+                    status_code=503,
+                    detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}"
                 )
 
         ocr_model = ocr_readers["paddleocr"]

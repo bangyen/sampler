@@ -111,10 +111,6 @@ async function loadOCREngines() {
             'easyocr': {
                 name: 'EasyOCR',
                 description: 'Fast and accurate OCR with multilingual support'
-            },
-            'paddleocr': {
-                name: 'PaddleOCR',
-                description: 'Advanced OCR with document structure detection'
             }
         };
         
