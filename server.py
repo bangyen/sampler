@@ -141,16 +141,16 @@ from storage.zero_shot_storage import (  # noqa: E402
 # Import zero-shot classifier
 try:
     from inference.zero_shot_classifier import (
-        ZeroShotClassifier,
-        ZERO_SHOT_MODELS,
-        create_classifier,
+        LLMZeroShotClassifier,
+        ZeroShotResult,
+        build_zero_shot_prompt,
     )
     ZERO_SHOT_AVAILABLE = True
 except ImportError:
     ZERO_SHOT_AVAILABLE = False
-    ZeroShotClassifier = None
-    ZERO_SHOT_MODELS = {}
-    create_classifier = None
+    LLMZeroShotClassifier = None
+    ZeroShotResult = None
+    build_zero_shot_prompt = None
 
 # Import bitnet.cpp inference module (llama-cpp-python wrapper)
 try:
@@ -281,7 +281,6 @@ loaded_llama_models = {}
 loaded_bitnet_models = {}
 ner_pipelines = {}
 ocr_readers = {}
-zero_shot_classifiers = {}
 
 
 class NERRequest(BaseModel):
@@ -815,10 +814,13 @@ async def get_layout_config():
     return {"config": LAYOUT_CONFIG}
 
 
-@app.get("/api/zero-shot/models")
-async def get_zero_shot_models():
-    """Get list of available zero-shot classification models"""
-    return {"models": ZERO_SHOT_MODELS if ZERO_SHOT_AVAILABLE else {}}
+@app.get("/api/zero-shot/available")
+async def check_zero_shot_available():
+    """Check if zero-shot classification is available"""
+    return {
+        "available": ZERO_SHOT_AVAILABLE,
+        "models": list(AVAILABLE_MODELS.keys()) if ZERO_SHOT_AVAILABLE else []
+    }
 
 
 async def stream_with_loading_wrapper_transformers(
@@ -1039,6 +1041,97 @@ async def extract_entities(request: NERRequest):
     return EventSourceResponse(stream_ner_extraction(request))
 
 
+async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGenerator[str, None]:
+    """Stream zero-shot classification with schema-locked JSON outputs and logprob scoring"""
+    try:
+        if not ZERO_SHOT_AVAILABLE:
+            yield json.dumps({"error": "Zero-shot classification not available"})
+            return
+        
+        if request.model not in AVAILABLE_MODELS:
+            yield json.dumps({"error": f"Invalid model: {request.model}"})
+            return
+        
+        model_config = AVAILABLE_MODELS[request.model]
+        model_id = model_config["id"]
+        backend = model_config.get("backend", "transformers")
+        
+        if backend != "transformers":
+            yield json.dumps({
+                "error": "Zero-shot classification currently only supports transformers backend models"
+            })
+            return
+        
+        is_cached = model_id in loaded_models
+        
+        if not is_cached:
+            yield json.dumps({"model_loading_start": True})
+        
+        model_data, load_time = load_model(model_id)
+        
+        if load_time is not None:
+            yield json.dumps({"model_loading_end": True, "load_time": load_time})
+        
+        start_time = time.time()
+        
+        if LLMZeroShotClassifier is None:
+            yield json.dumps({"error": "Zero-shot classifier not properly loaded"})
+            return
+        
+        classifier = LLMZeroShotClassifier(
+            model=model_data["model"],
+            tokenizer=model_data["tokenizer"],
+            device="cpu"
+        )
+        
+        result = classifier.classify(
+            text=request.text,
+            candidate_labels=request.candidate_labels,
+            hypothesis_template=request.hypothesis_template,
+            use_logprobs=request.use_logprobs,
+            abstain_threshold=request.abstain_threshold,
+            max_tokens=300,
+            temperature=0.1
+        )
+        
+        end_time = time.time()
+        processing_time = end_time - start_time
+        
+        result_dict = result.model_dump()
+        
+        zs_id = save_zero_shot_analysis(
+            text=request.text,
+            labels=request.candidate_labels,
+            results=result_dict,
+            model=request.model,
+            processing_time=processing_time,
+            use_logprobs=request.use_logprobs,
+            abstain_threshold=request.abstain_threshold
+        )
+        
+        yield json.dumps({
+            "done": True,
+            "result": result_dict,
+            "processing_time": processing_time,
+            "model": request.model,
+            "id": zs_id,
+        })
+        
+    except HTTPException as e:
+        yield json.dumps({"error": str(e.detail)})
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Exception in zero-shot classification: {e}")
+        print(traceback.format_exc())
+        yield json.dumps({"error": f"Error during classification: {str(e)}"})
+
+
+@app.post("/api/zero-shot/classify")
+async def classify_zero_shot(request: ZeroShotRequest):
+    """Perform zero-shot classification with schema-locked JSON outputs and logprob scoring (streaming)"""
+    return EventSourceResponse(stream_zero_shot_classification(request))
+
+
 async def stream_ocr_extraction(
     file_contents, filename, config
 ) -> AsyncGenerator[str, None]:
@@ -1104,7 +1197,7 @@ async def stream_ocr_extraction(
             image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
 
-            results = ocr_model.ocr(img_array, cls=True)
+            results = ocr_model.ocr(img_array, cls=True)  # type: ignore
 
             extracted_text_parts = []
             bounding_boxes = []
@@ -1301,6 +1394,36 @@ async def delete_ocr(ocr_id: str):
 async def clear_all_ocr():
     """Delete all OCR analyses"""
     success = clear_all_ocr_analyses()
+    return {"success": success}
+
+
+@app.get("/api/zero-shot/history")
+async def list_zero_shot_analyses():
+    """List all zero-shot classification analyses"""
+    analyses = get_all_zero_shot_analyses()
+    return {"analyses": analyses}
+
+
+@app.get("/api/zero-shot/history/{zs_id}")
+async def get_zero_shot_analysis(zs_id: str):
+    """Load a specific zero-shot classification analysis"""
+    analysis = load_zero_shot_analysis(zs_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Zero-shot analysis not found")
+    return analysis
+
+
+@app.delete("/api/zero-shot/history/{zs_id}")
+async def delete_zero_shot(zs_id: str):
+    """Delete a zero-shot classification analysis"""
+    success = delete_zero_shot_analysis(zs_id)
+    return {"success": success}
+
+
+@app.delete("/api/zero-shot/history")
+async def clear_all_zero_shot():
+    """Delete all zero-shot classification analyses"""
+    success = clear_all_zero_shot_analyses()
     return {"success": success}
 
 
