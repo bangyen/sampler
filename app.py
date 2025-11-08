@@ -1,7 +1,7 @@
 import streamlit as st
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
-from transformers import TextIteratorStreamer
+from transformers.generation.streamers import TextIteratorStreamer
 from threading import Thread
 import os
 import uuid
