@@ -3,7 +3,7 @@ import pytest
 import json
 from pathlib import Path
 from unittest.mock import patch
-import json_storage
+from storage import json_storage
 
 
 def test_save_and_load_conversation(tmp_path, sample_conversation):

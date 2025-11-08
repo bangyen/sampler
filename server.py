@@ -68,7 +68,7 @@ try:
         raise ConnectionError("Database connection test failed")
 except (ImportError, ModuleNotFoundError, ConnectionError):
     try:
-        from json_storage import (
+        from storage.json_storage import (
             save_conversation,
             load_conversation,
             get_all_conversations,
@@ -94,21 +94,21 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
             return False
 
 
-from ner_storage import (  # noqa: E402
+from storage.ner_storage import (  # noqa: E402
     save_ner_analysis,
     load_ner_analysis,
     get_all_ner_analyses,
     delete_ner_analysis,
 )
 
-from ocr_storage import (  # noqa: E402
+from storage.ocr_storage import (  # noqa: E402
     save_ocr_analysis,
     load_ocr_analysis,
     get_all_ocr_analyses,
     delete_ocr_analysis,
 )
 
-from layout_storage import (  # noqa: E402
+from storage.layout_storage import (  # noqa: E402
     save_layout_analysis,
     load_layout_analysis,
     get_all_layout_analyses,
@@ -117,7 +117,7 @@ from layout_storage import (  # noqa: E402
 
 # Import bitnet.cpp inference module (llama-cpp-python wrapper)
 try:
-    from bitnet_inference import (
+    from inference.bitnet_inference import (
         BitNetInference,
         is_available as llama_cpp_available,
         download_gguf_model,
@@ -131,7 +131,7 @@ except ImportError:
 
 # Import BitNet compiled binary bridge
 try:
-    from bitnet_cpp_bridge import BitNetCppBridge, load_bitnet_model
+    from inference.bitnet_cpp_bridge import BitNetCppBridge, load_bitnet_model
 
     BITNET_CPP_AVAILABLE = True
 except ImportError:

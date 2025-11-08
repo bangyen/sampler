@@ -6,24 +6,24 @@ import os
 
 def test_is_available():
     """Test availability check."""
-    from bitnet_inference import is_available, LLAMA_CPP_AVAILABLE
+    from inference.bitnet_inference import is_available, LLAMA_CPP_AVAILABLE
     assert is_available() == LLAMA_CPP_AVAILABLE
 
 
 def test_bitnet_inference_init_file_not_found():
     """Test BitNetInference raises error for non-existent model file."""
-    with patch("bitnet_inference.LLAMA_CPP_AVAILABLE", True):
-        from bitnet_inference import BitNetInference
+    with patch("inference.bitnet_inference.LLAMA_CPP_AVAILABLE", True):
+        from inference.bitnet_inference import BitNetInference
         with pytest.raises(FileNotFoundError):
             BitNetInference("nonexistent-model.gguf")
 
 
 def test_bitnet_inference_init_success():
     """Test BitNetInference initialization with mocked model."""
-    with patch("bitnet_inference.LLAMA_CPP_AVAILABLE", True):
-        with patch("bitnet_inference.Llama") as mock_llama:
+    with patch("inference.bitnet_inference.LLAMA_CPP_AVAILABLE", True):
+        with patch("inference.bitnet_inference.Llama") as mock_llama:
             with patch("os.path.exists", return_value=True):
-                from bitnet_inference import BitNetInference
+                from inference.bitnet_inference import BitNetInference
                 
                 mock_model = Mock()
                 mock_llama.return_value = mock_model
@@ -35,10 +35,10 @@ def test_bitnet_inference_init_success():
 
 def test_generate_basic():
     """Test basic text generation."""
-    with patch("bitnet_inference.LLAMA_CPP_AVAILABLE", True):
-        with patch("bitnet_inference.Llama") as mock_llama:
+    with patch("inference.bitnet_inference.LLAMA_CPP_AVAILABLE", True):
+        with patch("inference.bitnet_inference.Llama") as mock_llama:
             with patch("os.path.exists", return_value=True):
-                from bitnet_inference import BitNetInference
+                from inference.bitnet_inference import BitNetInference
                 
                 mock_model = Mock()
                 mock_model.return_value = {
@@ -56,10 +56,10 @@ def test_generate_basic():
 
 def test_generate_stream():
     """Test streaming text generation."""
-    with patch("bitnet_inference.LLAMA_CPP_AVAILABLE", True):
-        with patch("bitnet_inference.Llama") as mock_llama:
+    with patch("inference.bitnet_inference.LLAMA_CPP_AVAILABLE", True):
+        with patch("inference.bitnet_inference.Llama") as mock_llama:
             with patch("os.path.exists", return_value=True):
-                from bitnet_inference import BitNetInference
+                from inference.bitnet_inference import BitNetInference
                 
                 # Mock streaming response
                 mock_model = Mock()
@@ -87,7 +87,7 @@ def test_download_gguf_model_isolated():
     with patch("huggingface_hub.hf_hub_download", return_value="/path/to/model.gguf") as mock_download:
         with patch("huggingface_hub.list_repo_files", return_value=["model.gguf"]):
             with patch("os.makedirs"):
-                from bitnet_inference import download_gguf_model
+                from inference.bitnet_inference import download_gguf_model
                 
                 # Call with explicit filename to avoid auto-detection
                 result = download_gguf_model("test-repo", "model.gguf")
