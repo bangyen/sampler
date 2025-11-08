@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["cmake", "gcc", "gnumake", "hdf5", "just", "libjpeg_turbo", "libpng", "libxcrypt", "which", "mesa", "xorg.libX11", "xorg.libXext", "xorg.libXrender", "xorg.libxcb", "libglvnd"]
+packages = ["cmake", "gcc", "gnumake", "hdf5", "just", "libglvnd", "libjpeg_turbo", "libpng", "libxcrypt", "mesa", "openssl", "which", "xorg.libX11", "xorg.libXext", "xorg.libXrender", "xorg.libxcb", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"

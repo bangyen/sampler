@@ -503,7 +503,7 @@ def load_ocr_model(config_name="English Only"):
 
             start_time = time.time()
             ocr_readers["paddleocr"] = PaddleOCREngine(
-                use_angle_cls=True, lang="en", use_gpu=False, show_log=False
+                use_textline_orientation=True, lang="en", use_gpu=False
             )
             load_time = time.time() - start_time
             return ocr_readers["paddleocr"], load_time
@@ -1208,7 +1208,7 @@ async def analyze_layout(file: UploadFile = File(...)):
         if "paddleocr" not in ocr_readers:
             try:
                 ocr_readers["paddleocr"] = PaddleOCREngine(
-                    use_angle_cls=True, lang="en", use_gpu=False, show_log=False
+                    use_textline_orientation=True, lang="en", use_gpu=False
                 )
             except Exception as e:
                 raise HTTPException(

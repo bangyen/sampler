@@ -21,3 +21,5 @@ accelerate
 pytest
 pytest-asyncio
 httpx
+paddleocr
+paddlepaddle
