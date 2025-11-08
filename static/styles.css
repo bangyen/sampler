@@ -805,8 +805,8 @@ body {
 .ner-container,
 .ocr-container,
 .layout-container {
-    max-width: var(--container-max-width) !important;
-    width: 100% !important;
+    width: 1200px !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     padding: var(--space-3xl);
 }
