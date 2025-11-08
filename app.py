@@ -153,6 +153,10 @@ def load_transformers_model(model_id):
 @st.cache_resource
 def load_gguf_model(hf_repo):
     """Load a GGUF model for llama.cpp inference"""
+    if download_gguf_model is None or BitNetInference is None:
+        st.error("llama.cpp functions not available. bitnet_inference module not properly loaded.")
+        return None
+    
     try:
         with st.spinner(f"Downloading GGUF model from {hf_repo}..."):
             model_path = download_gguf_model(hf_repo, cache_dir="./models")

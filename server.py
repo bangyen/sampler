@@ -310,6 +310,12 @@ def load_llama_model(model_name: str):
             detail="llama.cpp backend not available. llama-cpp-python is not installed."
         )
     
+    if download_gguf_model is None or BitNetInference is None:
+        raise HTTPException(
+            status_code=503,
+            detail="llama.cpp functions not available. bitnet_inference module not properly loaded."
+        )
+    
     if model_name in loaded_llama_models:
         return loaded_llama_models[model_name], None
     
@@ -321,6 +327,9 @@ def load_llama_model(model_name: str):
         
         if not gguf_repo:
             raise HTTPException(status_code=400, detail=f"Model {model_name} does not have GGUF configuration")
+        
+        if not gguf_file:
+            raise HTTPException(status_code=400, detail=f"Model {model_name} missing GGUF file specification")
         
         # Download GGUF model from Hugging Face
         model_path = download_gguf_model(gguf_repo, gguf_file)
@@ -344,6 +353,12 @@ def load_bitnet_cpp_model(model_name: str):
             detail="BitNet.cpp backend not available. Binary not compiled or bitnet_cpp_bridge not found."
         )
     
+    if load_bitnet_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="BitNet.cpp functions not available. bitnet_cpp_bridge module not properly loaded."
+        )
+    
     if model_name in loaded_bitnet_models:
         return loaded_bitnet_models[model_name], None
     
@@ -355,6 +370,9 @@ def load_bitnet_cpp_model(model_name: str):
         
         if not gguf_repo:
             raise HTTPException(status_code=400, detail=f"Model {model_name} does not have GGUF configuration")
+        
+        if not gguf_file:
+            raise HTTPException(status_code=400, detail=f"Model {model_name} missing GGUF file specification")
         
         # Load BitNet model (downloads if needed)
         bridge = load_bitnet_model(gguf_repo, gguf_file)
@@ -428,8 +446,9 @@ def load_ocr_model(config_name="English Only"):
             return ocr_readers[languages], None
         
         try:
+            import easyocr as easyocr_module
             start_time = time.time()
-            ocr_readers[languages] = easyocr.Reader(list(languages), gpu=False)
+            ocr_readers[languages] = easyocr_module.Reader(list(languages), gpu=False)
             load_time = time.time() - start_time
             return ocr_readers[languages], load_time
         except Exception as e:
@@ -446,8 +465,9 @@ def load_ocr_model(config_name="English Only"):
             return ocr_readers["paddleocr"], None
         
         try:
+            from paddleocr import PaddleOCR as PaddleOCREngine
             start_time = time.time()
-            ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+            ocr_readers["paddleocr"] = PaddleOCREngine(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
             load_time = time.time() - start_time
             return ocr_readers["paddleocr"], load_time
         except Exception as e:
@@ -931,9 +951,14 @@ async def stream_ocr_extraction(file_contents, filename, config):
         if not PILLOW_AVAILABLE:
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
         
+        from PIL import Image as PILImage
+        import numpy as np
+        
+        extracted_text = ""
+        bounding_boxes = []
+        
         if engine == "easyocr":
-            import numpy as np
-            image = Image.open(io.BytesIO(file_contents))
+            image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
             results = ocr_model.readtext(img_array)
             
@@ -948,8 +973,7 @@ async def stream_ocr_extraction(file_contents, filename, config):
                 })
         
         elif engine == "paddleocr":
-            import numpy as np
-            image = Image.open(io.BytesIO(file_contents))
+            image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
             
             results = ocr_model.ocr(img_array, cls=True)
@@ -1107,9 +1131,10 @@ async def analyze_layout(file: UploadFile = File(...)):
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
         
         # Load PaddleOCR model
+        from paddleocr import PaddleOCR as PaddleOCREngine
         if "paddleocr" not in ocr_readers:
             try:
-                ocr_readers["paddleocr"] = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+                ocr_readers["paddleocr"] = PaddleOCREngine(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
         
@@ -1118,8 +1143,9 @@ async def analyze_layout(file: UploadFile = File(...)):
         
         contents = await file.read()
         
+        from PIL import Image as PILImage
         import numpy as np
-        image = Image.open(io.BytesIO(contents))
+        image = PILImage.open(io.BytesIO(contents))
         img_array = np.array(image)
         
         results = ocr_model.ocr(img_array, cls=True)
