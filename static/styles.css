@@ -389,7 +389,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: var(--space-xl);
-    overflow-y: auto;
+    overflow: hidden;
     flex: 1;
     min-width: 0;
 }
@@ -525,12 +525,13 @@ body {
    ======================================== */
 
 .settings-panel {
-    width: 100%;
+    flex: 0 0 var(--settings-panel-width);
+    max-width: var(--settings-panel-width);
+    min-width: 0;
     padding: var(--space-xl);
     background: var(--color-bg-white);
-    border: var(--border-width-base) solid var(--color-border);
-    border-radius: var(--radius-lg);
-    margin-top: var(--space-lg);
+    border-left: var(--border-width-thin) solid var(--color-border);
+    overflow-y: auto;
 }
 
 .settings-panel h2 {
@@ -791,10 +792,10 @@ body {
 }
 
 #chat-tab.active {
-    display: block;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--settings-panel-width);
+    overflow: hidden;
+    gap: 0;
 }
 
 /* ========================================
@@ -1087,8 +1088,12 @@ body {
     .settings-panel {
         width: 100% !important;
         max-width: 100% !important;
+        flex: none !important;
+        overflow: visible;
+        border-left: none;
+        border-top: var(--border-width-thin) solid var(--color-border);
         padding: var(--space-xl) var(--space-lg);
-        margin-top: var(--space-lg);
+        order: 2;
     }
     
     .chat-input-container {
