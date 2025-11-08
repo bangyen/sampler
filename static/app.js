@@ -358,10 +358,10 @@ function renderMessages() {
             <div id="example-prompts" class="example-prompts">
                 <div class="info-message">Welcome! Try one of these example prompts:</div>
                 <div class="example-grid">
-                    <button class="example-prompt" data-prompt="Explain quantum computing in simple terms">Explain quantum computing in simple terms</button>
-                    <button class="example-prompt" data-prompt="Write a short poem about artificial intelligence">Write a short poem about artificial intelligence</button>
-                    <button class="example-prompt" data-prompt="What are the benefits of 1-bit LLMs?">What are the benefits of 1-bit LLMs?</button>
-                    <button class="example-prompt" data-prompt="Tell me an interesting fact about space">Tell me an interesting fact about space</button>
+                    <button class="example-prompt" data-prompt="Classify this cargo: 20 containers of refrigerated pharmaceuticals requiring temperature control at 2-8°C. Categories: [Standard Cargo, Refrigerated Cargo, Hazardous Materials, Oversized Freight]">Classify cargo type</button>
+                    <button class="example-prompt" data-prompt="Determine priority level: Shipment of automotive parts needed for assembly line restart. Customer reports production halted. Categories: [Routine, Standard, Urgent, Critical Emergency]">Classify shipment urgency</button>
+                    <button class="example-prompt" data-prompt="Classify route optimization: Container ship with 5000 TEU capacity, fuel consumption 200 tons/day, scheduled ports: Singapore-Rotterdam-New York. Categories: [Direct Route, Hub-and-Spoke, Transhipment, Feeder Service]">Determine optimal routing</button>
+                    <button class="example-prompt" data-prompt="Classify handling requirements: Shipment contains heavy machinery parts, individual pieces up to 15 tons, requires crane access. Categories: [Standard Handling, Heavy Lift, Breakbulk, Project Cargo]">Identify handling needs</button>
                 </div>
             </div>
         `;
