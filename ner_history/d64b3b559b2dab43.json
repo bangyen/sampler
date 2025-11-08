@@ -1,0 +1,45 @@
+{
+  "id": "d64b3b559b2dab43",
+  "text": "Maersk Line announced the arrival of the MSC Gulsun at the Port of Rotterdam on Tuesday, carrying 19,000 containers from Shanghai.",
+  "entities": [
+    {
+      "text": "Maersk Line",
+      "label": "ORG",
+      "score": 0.9980876445770264,
+      "start": 0,
+      "end": 11
+    },
+    {
+      "text": "MS",
+      "label": "ORG",
+      "score": 0.5111384987831116,
+      "start": 41,
+      "end": 43
+    },
+    {
+      "text": "##C Gulsun",
+      "label": "MISC",
+      "score": 0.6752766966819763,
+      "start": 43,
+      "end": 51
+    },
+    {
+      "text": "Port of Rotterdam",
+      "label": "LOC",
+      "score": 0.8680793642997742,
+      "start": 59,
+      "end": 76
+    },
+    {
+      "text": "Shanghai",
+      "label": "LOC",
+      "score": 0.99870765209198,
+      "start": 121,
+      "end": 129
+    }
+  ],
+  "model": "BERT Base NER",
+  "processing_time": 0.047820329666137695,
+  "text_length": 130,
+  "created_at": "2025-11-08T18:18:20.672914"
+}

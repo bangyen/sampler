@@ -8,6 +8,8 @@ let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
 let displayedConversationCount = 10;
+let displayedNERCount = 10;
+let displayedOCRCount = 10;
 
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
@@ -1134,7 +1136,7 @@ async function loadNERHistory() {
         
         historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} analysis/analyses</small>`;
         
-        data.analyses.forEach(analysis => {
+        data.analyses.slice(0, displayedNERCount).forEach(analysis => {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
@@ -1158,6 +1160,17 @@ async function loadNERHistory() {
             item.appendChild(deleteBtn);
             historyList.appendChild(item);
         });
+        
+        if (data.analyses.length > displayedNERCount) {
+            const showMoreBtn = document.createElement('button');
+            showMoreBtn.className = 'btn btn-secondary show-more-btn';
+            showMoreBtn.textContent = `Show More (${data.analyses.length - displayedNERCount} remaining)`;
+            showMoreBtn.onclick = () => {
+                displayedNERCount += 10;
+                loadNERHistory();
+            };
+            historyList.appendChild(showMoreBtn);
+        }
     } catch (error) {
         console.error('Error loading NER history:', error);
     }
@@ -1207,33 +1220,39 @@ async function loadOCRHistory() {
         
         const ocrAnalyses = ocrData.analyses || [];
         const layoutAnalyses = layoutData.analyses || [];
+        const allAnalyses = [...ocrAnalyses, ...layoutAnalyses];
         
-        if (ocrAnalyses.length === 0 && layoutAnalyses.length === 0) {
+        if (allAnalyses.length === 0) {
             historyList.innerHTML = '<small style="color: #888;">No extractions yet</small>';
             return;
         }
         
-        const totalCount = ocrAnalyses.length + layoutAnalyses.length;
-        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${totalCount} extraction(s)</small>`;
+        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${allAnalyses.length} extraction(s)</small>`;
         
-        ocrAnalyses.forEach(analysis => {
+        const displayedAnalyses = allAnalyses.slice(0, displayedOCRCount);
+        
+        displayedAnalyses.forEach(analysis => {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
             const btn = document.createElement('button');
             btn.className = 'conversation-btn';
+            
+            const isLayout = layoutAnalyses.includes(analysis);
+            const configText = isLayout ? 'PaddleOCR' : analysis.config;
+            
             btn.innerHTML = `
                 <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
-                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections | ${analysis.config}</div>
+                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections | ${configText}</div>
             `;
-            btn.onclick = () => loadOCRAnalysis(analysis.id);
+            btn.onclick = () => isLayout ? loadLayoutAnalysis(analysis.id) : loadOCRAnalysis(analysis.id);
             
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
             deleteBtn.textContent = 'Delete';
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
-                deleteOCRAnalysis(analysis.id);
+                isLayout ? deleteLayoutAnalysis(analysis.id) : deleteOCRAnalysis(analysis.id);
             };
             
             item.appendChild(btn);
@@ -1241,30 +1260,16 @@ async function loadOCRHistory() {
             historyList.appendChild(item);
         });
         
-        layoutAnalyses.forEach(analysis => {
-            const item = document.createElement('div');
-            item.className = 'conversation-item';
-            
-            const btn = document.createElement('button');
-            btn.className = 'conversation-btn';
-            btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
-                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections | PaddleOCR</div>
-            `;
-            btn.onclick = () => loadLayoutAnalysis(analysis.id);
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteLayoutAnalysis(analysis.id);
+        if (allAnalyses.length > displayedOCRCount) {
+            const showMoreBtn = document.createElement('button');
+            showMoreBtn.className = 'btn btn-secondary show-more-btn';
+            showMoreBtn.textContent = `Show More (${allAnalyses.length - displayedOCRCount} remaining)`;
+            showMoreBtn.onclick = () => {
+                displayedOCRCount += 10;
+                loadOCRHistory();
             };
-            
-            item.appendChild(btn);
-            item.appendChild(deleteBtn);
-            historyList.appendChild(item);
-        });
+            historyList.appendChild(showMoreBtn);
+        }
     } catch (error) {
         console.error('Error loading OCR history:', error);
     }

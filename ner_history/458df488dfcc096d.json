@@ -1,0 +1,38 @@
+{
+  "id": "458df488dfcc096d",
+  "text": "Port of Los Angeles reported record cargo volume in November, with APM Terminals and Yang Ming Marine Transport handling over 2.5 million TEUs.",
+  "entities": [
+    {
+      "text": "Port of",
+      "label": "ORG",
+      "score": 0.6848198175430298,
+      "start": 0,
+      "end": 7
+    },
+    {
+      "text": "Los Angeles",
+      "label": "LOC",
+      "score": 0.7475190162658691,
+      "start": 8,
+      "end": 19
+    },
+    {
+      "text": "APM Terminals",
+      "label": "ORG",
+      "score": 0.9672809839248657,
+      "start": 67,
+      "end": 80
+    },
+    {
+      "text": "Yang Ming Marine Transport",
+      "label": "ORG",
+      "score": 0.9980428814888,
+      "start": 85,
+      "end": 111
+    }
+  ],
+  "model": "BERT Base NER",
+  "processing_time": 0.0474851131439209,
+  "text_length": 143,
+  "created_at": "2025-11-08T18:18:23.575535"
+}
