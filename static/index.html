@@ -32,10 +32,10 @@
                 </div>
 
                 <div class="sidebar-section">
-                    <h3>Conversation History</h3>
-                    <button id="new-conversation-btn" class="btn btn-primary">New Conversation</button>
-                    <button id="clear-all-conversations-btn" class="btn btn-secondary" style="margin-top: 10px;">Clear All History</button>
-                    <div id="conversation-list" class="conversation-list">
+                    <h3>Recent Classifications</h3>
+                    <button id="new-classification-btn" class="btn btn-primary">New Classification</button>
+                    <button id="clear-all-classifications-btn" class="btn btn-secondary" style="margin-top: 10px;">Clear All History</button>
+                    <div id="classification-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
                             <div class="skeleton skeleton-conversation-meta"></div>
@@ -135,67 +135,94 @@
 
             <div class="content-wrapper">
                 <div id="chat-tab" class="tab-content active">
-                <div class="chat-container">
-                    <div class="chat-header">
-                        <h2>Chat Interface</h2>
-                        <button id="clear-chat-btn" class="btn btn-secondary">Clear Chat History</button>
+                <div class="classification-container">
+                    <div class="classification-header">
+                        <h2>Zero-Shot Classification</h2>
+                        <p>Classify text into custom categories using LLMs with confidence scoring</p>
                     </div>
                     
-                    <div id="chat-messages" class="chat-messages">
-                        <div id="example-prompts" class="example-prompts">
-                            <div class="info-message">Welcome! Try one of these example prompts:</div>
-                            <div class="example-grid">
-                                <button class="example-prompt" data-prompt="Classify this cargo: 20 containers of refrigerated pharmaceuticals requiring temperature control at 2-8°C. Categories: [Standard Cargo, Refrigerated Cargo, Hazardous Materials, Oversized Freight]">Classify cargo type</button>
-                                <button class="example-prompt" data-prompt="Determine priority level: Shipment of automotive parts needed for assembly line restart. Customer reports production halted. Categories: [Routine, Standard, Urgent, Critical Emergency]">Classify shipment urgency</button>
-                                <button class="example-prompt" data-prompt="Classify route optimization: Container ship with 5000 TEU capacity, fuel consumption 200 tons/day, scheduled ports: Singapore-Rotterdam-New York. Categories: [Direct Route, Hub-and-Spoke, Transhipment, Feeder Service]">Determine optimal routing</button>
-                                <button class="example-prompt" data-prompt="Classify handling requirements: Shipment contains heavy machinery parts, individual pieces up to 15 tons, requires crane access. Categories: [Standard Handling, Heavy Lift, Breakbulk, Project Cargo]">Identify handling needs</button>
+                    <div class="classification-input-section">
+                        <label for="classification-text-input">Text to Classify:</label>
+                        <textarea id="classification-text-input" placeholder="Enter the text you want to classify..." rows="4"></textarea>
+                    </div>
+                    
+                    <div class="label-management-section">
+                        <div class="label-section-header">
+                            <label>Candidate Labels:</label>
+                            <div class="label-presets">
+                                <button class="preset-btn" data-preset="sentiment">Sentiment</button>
+                                <button class="preset-btn" data-preset="intent">Intent</button>
+                                <button class="preset-btn" data-preset="urgency">Urgency</button>
+                                <button class="preset-btn" data-preset="cargo">Cargo Type</button>
                             </div>
+                        </div>
+                        
+                        <div class="label-chips-container" id="label-chips-container">
+                            <div class="label-chip">
+                                <span>positive</span>
+                                <button class="remove-label" data-label="positive">&times;</button>
+                            </div>
+                            <div class="label-chip">
+                                <span>negative</span>
+                                <button class="remove-label" data-label="negative">&times;</button>
+                            </div>
+                            <div class="label-chip">
+                                <span>neutral</span>
+                                <button class="remove-label" data-label="neutral">&times;</button>
+                            </div>
+                        </div>
+                        
+                        <div class="add-label-section">
+                            <input type="text" id="new-label-input" placeholder="Add custom label..." />
+                            <button id="add-label-btn" class="btn btn-secondary">Add Label</button>
                         </div>
                     </div>
                     
-                    <div class="chat-input-container">
-                        <input type="text" id="chat-input" placeholder="Type your message here..." />
-                        <button id="send-btn" class="btn btn-primary">Send</button>
-                        <button id="stop-btn" class="btn btn-danger" style="display: none;">Stop</button>
+                    <div class="classification-actions">
+                        <button id="classify-btn" class="btn btn-primary">Classify</button>
+                        <button id="stop-classification-btn" class="btn btn-danger" style="display: none;">Stop</button>
+                    </div>
+                    
+                    <div id="classification-results" class="classification-results" style="display: none;">
+                        <h3>Classification Results</h3>
+                        <div id="abstain-indicator" class="abstain-indicator" style="display: none;">
+                            <strong>⚠ Low Confidence Warning</strong>
+                            <p>The model suggests abstaining from this classification. Top confidence is below the threshold.</p>
+                        </div>
+                        <div id="top-prediction" class="top-prediction"></div>
+                        <div id="all-predictions" class="all-predictions"></div>
+                        <div id="classification-metrics" class="metrics-display"></div>
                     </div>
                 </div>
 
                 <div class="settings-panel">
-                    <h2>Generation Settings</h2>
+                    <h2>Classification Settings</h2>
                     
                     <div class="setting-group">
-                        <label for="temperature-slider">
-                            Temperature: <span id="temperature-value">0.7</span>
+                        <label for="abstain-threshold-slider">
+                            Abstain Threshold: <span id="abstain-threshold-value">0.5</span>
                         </label>
-                        <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7" />
-                        <small>Higher values make output more random, lower values more deterministic</small>
+                        <input type="range" id="abstain-threshold-slider" min="0" max="1" step="0.05" value="0.5" />
+                        <small>Minimum confidence required to accept classification</small>
                     </div>
 
                     <div class="setting-group">
-                        <label for="max-tokens-slider">
-                            Max New Tokens: <span id="max-tokens-value">150</span>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="use-logprobs-checkbox" checked />
+                            <span>Use Logprob Scoring</span>
                         </label>
-                        <input type="range" id="max-tokens-slider" min="50" max="500" step="50" value="150" />
-                        <small>Maximum number of tokens to generate</small>
+                        <small>Compute sequence probabilities for confidence calibration (slower but more accurate)</small>
                     </div>
 
                     <details class="advanced-settings">
                         <summary>Advanced Settings</summary>
                         
                         <div class="setting-group">
-                            <label for="top-p-slider">
-                                Top-p (nucleus sampling): <span id="top-p-value">0.9</span>
+                            <label for="hypothesis-template-input">
+                                Hypothesis Template:
                             </label>
-                            <input type="range" id="top-p-slider" min="0" max="1" step="0.05" value="0.9" />
-                            <small>Sample from smallest set of tokens whose cumulative probability exceeds p</small>
-                        </div>
-
-                        <div class="setting-group">
-                            <label for="top-k-slider">
-                                Top-k sampling: <span id="top-k-value">50</span>
-                            </label>
-                            <input type="range" id="top-k-slider" min="1" max="100" step="1" value="50" />
-                            <small>Sample from top k most likely tokens</small>
+                            <input type="text" id="hypothesis-template-input" value="This text is about {label}." />
+                            <small>Template for generating hypotheses. Use {label} as placeholder.</small>
                         </div>
                     </details>
                 </div>

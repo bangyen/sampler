@@ -1,14 +1,23 @@
 let sessionId = generateUUID();
-let messages = [];
+let classificationLabels = ['positive', 'negative', 'neutral'];
+let classificationHistory = [];
+let currentClassification = null;
 let selectedModel = 'Qwen 2.5 0.5B';
 let selectedNERModel = 'BERT Base NER';
 let selectedOCRConfig = 'EasyOCR English';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
-let displayedConversationCount = 5;
+let displayedClassificationCount = 5;
 let displayedNERCount = 5;
 let displayedOCRCount = 5;
+
+const labelPresets = {
+    sentiment: ['positive', 'negative', 'neutral'],
+    intent: ['question', 'complaint', 'praise', 'request', 'information'],
+    urgency: ['urgent', 'normal', 'low-priority'],
+    cargo: ['standard cargo', 'refrigerated cargo', 'hazardous materials', 'oversized freight']
+};
 
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
@@ -79,18 +88,236 @@ function copyToClipboard(text, button) {
     });
 }
 
+function setupClassificationUI() {
+    renderLabelChips();
+    
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const preset = btn.dataset.preset;
+            if (labelPresets[preset]) {
+                classificationLabels = [...labelPresets[preset]];
+                renderLabelChips();
+            }
+        });
+    });
+    
+    const addLabelBtn = document.getElementById('add-label-btn');
+    const newLabelInput = document.getElementById('new-label-input');
+    
+    addLabelBtn.addEventListener('click', () => {
+        const label = newLabelInput.value.trim();
+        if (label && !classificationLabels.includes(label)) {
+            classificationLabels.push(label);
+            renderLabelChips();
+            newLabelInput.value = '';
+        }
+    });
+    
+    newLabelInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addLabelBtn.click();
+        }
+    });
+}
+
+function renderLabelChips() {
+    const container = document.getElementById('label-chips-container');
+    container.innerHTML = '';
+    
+    classificationLabels.forEach(label => {
+        const chip = document.createElement('div');
+        chip.className = 'label-chip';
+        chip.innerHTML = `
+            <span>${label}</span>
+            <button class="remove-label" data-label="${label}">&times;</button>
+        `;
+        
+        chip.querySelector('.remove-label').addEventListener('click', () => {
+            classificationLabels = classificationLabels.filter(l => l !== label);
+            renderLabelChips();
+        });
+        
+        container.appendChild(chip);
+    });
+}
+
+async function classifyText() {
+    const textInput = document.getElementById('classification-text-input');
+    const text = textInput.value.trim();
+    
+    if (!text || isGenerating || classificationLabels.length === 0) {
+        if (classificationLabels.length === 0) {
+            showToast('Please add at least one label', 'error');
+        }
+        return;
+    }
+    
+    isGenerating = true;
+    document.getElementById('classify-btn').style.display = 'none';
+    document.getElementById('stop-classification-btn').style.display = 'inline-block';
+    
+    const resultsDiv = document.getElementById('classification-results');
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<p>Classifying...</p>';
+    
+    const abstainThreshold = parseFloat(document.getElementById('abstain-threshold-slider').value);
+    const useLogprobs = document.getElementById('use-logprobs-checkbox').checked;
+    const hypothesisTemplate = document.getElementById('hypothesis-template-input').value;
+    
+    try {
+        currentAbortController = new AbortController();
+        
+        const response = await fetch('/api/zero-shot/classify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text,
+                candidate_labels: classificationLabels,
+                model: selectedModel,
+                abstain_threshold: abstainThreshold,
+                use_logprobs: useLogprobs,
+                hypothesis_template: hypothesisTemplate
+            }),
+            signal: currentAbortController.signal
+        });
+        
+        if (!response.ok) {
+            throw new Error('Classification failed');
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let result = null;
+        let startTime = null;
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = JSON.parse(line.slice(6));
+                    
+                    if (data.model_loading_start) {
+                        resultsDiv.innerHTML = '<p>Loading model...</p>';
+                    } else if (data.model_loading_end) {
+                        resultsDiv.innerHTML = '<p>Model loaded. Classifying...</p>';
+                        startTime = performance.now();
+                    } else if (data.result) {
+                        result = data.result;
+                        renderClassificationResults(result);
+                    } else if (data.error) {
+                        resultsDiv.innerHTML = `<p style="color: #dc3545;">Error: ${data.error}</p>`;
+                    }
+                }
+            }
+        }
+        
+        if (result && startTime) {
+            const endTime = performance.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            
+            currentClassification = {
+                id: generateUUID(),
+                text,
+                labels: classificationLabels,
+                result,
+                timestamp: new Date().toISOString(),
+                model: selectedModel,
+                duration
+            };
+            
+            showToast('Classification complete');
+        }
+        
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Classification error:', error);
+            resultsDiv.innerHTML = `<p style="color: #dc3545;">Error: ${error.message}</p>`;
+            showToast('Classification failed', 'error');
+        }
+    } finally {
+        isGenerating = false;
+        document.getElementById('classify-btn').style.display = 'inline-block';
+        document.getElementById('stop-classification-btn').style.display = 'none';
+    }
+}
+
+function renderClassificationResults(result) {
+    const resultsDiv = document.getElementById('classification-results');
+    
+    let html = '<h3>Classification Results</h3>';
+    
+    if (result.should_abstain) {
+        html += `
+            <div id="abstain-indicator" class="abstain-indicator">
+                <strong>⚠ Low Confidence Warning</strong>
+                <p>The model suggests abstaining from this classification. Top confidence (${(result.top_score * 100).toFixed(1)}%) is below the threshold (${(result.abstain_threshold * 100).toFixed(0)}%).</p>
+            </div>
+        `;
+    }
+    
+    html += `
+        <div class="top-prediction">
+            <div class="prediction-header">Top Prediction</div>
+            <div class="prediction-label">${result.top_label}</div>
+            <div class="prediction-score">Confidence: ${(result.top_score * 100).toFixed(1)}%</div>
+        </div>
+    `;
+    
+    html += '<div class="all-predictions">';
+    
+    result.labels.forEach(labelResult => {
+        const percentage = (labelResult.score * 100).toFixed(1);
+        const logprobText = labelResult.logprob !== null && labelResult.logprob !== undefined 
+            ? `<div class="prediction-logprob">logprob: ${labelResult.logprob.toFixed(3)}</div>`
+            : '';
+        
+        html += `
+            <div class="prediction-item">
+                <div class="prediction-label-row">
+                    <span class="prediction-label-name">${labelResult.label}</span>
+                    <span class="prediction-label-score">${percentage}%</span>
+                </div>
+                <div class="confidence-bar-container">
+                    <div class="confidence-bar" style="width: ${percentage}%">
+                        ${percentage > 15 ? `<span class="confidence-bar-label">${percentage}%</span>` : ''}
+                    </div>
+                </div>
+                ${logprobText}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    resultsDiv.innerHTML = html;
+}
+
+async function loadClassificationHistory() {
+    const listDiv = document.getElementById('classification-list');
+    listDiv.innerHTML = '<p style="color: #888;">No classification history yet</p>';
+}
+
 async function init() {
     setupEventListeners();
     setupNERExamples();
     setupOCRExamples();
+    setupClassificationUI();
     closeMobileMenuHelper();
     
     Promise.all([
         loadModels(),
         loadNERModels(),
         loadOCRConfigs(),
-        loadConversation(),
-        loadConversationList(),
+        loadClassificationHistory(),
         loadNERHistory(),
         loadOCRHistory()
     ]).catch(error => {
@@ -686,44 +913,58 @@ function stopGeneration() {
 }
 
 function setupEventListeners() {
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
+    const classifyBtn = document.getElementById('classify-btn');
+    const stopClassificationBtn = document.getElementById('stop-classification-btn');
     
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage(chatInput.value);
-        }
-    });
+    if (classifyBtn) {
+        classifyBtn.addEventListener('click', () => {
+            classifyText();
+        });
+    }
     
-    sendBtn.addEventListener('click', () => {
-        sendMessage(chatInput.value);
-    });
+    if (stopClassificationBtn) {
+        stopClassificationBtn.addEventListener('click', () => {
+            stopGeneration();
+        });
+    }
     
-    document.getElementById('stop-btn').addEventListener('click', () => {
-        stopGeneration();
-    });
+    const classificationTextInput = document.getElementById('classification-text-input');
+    if (classificationTextInput) {
+        classificationTextInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                classifyText();
+            }
+        });
+    }
     
-    document.getElementById('clear-chat-btn').addEventListener('click', async () => {
-        messages = [];
-        renderMessages();
-        await saveConversation();
-        await loadConversationList();
-    });
+    const newClassificationBtn = document.getElementById('new-classification-btn');
+    if (newClassificationBtn) {
+        newClassificationBtn.addEventListener('click', () => {
+            document.getElementById('classification-text-input').value = '';
+            document.getElementById('classification-results').style.display = 'none';
+            currentClassification = null;
+            closeMobileMenuHelper();
+        });
+    }
     
-    document.getElementById('new-conversation-btn').addEventListener('click', () => {
-        sessionId = generateUUID();
-        messages = [];
-        renderMessages();
-        loadConversationList();
-        closeMobileMenuHelper();
-    });
+    const clearAllClassificationsBtn = document.getElementById('clear-all-classifications-btn');
+    if (clearAllClassificationsBtn) {
+        clearAllClassificationsBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to delete ALL classification history? This cannot be undone.')) {
+                classificationHistory = [];
+                await loadClassificationHistory();
+            }
+        });
+    }
     
-    document.getElementById('clear-all-conversations-btn').addEventListener('click', async () => {
-        if (confirm('Are you sure you want to delete ALL conversation history? This cannot be undone.')) {
-            await clearAllConversations();
-        }
-    });
+    const abstainThresholdSlider = document.getElementById('abstain-threshold-slider');
+    const abstainThresholdValue = document.getElementById('abstain-threshold-value');
+    if (abstainThresholdSlider && abstainThresholdValue) {
+        abstainThresholdSlider.addEventListener('input', (e) => {
+            abstainThresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+    }
     
     document.getElementById('clear-all-ner-btn').addEventListener('click', async () => {
         if (confirm('Are you sure you want to delete ALL NER analysis history? This cannot be undone.')) {
