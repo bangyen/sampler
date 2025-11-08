@@ -89,17 +89,28 @@ function copyToClipboard(text, button) {
 }
 
 function setupClassificationUI() {
-    renderLabelChips();
-    
-    document.querySelectorAll('.preset-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const preset = btn.dataset.preset;
-            if (labelPresets[preset]) {
-                classificationLabels = [...labelPresets[preset]];
-                renderLabelChips();
-            }
+    try {
+        renderLabelChips();
+        
+        const presetButtons = document.querySelectorAll('.preset-btn');
+        
+        if (presetButtons.length === 0) {
+            console.warn('No preset buttons found in DOM');
+            return;
+        }
+        
+        presetButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const preset = btn.dataset.preset;
+                if (labelPresets[preset]) {
+                    classificationLabels = [...labelPresets[preset]];
+                    renderLabelChips();
+                }
+            });
         });
-    });
+    } catch (error) {
+        console.error('Error in setupClassificationUI():', error);
+    }
     
     const addLabelBtn = document.getElementById('add-label-btn');
     const newLabelInput = document.getElementById('new-label-input');
@@ -122,6 +133,11 @@ function setupClassificationUI() {
 
 function renderLabelChips() {
     const container = document.getElementById('label-chips-container');
+    if (!container) {
+        console.error('Label chips container not found');
+        return;
+    }
+    
     container.innerHTML = '';
     
     classificationLabels.forEach(label => {
@@ -307,22 +323,26 @@ async function loadClassificationHistory() {
 }
 
 async function init() {
-    setupEventListeners();
-    setupNERExamples();
-    setupOCRExamples();
-    setupClassificationUI();
-    closeMobileMenuHelper();
-    
-    Promise.all([
-        loadModels(),
-        loadNERModels(),
-        loadOCRConfigs(),
-        loadClassificationHistory(),
-        loadNERHistory(),
-        loadOCRHistory()
-    ]).catch(error => {
-        console.error('Error during initialization:', error);
-    });
+    try {
+        setupEventListeners();
+        setupNERExamples();
+        await setupOCRExamples();
+        setupClassificationUI();
+        closeMobileMenuHelper();
+        
+        Promise.all([
+            loadModels(),
+            loadNERModels(),
+            loadOCRConfigs(),
+            loadClassificationHistory(),
+            loadNERHistory(),
+            loadOCRHistory()
+        ]).catch(error => {
+            console.error('Error during initialization:', error);
+        });
+    } catch (error) {
+        console.error('Error in init():', error);
+    }
 }
 
 async function loadModels() {
@@ -966,17 +986,23 @@ function setupEventListeners() {
         });
     }
     
-    document.getElementById('clear-all-ner-btn').addEventListener('click', async () => {
-        if (confirm('Are you sure you want to delete ALL NER analysis history? This cannot be undone.')) {
-            await clearAllNERHistory();
-        }
-    });
+    const clearAllNERBtn = document.getElementById('clear-all-ner-btn');
+    if (clearAllNERBtn) {
+        clearAllNERBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to delete ALL NER analysis history? This cannot be undone.')) {
+                await clearAllNERHistory();
+            }
+        });
+    }
     
-    document.getElementById('clear-all-ocr-btn').addEventListener('click', async () => {
-        if (confirm('Are you sure you want to delete ALL OCR extraction history? This cannot be undone.')) {
-            await clearAllOCRHistory();
-        }
-    });
+    const clearAllOCRBtn = document.getElementById('clear-all-ocr-btn');
+    if (clearAllOCRBtn) {
+        clearAllOCRBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to delete ALL OCR extraction history? This cannot be undone.')) {
+                await clearAllOCRHistory();
+            }
+        });
+    }
     
     const hamburgerMenu = document.querySelector('.hamburger-menu');
     const closeSidebar = document.querySelector('.close-sidebar');
@@ -1015,31 +1041,39 @@ function setupEventListeners() {
     
     const temperatureSlider = document.getElementById('temperature-slider');
     const temperatureValue = document.getElementById('temperature-value');
-    temperatureSlider.addEventListener('input', (e) => {
-        settings.temperature = parseFloat(e.target.value);
-        temperatureValue.textContent = settings.temperature.toFixed(1);
-    });
+    if (temperatureSlider && temperatureValue) {
+        temperatureSlider.addEventListener('input', (e) => {
+            settings.temperature = parseFloat(e.target.value);
+            temperatureValue.textContent = settings.temperature.toFixed(1);
+        });
+    }
     
     const maxTokensSlider = document.getElementById('max-tokens-slider');
     const maxTokensValue = document.getElementById('max-tokens-value');
-    maxTokensSlider.addEventListener('input', (e) => {
-        settings.maxTokens = parseInt(e.target.value);
-        maxTokensValue.textContent = settings.maxTokens;
-    });
+    if (maxTokensSlider && maxTokensValue) {
+        maxTokensSlider.addEventListener('input', (e) => {
+            settings.maxTokens = parseInt(e.target.value);
+            maxTokensValue.textContent = settings.maxTokens;
+        });
+    }
     
     const topPSlider = document.getElementById('top-p-slider');
     const topPValue = document.getElementById('top-p-value');
-    topPSlider.addEventListener('input', (e) => {
-        settings.topP = parseFloat(e.target.value);
-        topPValue.textContent = settings.topP.toFixed(2);
-    });
+    if (topPSlider && topPValue) {
+        topPSlider.addEventListener('input', (e) => {
+            settings.topP = parseFloat(e.target.value);
+            topPValue.textContent = settings.topP.toFixed(2);
+        });
+    }
     
     const topKSlider = document.getElementById('top-k-slider');
     const topKValue = document.getElementById('top-k-value');
-    topKSlider.addEventListener('input', (e) => {
-        settings.topK = parseInt(e.target.value);
-        topKValue.textContent = settings.topK;
-    });
+    if (topKSlider && topKValue) {
+        topKSlider.addEventListener('input', (e) => {
+            settings.topK = parseInt(e.target.value);
+            topKValue.textContent = settings.topK;
+        });
+    }
     
     setupTabs();
     setupNER();
