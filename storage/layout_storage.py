@@ -114,3 +114,19 @@ def delete_layout_analysis(layout_id):
     except Exception as e:
         print(f"Error deleting layout analysis: {e}")
         return False
+
+
+def clear_all_layout_analyses():
+    """Delete all layout analysis files"""
+    try:
+        count = 0
+        for file_path in STORAGE_DIR.glob("*.json"):
+            try:
+                file_path.unlink()
+                count += 1
+            except Exception:
+                continue
+        return True
+    except Exception as e:
+        print(f"Error clearing all layout analyses: {e}")
+        return False

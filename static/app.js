@@ -295,6 +295,12 @@ async function loadConversationList() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.conversations.length - displayedConversationCount} remaining)`;
             showMoreBtn.onclick = () => {
+                conversationList.innerHTML += `
+                    <div class="skeleton-conversation">
+                        <div class="skeleton skeleton-conversation-title"></div>
+                        <div class="skeleton skeleton-conversation-meta"></div>
+                    </div>
+                `;
                 displayedConversationCount += 5;
                 loadConversationList();
             };
@@ -697,6 +703,24 @@ function setupEventListeners() {
         renderMessages();
         loadConversationList();
         closeMobileMenuHelper();
+    });
+    
+    document.getElementById('clear-all-conversations-btn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete ALL conversation history? This cannot be undone.')) {
+            await clearAllConversations();
+        }
+    });
+    
+    document.getElementById('clear-all-ner-btn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete ALL NER analysis history? This cannot be undone.')) {
+            await clearAllNERHistory();
+        }
+    });
+    
+    document.getElementById('clear-all-ocr-btn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete ALL OCR extraction history? This cannot be undone.')) {
+            await clearAllOCRHistory();
+        }
     });
     
     const hamburgerMenu = document.querySelector('.hamburger-menu');
@@ -1167,6 +1191,12 @@ async function loadNERHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.analyses.length - displayedNERCount} remaining)`;
             showMoreBtn.onclick = () => {
+                historyList.innerHTML += `
+                    <div class="skeleton-conversation">
+                        <div class="skeleton skeleton-conversation-title"></div>
+                        <div class="skeleton skeleton-conversation-meta"></div>
+                    </div>
+                `;
                 displayedNERCount += 5;
                 loadNERHistory();
             };
@@ -1266,6 +1296,12 @@ async function loadOCRHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${allAnalyses.length - displayedOCRCount} remaining)`;
             showMoreBtn.onclick = () => {
+                historyList.innerHTML += `
+                    <div class="skeleton-conversation">
+                        <div class="skeleton skeleton-conversation-title"></div>
+                        <div class="skeleton skeleton-conversation-meta"></div>
+                    </div>
+                `;
                 displayedOCRCount += 5;
                 loadOCRHistory();
             };
@@ -1329,6 +1365,61 @@ async function deleteLayoutAnalysis(layoutId) {
         await loadOCRHistory();
     } catch (error) {
         console.error('Error deleting layout analysis:', error);
+    }
+}
+
+async function clearAllConversations() {
+    try {
+        const response = await fetch('/api/conversations', {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            sessionId = generateUUID();
+            messages = [];
+            displayedConversationCount = 5;
+            renderMessages();
+            await loadConversationList();
+            closeMobileMenuHelper();
+        }
+    } catch (error) {
+        console.error('Error clearing all conversations:', error);
+        alert('Failed to clear conversation history. Please try again.');
+    }
+}
+
+async function clearAllNERHistory() {
+    try {
+        const response = await fetch('/api/ner/history', {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            displayedNERCount = 5;
+            await loadNERHistory();
+            closeMobileMenuHelper();
+        }
+    } catch (error) {
+        console.error('Error clearing all NER history:', error);
+        alert('Failed to clear NER history. Please try again.');
+    }
+}
+
+async function clearAllOCRHistory() {
+    try {
+        const [ocrResponse, layoutResponse] = await Promise.all([
+            fetch('/api/ocr/history', { method: 'DELETE' }),
+            fetch('/api/layout/history', { method: 'DELETE' })
+        ]);
+        
+        if (ocrResponse.ok && layoutResponse.ok) {
+            displayedOCRCount = 5;
+            await loadOCRHistory();
+            closeMobileMenuHelper();
+        }
+    } catch (error) {
+        console.error('Error clearing all OCR history:', error);
+        alert('Failed to clear OCR history. Please try again.');
     }
 }
 

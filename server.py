@@ -53,6 +53,7 @@ try:
         load_conversation,
         get_all_conversations,
         delete_conversation,
+        clear_all_conversations,
         get_engine,
     )
     from sqlalchemy import text
@@ -80,6 +81,7 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
             load_conversation,
             get_all_conversations,
             delete_conversation,
+            clear_all_conversations,
         )
 
         DATABASE_AVAILABLE = True
@@ -100,12 +102,16 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
         def delete_conversation(session_id: str) -> bool:
             return False
 
+        def clear_all_conversations() -> bool:
+            return False
+
 
 from storage.ner_storage import (  # noqa: E402
     save_ner_analysis,
     load_ner_analysis,
     get_all_ner_analyses,
     delete_ner_analysis,
+    clear_all_ner_analyses,
 )
 
 from storage.ocr_storage import (  # noqa: E402
@@ -113,6 +119,7 @@ from storage.ocr_storage import (  # noqa: E402
     load_ocr_analysis,
     get_all_ocr_analyses,
     delete_ocr_analysis,
+    clear_all_ocr_analyses,
 )
 
 from storage.layout_storage import (  # noqa: E402
@@ -120,6 +127,7 @@ from storage.layout_storage import (  # noqa: E402
     load_layout_analysis,
     get_all_layout_analyses,
     delete_layout_analysis,
+    clear_all_layout_analyses,
 )
 
 # Import bitnet.cpp inference module (llama-cpp-python wrapper)
@@ -1200,6 +1208,13 @@ async def delete_conv(session_id: str):
     return {"success": success}
 
 
+@app.delete("/api/conversations")
+async def clear_all_convs():
+    """Delete all conversations"""
+    success = clear_all_conversations()
+    return {"success": success}
+
+
 @app.get("/api/ner/history")
 async def list_ner_analyses():
     """List all NER analyses"""
@@ -1223,6 +1238,13 @@ async def delete_ner(ner_id: str):
     return {"success": success}
 
 
+@app.delete("/api/ner/history")
+async def clear_all_ner():
+    """Delete all NER analyses"""
+    success = clear_all_ner_analyses()
+    return {"success": success}
+
+
 @app.get("/api/ocr/history")
 async def list_ocr_analyses():
     """List all OCR analyses"""
@@ -1243,6 +1265,13 @@ async def get_ocr_analysis(ocr_id: str):
 async def delete_ocr(ocr_id: str):
     """Delete an OCR analysis"""
     success = delete_ocr_analysis(ocr_id)
+    return {"success": success}
+
+
+@app.delete("/api/ocr/history")
+async def clear_all_ocr():
+    """Delete all OCR analyses"""
+    success = clear_all_ocr_analyses()
     return {"success": success}
 
 
@@ -1356,6 +1385,13 @@ async def get_layout_analysis_by_id(layout_id: str):
 async def delete_layout_analysis_by_id(layout_id: str):
     """Delete a layout analysis"""
     success = delete_layout_analysis(layout_id)
+    return {"success": success}
+
+
+@app.delete("/api/layout/history")
+async def clear_all_layout():
+    """Delete all layout analyses"""
+    success = clear_all_layout_analyses()
     return {"success": success}
 
 

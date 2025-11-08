@@ -34,6 +34,7 @@
                 <div class="sidebar-section">
                     <h3>Conversation History</h3>
                     <button id="new-conversation-btn" class="btn btn-primary">New Conversation</button>
+                    <button id="clear-all-conversations-btn" class="btn btn-secondary" style="margin-top: 10px;">Clear All History</button>
                     <div id="conversation-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
@@ -62,6 +63,7 @@
                 
                 <div class="sidebar-section">
                     <h3>Recent Analyses</h3>
+                    <button id="clear-all-ner-btn" class="btn btn-secondary" style="margin-bottom: 10px;">Clear All History</button>
                     <div id="ner-history-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
@@ -99,6 +101,7 @@
                 
                 <div class="sidebar-section">
                     <h3>Recent Extractions</h3>
+                    <button id="clear-all-ocr-btn" class="btn btn-secondary" style="margin-bottom: 10px;">Clear All History</button>
                     <div id="ocr-history-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
@@ -204,9 +207,8 @@
                     <div class="ner-container">
                         <div class="ner-header">
                             <h2>Named Entity Recognition</h2>
-                            <button id="clear-ner-btn" class="btn btn-secondary">Clear Results</button>
+                            <p>Extract entities like people, organizations, and locations from text</p>
                         </div>
-                        <p>Extract entities like people, organizations, and locations from text</p>
                         
                         <div class="example-prompts" style="margin-bottom: 20px;">
                             <div class="info-message">Try one of these example texts:</div>
@@ -236,9 +238,8 @@
                     <div class="ocr-container">
                         <div class="ocr-header">
                             <h2>Optical Character Recognition</h2>
-                            <button id="clear-ocr-results-btn" class="btn btn-secondary">Clear Results</button>
+                            <p>Extract text from images using EasyOCR or Tesseract</p>
                         </div>
-                        <p>Extract text from images using EasyOCR or Tesseract</p>
                         
                         <div class="example-prompts" style="margin-bottom: 20px;">
                             <div class="info-message">Try one of these example images:</div>

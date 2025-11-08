@@ -187,3 +187,20 @@ def delete_conversation(session_id):
         return True
     except Exception:
         return False
+
+
+def clear_all_conversations():
+    """Delete all conversations from database"""
+    if not DATABASE_URL:
+        return False
+    try:
+        db_session = get_session()
+        if not db_session:
+            return False
+        db_session.query(Message).delete()
+        db_session.query(Conversation).delete()
+        db_session.commit()
+        db_session.close()
+        return True
+    except Exception:
+        return False

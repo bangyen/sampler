@@ -97,3 +97,19 @@ def delete_conversation(session_id):
     except Exception as e:
         print(f"Error deleting conversation: {e}")
         return False
+
+
+def clear_all_conversations():
+    """Delete all conversation files"""
+    try:
+        count = 0
+        for file_path in STORAGE_DIR.glob("*.json"):
+            try:
+                file_path.unlink()
+                count += 1
+            except Exception:
+                continue
+        return True
+    except Exception as e:
+        print(f"Error clearing all conversations: {e}")
+        return False

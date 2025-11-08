@@ -101,3 +101,19 @@ def delete_ner_analysis(ner_id):
     except Exception as e:
         print(f"Error deleting NER analysis: {e}")
         return False
+
+
+def clear_all_ner_analyses():
+    """Delete all NER analysis files"""
+    try:
+        count = 0
+        for file_path in STORAGE_DIR.glob("*.json"):
+            try:
+                file_path.unlink()
+                count += 1
+            except Exception:
+                continue
+        return True
+    except Exception as e:
+        print(f"Error clearing all NER analyses: {e}")
+        return False

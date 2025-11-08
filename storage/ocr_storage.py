@@ -117,3 +117,19 @@ def delete_ocr_analysis(ocr_id):
     except Exception as e:
         print(f"Error deleting OCR analysis: {e}")
         return False
+
+
+def clear_all_ocr_analyses():
+    """Delete all OCR analysis files"""
+    try:
+        count = 0
+        for file_path in STORAGE_DIR.glob("*.json"):
+            try:
+                file_path.unlink()
+                count += 1
+            except Exception:
+                continue
+        return True
+    except Exception as e:
+        print(f"Error clearing all OCR analyses: {e}")
+        return False
