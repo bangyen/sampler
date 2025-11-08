@@ -130,6 +130,28 @@ from storage.layout_storage import (  # noqa: E402
     clear_all_layout_analyses,
 )
 
+from storage.zero_shot_storage import (  # noqa: E402
+    save_zero_shot_analysis,
+    load_zero_shot_analysis,
+    get_all_zero_shot_analyses,
+    delete_zero_shot_analysis,
+    clear_all_zero_shot_analyses,
+)
+
+# Import zero-shot classifier
+try:
+    from inference.zero_shot_classifier import (
+        ZeroShotClassifier,
+        ZERO_SHOT_MODELS,
+        create_classifier,
+    )
+    ZERO_SHOT_AVAILABLE = True
+except ImportError:
+    ZERO_SHOT_AVAILABLE = False
+    ZeroShotClassifier = None
+    ZERO_SHOT_MODELS = {}
+    create_classifier = None
+
 # Import bitnet.cpp inference module (llama-cpp-python wrapper)
 try:
     from inference.bitnet_inference import (
@@ -259,11 +281,22 @@ loaded_llama_models = {}
 loaded_bitnet_models = {}
 ner_pipelines = {}
 ocr_readers = {}
+zero_shot_classifiers = {}
 
 
 class NERRequest(BaseModel):
     text: str
     model: str = "BERT Base NER"
+
+
+class ZeroShotRequest(BaseModel):
+    text: str
+    candidate_labels: List[str]
+    model: str = "BART Large MNLI"
+    hypothesis_template: str = "This example is {}."
+    multi_label: bool = False
+    use_logprobs: bool = True
+    abstain_threshold: Optional[float] = None
 
 
 class OCRResponse(BaseModel):
@@ -780,6 +813,12 @@ async def get_ocr_configs():
 async def get_layout_config():
     """Get layout analysis configuration"""
     return {"config": LAYOUT_CONFIG}
+
+
+@app.get("/api/zero-shot/models")
+async def get_zero_shot_models():
+    """Get list of available zero-shot classification models"""
+    return {"models": ZERO_SHOT_MODELS if ZERO_SHOT_AVAILABLE else {}}
 
 
 async def stream_with_loading_wrapper_transformers(
