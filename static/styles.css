@@ -128,7 +128,7 @@
     --sidebar-mobile-width: 80vw;
     --sidebar-mobile-max-width: 320px;
     --settings-panel-width: 320px;
-    --container-max-width: 900px;
+    --container-max-width: 1400px;
     --ocr-preview-max-height: 400px;
     
     /* Breakpoints (for use in media queries) */
@@ -383,13 +383,14 @@ body {
    ======================================== */
 
 .chat-container {
-    width: 100%;
-    max-width: var(--container-max-width);
+    width: min(100%, var(--container-max-width));
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     padding: var(--space-xl);
     overflow: hidden;
+    flex: 1;
+    min-width: 0;
 }
 
 .chat-header {
