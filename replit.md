@@ -31,6 +31,20 @@ The backend is built with FastAPI, providing REST APIs and Server-Sent Events (S
 ### System Design Choices
 The project uses a clear separation of concerns with `server.py` for FastAPI logic, `static/` for frontend assets, and dedicated modules for database (`database.py`) and JSON storage (`json_storage.py`). The system is designed for robustness, including graceful error handling, automatic fallback mechanisms (e.g., database to JSON storage), and optional dependency loading for features like NER/OCR.
 
+### Testing Infrastructure
+The project includes a comprehensive pytest testing suite that validates backend modules and API endpoints. Tests are organized in the `tests/` directory with the following coverage:
+- **JSON Storage Tests** (`test_json_storage.py`): Validates conversation persistence via JSON files, including save/load operations, error handling, and edge cases.
+- **Database Tests** (`test_database.py`): Verifies PostgreSQL database operations with mocked connections, testing conversation CRUD operations.
+- **Inference Tests** (`test_bitnet_inference.py`): Tests llama.cpp inference wrapper functionality, including model initialization, text generation, and streaming.
+- **API Endpoint Tests** (`test_server.py`): Validates FastAPI endpoints using test client, covering conversation management, model listing, and NER/OCR configurations.
+
+**Running Tests:**
+- `just test` - Run all tests with verbose output
+- `just all` - Run linting and tests together
+- `python -m pytest tests/` - Direct pytest execution
+
+The test suite uses fixtures for consistent test data and mocking for external dependencies, ensuring fast, isolated tests that don't require actual models or database connections.
+
 ## External Dependencies
 - **FastAPI:** Web framework for the backend.
 - **Uvicorn:** ASGI server for running FastAPI.

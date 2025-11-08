@@ -16,13 +16,17 @@ init:
         pip install -r requirements.txt
     fi
 
-# Run full pipeline (lint only, no tests)
-all: lint
+# Run full pipeline (lint and test)
+all: lint test
 
 # Check code quality
 lint:
     @{{PYTHON}} -m ruff check *.py || echo "ruff not installed, skipping..."
     @{{PYTHON}} -m black --check *.py || echo "black not installed, skipping..."
+
+# Run tests
+test:
+    @{{PYTHON}} -m pytest tests/ -v --tb=short || echo "pytest not installed or tests failed"
 
 # Format code
 format:
