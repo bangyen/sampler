@@ -36,16 +36,21 @@ function generateUUID() {
 }
 
 async function init() {
-    await loadModels();
-    await loadNERModels();
-    await loadOCREngines();
-    await loadOCRConfigs();
-    await loadConversation();
-    await loadConversationList();
     setupEventListeners();
     setupNERExamples();
     setupOCRExamples();
     closeMobileMenuHelper();
+    
+    Promise.all([
+        loadModels(),
+        loadNERModels(),
+        loadOCREngines(),
+        loadOCRConfigs(),
+        loadConversation(),
+        loadConversationList()
+    ]).catch(error => {
+        console.error('Error during initialization:', error);
+    });
 }
 
 async function loadModels() {
