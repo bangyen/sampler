@@ -2,8 +2,7 @@ let sessionId = generateUUID();
 let messages = [];
 let selectedModel = 'Qwen 2.5 0.5B';
 let selectedNERModel = 'BERT Base NER';
-let selectedOCREngine = 'easyocr';
-let selectedOCRConfig = 'English Only';
+let selectedOCRConfig = 'EasyOCR English';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
@@ -47,7 +46,6 @@ async function init() {
     Promise.all([
         loadModels(),
         loadNERModels(),
-        loadOCREngines(),
         loadOCRConfigs(),
         loadConversation(),
         loadConversationList(),
@@ -112,59 +110,23 @@ async function loadNERModels() {
     }
 }
 
-async function loadOCREngines() {
-    try {
-        const engineSelector = document.getElementById('ocr-engine-selector');
-        engineSelector.innerHTML = '';
-        
-        const engines = {
-            'easyocr': {
-                name: 'EasyOCR',
-                description: 'Fast and accurate OCR with multilingual support'
-            },
-            'tesseract': {
-                name: 'Tesseract',
-                description: 'Fast and lightweight OCR engine'
-            }
-        };
-        
-        Object.entries(engines).forEach(([key, info]) => {
-            const engineDiv = document.createElement('div');
-            engineDiv.className = `model-option ${key === selectedOCREngine ? 'selected' : ''}`;
-            engineDiv.innerHTML = `
-                <h4>${info.name}</h4>
-                <div class="model-description">${info.description}</div>
-            `;
-            engineDiv.onclick = (evt) => selectOCREngine(key, evt);
-            engineSelector.appendChild(engineDiv);
-        });
-        
-        updateOCRConfigVisibility();
-    } catch (error) {
-        console.error('Error loading OCR engines:', error);
-    }
-}
-
 async function loadOCRConfigs() {
     try {
         const response = await fetch('/api/ocr/configs');
         const data = await response.json();
         
-        const configList = document.getElementById('ocr-config-list');
-        configList.innerHTML = '';
+        const modelList = document.getElementById('ocr-model-list');
+        modelList.innerHTML = '';
         
         Object.entries(data.configs).forEach(([name, info]) => {
-            const configDiv = document.createElement('div');
-            configDiv.className = `model-option ${name === selectedOCRConfig ? 'selected' : ''}`;
-            configDiv.innerHTML = `
+            const modelDiv = document.createElement('div');
+            modelDiv.className = `model-option ${name === selectedOCRConfig ? 'selected' : ''}`;
+            modelDiv.innerHTML = `
                 <h4>${name}</h4>
                 <div class="model-description">${info.description}</div>
-                <div class="model-specs">
-                    ${info.languages.map(lang => `<span class="model-badge">${lang}</span>`).join('')}
-                </div>
             `;
-            configDiv.onclick = (evt) => selectOCRConfig(name, evt);
-            configList.appendChild(configDiv);
+            modelDiv.onclick = (evt) => selectOCRConfig(name, evt);
+            modelList.appendChild(modelDiv);
         });
     } catch (error) {
         console.error('Error loading OCR configs:', error);
@@ -199,39 +161,10 @@ function selectNERModel(name, evt) {
     }, 100);
 }
 
-function selectOCREngine(engine, evt) {
-    selectedOCREngine = engine;
-    
-    document.querySelectorAll('#ocr-engine-selector .model-option').forEach(el => {
-        el.classList.remove('selected');
-    });
-    
-    evt.target.closest('.model-option').classList.add('selected');
-    
-    updateOCRConfigVisibility();
-    
-    setTimeout(() => {
-        closeMobileMenuHelper();
-    }, 300);
-}
-
-function updateOCRConfigVisibility() {
-    const configSection = document.getElementById('ocr-config-section');
-    if (!configSection) {
-        console.warn('ocr-config-section element not found');
-        return;
-    }
-    if (selectedOCREngine === 'easyocr') {
-        configSection.style.display = 'block';
-    } else {
-        configSection.style.display = 'none';
-    }
-}
-
 function selectOCRConfig(name, evt) {
     selectedOCRConfig = name;
     
-    document.querySelectorAll('#ocr-config-list .model-option').forEach(el => {
+    document.querySelectorAll('#ocr-model-list .model-option').forEach(el => {
         el.classList.remove('selected');
     });
     
@@ -1024,8 +957,7 @@ function setupOCR() {
         }
         
         submitBtn.disabled = true;
-        const isLayout = selectedOCREngine === 'paddleocr';
-        submitBtn.textContent = isLayout ? 'Analyzing...' : 'Extracting...';
+        submitBtn.textContent = 'Extracting...';
         
         let loadingTimerInterval = null;
         let modelLoadStartTime = null;
@@ -1034,7 +966,7 @@ function setupOCR() {
             const formData = new FormData();
             formData.append('file', ocrSelectedFile);
             
-            const endpoint = isLayout ? '/api/layout' : `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`;
+            const endpoint = `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`;
             const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
@@ -1083,7 +1015,7 @@ function setupOCR() {
                                         clearInterval(loadingTimerInterval);
                                         loadingTimerInterval = null;
                                     }
-                                    submitBtn.textContent = isLayout ? 'Analyzing...' : 'Extracting...';
+                                    submitBtn.textContent = 'Extracting...';
                                 }
                                 
                                 if (data.done) {
@@ -1345,8 +1277,8 @@ async function loadLayoutAnalysis(layoutId) {
         const response = await fetch(`/api/layout/history/${layoutId}`);
         const data = await response.json();
         
-        selectedOCREngine = 'paddleocr';
-        await loadOCREngines();
+        selectedOCRConfig = 'PaddleOCR English';
+        await loadOCRConfigs();
         
         displayOCRResults(data);
         

@@ -229,30 +229,20 @@ NER_MODELS = {
 }
 
 OCR_CONFIGS = {
-    "English Only": {
+    "EasyOCR English": {
         "engine": "easyocr",
         "languages": ["en"],
-        "description": "Fastest - English text only",
-    },
-    "English + Spanish": {
-        "engine": "easyocr",
-        "languages": ["en", "es"],
-        "description": "English and Spanish text recognition",
-    },
-    "English + Chinese": {
-        "engine": "easyocr",
-        "languages": ["en", "ch_sim"],
-        "description": "English and Simplified Chinese text",
-    },
-    "Multi-Language": {
-        "engine": "easyocr",
-        "languages": ["en", "es", "fr", "de", "it", "pt"],
-        "description": "Common European languages (slower)",
+        "description": "Fast and accurate OCR with deep learning",
     },
     "Tesseract English": {
         "engine": "tesseract",
         "languages": ["eng"],
-        "description": "Fast Tesseract OCR - English only",
+        "description": "Lightweight and fast traditional OCR engine",
+    },
+    "PaddleOCR English": {
+        "engine": "paddleocr",
+        "languages": ["en"],
+        "description": "Advanced OCR with superior accuracy (CPU-optimized)",
     },
 }
 
@@ -1165,7 +1155,7 @@ async def stream_ocr_extraction(
 
 @app.post("/api/ocr")
 async def extract_text_from_image(
-    file: UploadFile = File(...), config: str = "English Only"
+    file: UploadFile = File(...), config: str = "EasyOCR English"
 ):
     """Extract text from uploaded image using OCR (streaming)"""
     contents = await file.read()
