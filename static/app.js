@@ -7,6 +7,7 @@ let selectedOCRConfig = 'English Only';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
+let displayedConversationCount = 10;
 
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
@@ -255,7 +256,7 @@ async function loadConversationList() {
         
         conversationList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.conversations.length} saved conversation(s)</small>`;
         
-        data.conversations.slice(0, 10).forEach(conv => {
+        data.conversations.slice(0, displayedConversationCount).forEach(conv => {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             
@@ -277,11 +278,15 @@ async function loadConversationList() {
             conversationList.appendChild(item);
         });
         
-        if (data.conversations.length > 10) {
-            const more = document.createElement('small');
-            more.style.color = '#888';
-            more.textContent = `Showing 10 of ${data.conversations.length} conversations`;
-            conversationList.appendChild(more);
+        if (data.conversations.length > displayedConversationCount) {
+            const showMoreBtn = document.createElement('button');
+            showMoreBtn.className = 'btn btn-secondary show-more-btn';
+            showMoreBtn.textContent = `Show More (${data.conversations.length - displayedConversationCount} remaining)`;
+            showMoreBtn.onclick = () => {
+                displayedConversationCount += 10;
+                loadConversationList();
+            };
+            conversationList.appendChild(showMoreBtn);
         }
     } catch (error) {
         console.error('Error loading conversation list:', error);

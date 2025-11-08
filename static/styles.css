@@ -317,6 +317,12 @@ body {
     white-space: nowrap;
 }
 
+.show-more-btn {
+    width: 100%;
+    margin-top: var(--space-md);
+    font-size: var(--font-size-md);
+}
+
 /* ========================================
    Main Content
    ======================================== */
