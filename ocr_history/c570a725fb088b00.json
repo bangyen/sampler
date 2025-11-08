@@ -622,7 +622,7 @@
     }
   ],
   "config": "EasyOCR English",
-  "processing_time": 8.07698655128479,
+  "processing_time": 17.1513249874115,
   "num_detections": 28,
-  "created_at": "2025-11-08T21:45:24.996659"
+  "created_at": "2025-11-08T21:55:45.689870"
 }

@@ -241,7 +241,7 @@ async function loadConversationList() {
                 <div class="empty-state">
                     <p style="color: #888; margin-bottom: 10px;">No saved conversations yet</p>
                     <small style="color: #999;">
-                        💡 Try selecting a model and starting a conversation!<br><br>
+                        Try selecting a model and starting a conversation!<br><br>
                         Example use cases:<br>
                         • Classify cargo shipments<br>
                         • Analyze logistics scenarios<br>
@@ -1299,7 +1299,7 @@ async function loadNERHistory() {
                 <div class="empty-state">
                     <p style="color: #888; margin-bottom: 10px;">No analyses yet</p>
                     <small style="color: #999;">
-                        💡 Try analyzing some text to extract entities!<br><br>
+                        Try analyzing some text to extract entities!<br><br>
                         Example uses:<br>
                         • Extract people, organizations, locations<br>
                         • Analyze business documents<br>
@@ -1411,7 +1411,7 @@ async function loadOCRHistory() {
                 <div class="empty-state">
                     <p style="color: #888; margin-bottom: 10px;">No extractions yet</p>
                     <small style="color: #999;">
-                        💡 Try uploading an image to extract text!<br><br>
+                        Try uploading an image to extract text!<br><br>
                         Works great for:<br>
                         • Scanned documents<br>
                         • Business cards<br>
