@@ -50,7 +50,9 @@ async function init() {
         loadOCREngines(),
         loadOCRConfigs(),
         loadConversation(),
-        loadConversationList()
+        loadConversationList(),
+        loadNERHistory(),
+        loadOCRHistory()
     ]).catch(error => {
         console.error('Error during initialization:', error);
     });
