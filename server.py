@@ -41,7 +41,7 @@ GetAllConversationsFn = Callable[[], List[Dict[str, Any]]]
 DeleteConversationFn = Callable[[str], bool]
 
 try:
-    from database import (
+    from storage.database import (
         save_conversation,
         load_conversation,
         get_all_conversations,

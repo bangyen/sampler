@@ -7,17 +7,19 @@ from storage import database
 
 def test_get_engine_with_url():
     """Test engine creation returns engine when DATABASE_URL is set."""
-    # The actual get_engine uses @st.cache_resource, which we can test via mocking
     with patch.dict('os.environ', {'DATABASE_URL': 'postgresql://test:test@localhost/test'}):
         with patch('storage.database.create_engine') as mock_create:
             with patch('storage.database.Base.metadata.create_all'):
+                # Reset the global cache
+                database._engine_cache = None
+                
                 mock_engine = Mock()
                 mock_create.return_value = mock_engine
-                # Reset the cache to force re-execution
-                if hasattr(database.get_engine, 'clear'):
-                    database.get_engine.clear()
-                # Since we can't easily test streamlit cache, we'll test the underlying logic
-                assert database.DATABASE_URL is not None or 'DATABASE_URL' in os.environ
+                
+                # Call get_engine to test caching logic
+                engine = database.get_engine()
+                assert engine == mock_engine
+                assert mock_create.called
 
 
 def test_save_conversation_returns_false_without_db():

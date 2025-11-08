@@ -3,12 +3,11 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, J
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
-import streamlit as st
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    st.error(
+    print(
         "DATABASE_URL environment variable is not set. Conversation persistence is disabled."
     )
     DATABASE_URL = None
@@ -36,14 +35,21 @@ class Message(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-@st.cache_resource
+_engine_cache = None
+
+
 def get_engine():
     """Create and cache database engine"""
+    global _engine_cache
+    if _engine_cache is not None:
+        return _engine_cache
+    
     if not DATABASE_URL:
         return None
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    Base.metadata.create_all(engine)
-    return engine
+    
+    _engine_cache = create_engine(DATABASE_URL, pool_pre_ping=True)
+    Base.metadata.create_all(_engine_cache)
+    return _engine_cache
 
 
 def get_session():

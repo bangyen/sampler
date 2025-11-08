@@ -29,7 +29,14 @@ The backend is built with FastAPI, providing REST APIs and Server-Sent Events (S
 - **Performance Optimization:** Automatically downloads and caches GGUF models for accelerated inference when using llama.cpp backend.
 
 ### System Design Choices
-The project uses a clear separation of concerns with `server.py` for FastAPI logic, `static/` for frontend assets, and dedicated modules for database (`database.py`) and JSON storage (`json_storage.py`). The system is designed for robustness, including graceful error handling, automatic fallback mechanisms (e.g., database to JSON storage), and optional dependency loading for features like NER/OCR.
+The project uses a clear separation of concerns with modular organization:
+- **`server.py`**: Main FastAPI application entry point
+- **`storage/`**: Persistence layer modules (database, JSON, NER, OCR, layout storage)
+- **`inference/`**: LLM inference backends (bitnet_inference, bitnet_cpp_bridge)
+- **`static/`**: Frontend assets (HTML, CSS, JavaScript)
+- **`tests/`**: Pytest test suite with comprehensive coverage
+
+The system is designed for robustness, including graceful error handling, automatic fallback mechanisms (e.g., database to JSON storage), and optional dependency loading for features like NER/OCR.
 
 ### Testing Infrastructure
 The project includes a comprehensive pytest testing suite that validates backend modules and API endpoints. Tests are organized in the `tests/` directory with the following coverage:
