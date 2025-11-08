@@ -491,7 +491,7 @@ async function sendMessage(userMessage) {
                                 // Start timer that updates every 100ms
                                 loadingTimerInterval = setInterval(() => {
                                     const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
-                                    streamingContent.innerHTML = `<em style="color: #888;">⏳ Loading model... ${elapsed}s</em>`;
+                                    streamingContent.innerHTML = `<em style="color: #888;">Loading model... ${elapsed}s</em>`;
                                 }, 100);
                             }
                             
