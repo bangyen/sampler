@@ -852,9 +852,24 @@ function setupNER() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Extracting...';
         
-        // Clear previous results immediately
+        // Show loading skeleton
         const resultsDiv = document.getElementById('ner-results');
-        resultsDiv.style.display = 'none';
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = `
+            <div class="skeleton-results">
+                <div class="skeleton skeleton-results-title"></div>
+                <div class="skeleton skeleton-entity"></div>
+                <div class="skeleton skeleton-entity"></div>
+                <div class="skeleton skeleton-entity"></div>
+                <div class="skeleton skeleton-metrics"></div>
+                <div class="skeleton skeleton-metrics"></div>
+            </div>
+        `;
+        
+        // Auto-scroll to results
+        setTimeout(() => {
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
         
         let loadingTimerInterval = null;
         let modelLoadStartTime = null;
@@ -943,6 +958,14 @@ function setupNER() {
 
 function displayNERError(message) {
     const resultsDiv = document.getElementById('ner-results');
+    
+    // Restore proper HTML structure
+    resultsDiv.innerHTML = `
+        <h3>Detected Entities</h3>
+        <div id="ner-entities" class="entity-list"></div>
+        <div id="ner-metrics" class="metrics-display"></div>
+    `;
+    
     const entitiesDiv = document.getElementById('ner-entities');
     const metricsDiv = document.getElementById('ner-metrics');
     
@@ -962,6 +985,14 @@ function displayNERError(message) {
 
 function displayNERResults(data) {
     const resultsDiv = document.getElementById('ner-results');
+    
+    // Restore proper HTML structure
+    resultsDiv.innerHTML = `
+        <h3>Detected Entities</h3>
+        <div id="ner-entities" class="entity-list"></div>
+        <div id="ner-metrics" class="metrics-display"></div>
+    `;
+    
     const entitiesDiv = document.getElementById('ner-entities');
     const metricsDiv = document.getElementById('ner-metrics');
     
@@ -1079,9 +1110,22 @@ function setupOCR() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Extracting...';
         
-        // Clear previous results immediately
+        // Show loading skeleton
         const resultsDiv = document.getElementById('ocr-results');
-        resultsDiv.style.display = 'none';
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = `
+            <div class="skeleton-results">
+                <div class="skeleton skeleton-results-title"></div>
+                <div class="skeleton skeleton-text-block"></div>
+                <div class="skeleton skeleton-metrics"></div>
+                <div class="skeleton skeleton-metrics"></div>
+            </div>
+        `;
+        
+        // Auto-scroll to results
+        setTimeout(() => {
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
         
         let loadingTimerInterval = null;
         let modelLoadStartTime = null;
@@ -1172,6 +1216,14 @@ function setupOCR() {
 
 function displayOCRError(message) {
     const resultsDiv = document.getElementById('ocr-results');
+    
+    // Restore proper HTML structure
+    resultsDiv.innerHTML = `
+        <h3>Extracted Text</h3>
+        <div id="ocr-text" class="extracted-text"></div>
+        <div id="ocr-metrics" class="metrics-display"></div>
+    `;
+    
     const textDiv = document.getElementById('ocr-text');
     const metricsDiv = document.getElementById('ocr-metrics');
     
@@ -1191,6 +1243,14 @@ function displayOCRError(message) {
 
 function displayOCRResults(data) {
     const resultsDiv = document.getElementById('ocr-results');
+    
+    // Restore proper HTML structure
+    resultsDiv.innerHTML = `
+        <h3>Extracted Text</h3>
+        <div id="ocr-text" class="extracted-text"></div>
+        <div id="ocr-metrics" class="metrics-display"></div>
+    `;
+    
     const textDiv = document.getElementById('ocr-text');
     const metricsDiv = document.getElementById('ocr-metrics');
     
