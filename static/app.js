@@ -37,11 +37,34 @@ function generateUUID() {
     });
 }
 
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-message">${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('toast-hiding');
+        setTimeout(() => {
+            container.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
 function copyToClipboard(text, button) {
     navigator.clipboard.writeText(text).then(() => {
         const originalText = button.textContent;
         button.textContent = 'Copied!';
         button.style.background = '#4CAF50';
+        showToast('Text copied to clipboard');
         setTimeout(() => {
             button.textContent = originalText;
             button.style.background = '';
@@ -49,6 +72,7 @@ function copyToClipboard(text, button) {
     }).catch(err => {
         console.error('Failed to copy:', err);
         button.textContent = 'Failed';
+        showToast('Failed to copy text', 'error');
         setTimeout(() => {
             button.textContent = 'Copy';
         }, 2000);
@@ -213,7 +237,18 @@ async function loadConversationList() {
         conversationList.innerHTML = '';
         
         if (!data.conversations || data.conversations.length === 0) {
-            conversationList.innerHTML = '<small style="color: #888;">No saved conversations yet</small>';
+            conversationList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #888; margin-bottom: 10px;">No saved conversations yet</p>
+                    <small style="color: #999;">
+                        💡 Try selecting a model and starting a conversation!<br><br>
+                        Example use cases:<br>
+                        • Classify cargo shipments<br>
+                        • Analyze logistics scenarios<br>
+                        • Get shipping recommendations
+                    </small>
+                </div>
+            `;
             return;
         }
         
@@ -605,7 +640,19 @@ async function sendMessage(userMessage) {
                     setTimeout(() => assistantDiv.remove(), 1500);
                 }
             } else {
-                streamingContent.textContent = `Error: ${error.message}`;
+                streamingContent.innerHTML = `
+                    <div style="color: #c33; padding: 10px 0;">Error: ${error.message}</div>
+                    <button class="btn btn-primary chat-retry-btn" style="margin-top: 10px;" data-retry-message="${escapeHtml(userMessage)}">Try Again</button>
+                `;
+                
+                const retryBtn = assistantDiv.querySelector('.chat-retry-btn');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', () => {
+                        assistantDiv.remove();
+                        messages.pop();
+                        sendMessage(userMessage);
+                    });
+                }
             }
         }
     } finally {
@@ -900,8 +947,17 @@ function displayNERError(message) {
     const metricsDiv = document.getElementById('ner-metrics');
     
     resultsDiv.style.display = 'block';
-    entitiesDiv.innerHTML = `<div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;"><strong>Error:</strong> ${message}</div>`;
+    entitiesDiv.innerHTML = `
+        <div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;">
+            <strong>Error:</strong> ${message}
+        </div>
+        <button id="ner-retry-btn" class="btn btn-primary" style="margin-top: 15px;">Try Again</button>
+    `;
     metricsDiv.innerHTML = '';
+    
+    document.getElementById('ner-retry-btn').addEventListener('click', () => {
+        document.getElementById('ner-submit-btn').click();
+    });
 }
 
 function displayNERResults(data) {
@@ -1120,8 +1176,17 @@ function displayOCRError(message) {
     const metricsDiv = document.getElementById('ocr-metrics');
     
     resultsDiv.style.display = 'block';
-    textDiv.innerHTML = `<div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;"><strong>Error:</strong> ${message}</div>`;
+    textDiv.innerHTML = `
+        <div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;">
+            <strong>Error:</strong> ${message}
+        </div>
+        <button id="ocr-retry-btn" class="btn btn-primary" style="margin-top: 15px;">Try Again</button>
+    `;
     metricsDiv.innerHTML = '';
+    
+    document.getElementById('ocr-retry-btn').addEventListener('click', () => {
+        document.getElementById('ocr-submit-btn').click();
+    });
 }
 
 function displayOCRResults(data) {
@@ -1170,7 +1235,18 @@ async function loadNERHistory() {
         historyList.innerHTML = '';
         
         if (!data.analyses || data.analyses.length === 0) {
-            historyList.innerHTML = '<small style="color: #888;">No analyses yet</small>';
+            historyList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #888; margin-bottom: 10px;">No analyses yet</p>
+                    <small style="color: #999;">
+                        💡 Try analyzing some text to extract entities!<br><br>
+                        Example uses:<br>
+                        • Extract people, organizations, locations<br>
+                        • Analyze business documents<br>
+                        • Parse contact information
+                    </small>
+                </div>
+            `;
             return;
         }
         
@@ -1271,7 +1347,18 @@ async function loadOCRHistory() {
         const allAnalyses = [...ocrAnalyses, ...layoutAnalyses];
         
         if (allAnalyses.length === 0) {
-            historyList.innerHTML = '<small style="color: #888;">No extractions yet</small>';
+            historyList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #888; margin-bottom: 10px;">No extractions yet</p>
+                    <small style="color: #999;">
+                        💡 Try uploading an image to extract text!<br><br>
+                        Works great for:<br>
+                        • Scanned documents<br>
+                        • Business cards<br>
+                        • Forms and receipts
+                    </small>
+                </div>
+            `;
             return;
         }
         
@@ -1399,11 +1486,12 @@ async function clearAllConversations() {
             displayedConversationCount = 5;
             renderMessages();
             await loadConversationList();
+            showToast('Conversation history cleared');
             closeMobileMenuHelper();
         }
     } catch (error) {
         console.error('Error clearing all conversations:', error);
-        alert('Failed to clear conversation history. Please try again.');
+        showToast('Failed to clear conversation history', 'error');
     }
 }
 
@@ -1416,11 +1504,12 @@ async function clearAllNERHistory() {
         if (response.ok) {
             displayedNERCount = 5;
             await loadNERHistory();
+            showToast('NER history cleared');
             closeMobileMenuHelper();
         }
     } catch (error) {
         console.error('Error clearing all NER history:', error);
-        alert('Failed to clear NER history. Please try again.');
+        showToast('Failed to clear NER history', 'error');
     }
 }
 
@@ -1434,11 +1523,12 @@ async function clearAllOCRHistory() {
         if (ocrResponse.ok && layoutResponse.ok) {
             displayedOCRCount = 5;
             await loadOCRHistory();
+            showToast('OCR history cleared');
             closeMobileMenuHelper();
         }
     } catch (error) {
         console.error('Error clearing all OCR history:', error);
-        alert('Failed to clear OCR history. Please try again.');
+        showToast('Failed to clear OCR history', 'error');
     }
 }
 
