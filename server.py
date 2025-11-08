@@ -34,6 +34,13 @@ try:
 except ImportError:
     PILLOW_AVAILABLE = False
 
+try:
+    import pytesseract  # noqa: F401
+
+    PYTESSERACT_AVAILABLE = True
+except ImportError:
+    PYTESSERACT_AVAILABLE = False
+
 # Type aliases for persistence functions
 SaveConversationFn = Callable[[str, List[Dict[str, Any]]], bool]
 LoadConversationFn = Callable[[str], List[Dict[str, Any]]]
@@ -233,6 +240,11 @@ OCR_CONFIGS = {
         "engine": "easyocr",
         "languages": ["en", "es", "fr", "de", "it", "pt"],
         "description": "Common European languages (slower)",
+    },
+    "Tesseract English": {
+        "engine": "tesseract",
+        "languages": ["eng"],
+        "description": "Fast Tesseract OCR - English only",
     },
 }
 
@@ -510,6 +522,19 @@ def load_ocr_model(config_name="English Only"):
                 status_code=503,
                 detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}"
             )
+
+    elif engine == "tesseract":
+        if not PYTESSERACT_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Tesseract not installed. Please install: pip install pytesseract",
+            )
+
+        # Tesseract doesn't need preloading, just return a placeholder
+        # The actual OCR will be done per-request
+        if "tesseract" not in ocr_readers:
+            ocr_readers["tesseract"] = "initialized"
+        return ocr_readers["tesseract"], None
 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
@@ -993,6 +1018,9 @@ async def stream_ocr_extraction(
         elif engine == "paddleocr":
             cache_key = "paddleocr"
             is_cached = cache_key in ocr_readers
+        elif engine == "tesseract":
+            cache_key = "tesseract"
+            is_cached = cache_key in ocr_readers
         else:
             raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
 
@@ -1063,6 +1091,37 @@ async def stream_ocr_extraction(
                     )
 
             extracted_text = " ".join(extracted_text_parts)
+
+        elif engine == "tesseract":
+            import pytesseract
+            from PIL import Image as PILImage
+
+            image = PILImage.open(io.BytesIO(file_contents))
+            
+            # Get language code (tesseract uses different codes than easyocr)
+            lang = "+".join(ocr_config["languages"])
+            
+            # Extract text using pytesseract
+            extracted_text = pytesseract.image_to_string(image, lang=lang)
+            
+            # Get bounding box data
+            data = pytesseract.image_to_data(image, lang=lang, output_type=pytesseract.Output.DICT)
+            
+            # Filter out empty detections and create bounding boxes
+            bounding_boxes = []
+            for i in range(len(data["text"])):
+                text = data["text"][i].strip()
+                if text:  # Only include non-empty text
+                    conf = float(data["conf"][i]) / 100.0  # Convert to 0-1 range
+                    if conf > 0:  # Only include confident detections
+                        x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+                        bounding_boxes.append(
+                            {
+                                "text": text,
+                                "confidence": conf,
+                                "bbox": [[x, y], [x + w, y], [x + w, y + h], [x, y + h]],
+                            }
+                        )
 
         end_time = time.time()
         processing_time = end_time - start_time

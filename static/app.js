@@ -111,6 +111,10 @@ async function loadOCREngines() {
             'easyocr': {
                 name: 'EasyOCR',
                 description: 'Fast and accurate OCR with multilingual support'
+            },
+            'tesseract': {
+                name: 'Tesseract',
+                description: 'Fast and lightweight OCR engine'
             }
         };
         
