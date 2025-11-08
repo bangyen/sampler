@@ -67,7 +67,11 @@ async function loadModels() {
             modelDiv.className = `model-option ${name === selectedModel ? 'selected' : ''}`;
             modelDiv.innerHTML = `
                 <h4>${name}</h4>
-                <div class="model-specs">${info.params} params | ${info.quantization} | ${info.memory}</div>
+                <div class="model-specs">
+                    <span class="model-badge">${info.params} params</span>
+                    <span class="model-badge">${info.quantization}</span>
+                    <span class="model-badge">${info.memory}</span>
+                </div>
                 <div class="model-description">${info.description}</div>
             `;
             modelDiv.onclick = (evt) => selectModel(name, evt);
@@ -91,7 +95,10 @@ async function loadNERModels() {
             modelDiv.className = `model-option ${name === selectedNERModel ? 'selected' : ''}`;
             modelDiv.innerHTML = `
                 <h4>${name}</h4>
-                <div class="model-specs">${info.params} params | ${info.memory}</div>
+                <div class="model-specs">
+                    <span class="model-badge">${info.params} params</span>
+                    <span class="model-badge">${info.memory}</span>
+                </div>
                 <div class="model-description">${info.description}</div>
             `;
             modelDiv.onclick = (evt) => selectNERModel(name, evt);
@@ -149,7 +156,9 @@ async function loadOCRConfigs() {
             configDiv.innerHTML = `
                 <h4>${name}</h4>
                 <div class="model-description">${info.description}</div>
-                <div class="model-specs">Languages: ${info.languages.join(', ')}</div>
+                <div class="model-specs">
+                    ${info.languages.map(lang => `<span class="model-badge">${lang}</span>`).join('')}
+                </div>
             `;
             configDiv.onclick = (evt) => selectOCRConfig(name, evt);
             configList.appendChild(configDiv);

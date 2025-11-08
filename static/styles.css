@@ -219,9 +219,26 @@ body {
 }
 
 .model-option .model-specs {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
     margin-bottom: var(--space-xs);
+}
+
+.model-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--color-bg-light);
+    border: var(--border-width-thin) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.model-option.selected .model-badge {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: var(--color-primary);
 }
 
 .model-option .model-description {
