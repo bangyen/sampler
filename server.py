@@ -165,12 +165,12 @@ AVAILABLE_MODELS = {
 
 # SmolLM2 GGUF with llama-cpp-python
 if LLAMA_CPP_AVAILABLE:
-    AVAILABLE_MODELS["SmolLM2 1.7B (GGUF - Fast)"] = {
+    AVAILABLE_MODELS["SmolLM2 1.7B"] = {
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "params": "1.7B",
         "quantization": "Q4_K_M (GGUF)",
         "memory": "~1.1GB",
-        "description": "SmolLM2 optimized with llama.cpp - 2-3x faster CPU inference!",
+        "description": "Fast, efficient model optimized with llama.cpp - 2-3x faster inference",
         "backend": "llamacpp",
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf",
@@ -188,12 +188,12 @@ else:
 
 # BitNet GGUF with compiled bitnet.cpp binary
 if BITNET_CPP_AVAILABLE:
-    AVAILABLE_MODELS["BitNet b1.58 2B (GGUF - Fastest)"] = {
+    AVAILABLE_MODELS["BitNet b1.58 2B"] = {
         "id": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "params": "2B",
         "quantization": "i2_s (1.58-bit GGUF)",
         "memory": "~1.2GB",
-        "description": "BitNet with custom bitnet.cpp - Ultimate 1.58-bit quantization!",
+        "description": "Fastest model with ultra-efficient 1.58-bit quantization",
         "backend": "bitnet_cpp",
         "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "gguf_file": "ggml-model-i2_s.gguf",

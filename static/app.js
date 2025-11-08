@@ -73,7 +73,6 @@ async function loadModels() {
                 <h4>${name}</h4>
                 <div class="model-specs">
                     <span class="model-badge">${info.params} params</span>
-                    <span class="model-badge">${info.quantization}</span>
                     <span class="model-badge">${info.memory}</span>
                 </div>
                 <div class="model-description">${info.description}</div>
