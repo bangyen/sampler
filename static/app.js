@@ -764,6 +764,10 @@ function setupNER() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Extracting...';
         
+        // Clear previous results immediately
+        const resultsDiv = document.getElementById('ner-results');
+        resultsDiv.style.display = 'none';
+        
         let loadingTimerInterval = null;
         let modelLoadStartTime = null;
         
@@ -958,6 +962,10 @@ function setupOCR() {
         
         submitBtn.disabled = true;
         submitBtn.textContent = 'Extracting...';
+        
+        // Clear previous results immediately
+        const resultsDiv = document.getElementById('ocr-results');
+        resultsDiv.style.display = 'none';
         
         let loadingTimerInterval = null;
         let modelLoadStartTime = null;
