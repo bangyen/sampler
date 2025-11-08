@@ -3,6 +3,7 @@ import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 from threading import Thread
+from typing import Callable, List, Dict, Any
 import os
 import uuid
 import time
@@ -29,6 +30,12 @@ def test_database_connection():
     except Exception:
         return False
 
+# Type aliases for persistence functions
+SaveConversationFn = Callable[[str, List[Dict[str, Any]]], bool]
+LoadConversationFn = Callable[[str], List[Dict[str, Any]]]
+GetAllConversationsFn = Callable[[], List[Dict[str, Any]]]
+DeleteConversationFn = Callable[[str], bool]
+
 try:
     from database import save_conversation, load_conversation, get_all_conversations, delete_conversation
     if test_database_connection():
@@ -45,13 +52,13 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
         DATABASE_AVAILABLE = False
         PERSISTENCE_TYPE = "None"
         
-        def save_conversation(session_id, messages):
+        def save_conversation(session_id: str, messages: List[Dict[str, Any]]) -> bool:
             return False
-        def load_conversation(session_id):
+        def load_conversation(session_id: str) -> List[Dict[str, Any]]:
             return []
-        def get_all_conversations():
+        def get_all_conversations() -> List[Dict[str, Any]]:
             return []
-        def delete_conversation(session_id):
+        def delete_conversation(session_id: str) -> bool:
             return False
 
 st.set_page_config(

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, AsyncGenerator, Callable
 import asyncio
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
@@ -33,6 +33,12 @@ try:
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
+
+# Type aliases for persistence functions
+SaveConversationFn = Callable[[str, List[Dict[str, Any]]], bool]
+LoadConversationFn = Callable[[str], List[Dict[str, Any]]]
+GetAllConversationsFn = Callable[[], List[Dict[str, Any]]]
+DeleteConversationFn = Callable[[str], bool]
 
 try:
     from database import (
@@ -74,16 +80,16 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
         DATABASE_AVAILABLE = False
         PERSISTENCE_TYPE = "None"
 
-        def save_conversation(session_id, messages):
+        def save_conversation(session_id: str, messages: List[Dict[str, Any]]) -> bool:
             return False
 
-        def load_conversation(session_id):
+        def load_conversation(session_id: str) -> List[Dict[str, Any]]:
             return []
 
-        def get_all_conversations():
+        def get_all_conversations() -> List[Dict[str, Any]]:
             return []
 
-        def delete_conversation(session_id):
+        def delete_conversation(session_id: str) -> bool:
             return False
 
 from ner_storage import (
@@ -504,7 +510,7 @@ def format_prompt(messages: List[Dict], tokenizer):
 
 async def generate_response_streaming(
     model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
-):
+) -> AsyncGenerator[str, None]:
     """Generate a streaming response from the model"""
     try:
         # Send model loading events if this was a fresh load
@@ -563,7 +569,7 @@ async def generate_response_streaming(
 
 async def generate_response_streaming_llama(
     inference, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
-):
+) -> AsyncGenerator[str, None]:
     """Generate a streaming response using llama.cpp backend"""
     try:
         # Send model loading events if this was a fresh load
@@ -602,7 +608,7 @@ async def generate_response_streaming_llama(
 
 async def generate_response_streaming_bitnet_cpp(
     bridge, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
-):
+) -> AsyncGenerator[str, None]:
     """Generate a streaming response using bitnet.cpp compiled binary backend"""
     try:
         # Send model loading events if this was a fresh load
@@ -704,7 +710,7 @@ async def get_layout_config():
 
 async def stream_with_loading_wrapper_transformers(
     model_id, messages, temperature, max_tokens, top_p, top_k, request
-):
+) -> AsyncGenerator[str, None]:
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
     is_cached = model_id in loaded_models
@@ -733,7 +739,7 @@ async def stream_with_loading_wrapper_transformers(
 
 async def stream_with_loading_wrapper_llama(
     model_name, messages, temperature, max_tokens, top_p, top_k, request
-):
+) -> AsyncGenerator[str, None]:
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
     is_cached = model_name in loaded_llama_models
@@ -761,7 +767,7 @@ async def stream_with_loading_wrapper_llama(
 
 async def stream_with_loading_wrapper_bitnet(
     model_name, messages, temperature, max_tokens, top_p, top_k, request
-):
+) -> AsyncGenerator[str, None]:
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
     is_cached = model_name in loaded_bitnet_models
@@ -854,7 +860,7 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def stream_ner_extraction(request: NERRequest):
+async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None]:
     """Stream NER extraction with model loading events"""
     try:
         # Check if model needs to be loaded
@@ -918,7 +924,7 @@ async def extract_entities(request: NERRequest):
     return EventSourceResponse(stream_ner_extraction(request))
 
 
-async def stream_ocr_extraction(file_contents, filename, config):
+async def stream_ocr_extraction(file_contents, filename, config) -> AsyncGenerator[str, None]:
     """Stream OCR extraction with model loading events"""
     try:
         # Check if model needs to be loaded
@@ -960,7 +966,7 @@ async def stream_ocr_extraction(file_contents, filename, config):
         if engine == "easyocr":
             image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
-            results = ocr_model.readtext(img_array)
+            results = ocr_model.readtext(img_array)  # type: ignore
             
             extracted_text = " ".join([text for (bbox, text, conf) in results])
             
