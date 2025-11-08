@@ -1096,3 +1096,70 @@ body {
         max-width: var(--container-max-width);
     }
 }
+
+/* ========================================
+   Skeleton Loaders
+   ======================================== */
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        #f0f0f0 0%,
+        #e0e0e0 20%,
+        #f0f0f0 40%,
+        #f0f0f0 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-model {
+    padding: var(--space-base);
+    margin-bottom: var(--space-sm);
+    border: var(--border-width-base) solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.skeleton-title {
+    height: 18px;
+    width: 70%;
+    margin-bottom: var(--space-sm);
+}
+
+.skeleton-specs {
+    height: 14px;
+    width: 85%;
+    margin-bottom: var(--space-xs);
+}
+
+.skeleton-description {
+    height: 12px;
+    width: 95%;
+}
+
+.skeleton-conversation {
+    padding: var(--space-md);
+    margin-bottom: var(--space-xs);
+    border-radius: var(--radius-md);
+}
+
+.skeleton-conversation-title {
+    height: 14px;
+    width: 80%;
+    margin-bottom: var(--space-xs);
+}
+
+.skeleton-conversation-meta {
+    height: 12px;
+    width: 50%;
+}
