@@ -7,9 +7,9 @@ let selectedOCRConfig = 'English Only';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
-let displayedConversationCount = 10;
-let displayedNERCount = 10;
-let displayedOCRCount = 10;
+let displayedConversationCount = 5;
+let displayedNERCount = 5;
+let displayedOCRCount = 5;
 
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
@@ -296,7 +296,7 @@ async function loadConversationList() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.conversations.length - displayedConversationCount} remaining)`;
             showMoreBtn.onclick = () => {
-                displayedConversationCount += 10;
+                displayedConversationCount += 5;
                 loadConversationList();
             };
             conversationList.appendChild(showMoreBtn);
@@ -1168,7 +1168,7 @@ async function loadNERHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.analyses.length - displayedNERCount} remaining)`;
             showMoreBtn.onclick = () => {
-                displayedNERCount += 10;
+                displayedNERCount += 5;
                 loadNERHistory();
             };
             historyList.appendChild(showMoreBtn);
@@ -1267,7 +1267,7 @@ async function loadOCRHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${allAnalyses.length - displayedOCRCount} remaining)`;
             showMoreBtn.onclick = () => {
-                displayedOCRCount += 10;
+                displayedOCRCount += 5;
                 loadOCRHistory();
             };
             historyList.appendChild(showMoreBtn);
