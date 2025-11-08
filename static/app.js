@@ -37,6 +37,24 @@ function generateUUID() {
     });
 }
 
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.style.background = '#4CAF50';
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = '';
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        button.textContent = 'Failed';
+        setTimeout(() => {
+            button.textContent = 'Copy';
+        }, 2000);
+    });
+}
+
 async function init() {
     setupEventListeners();
     setupNERExamples();
@@ -314,7 +332,7 @@ function renderMessages() {
             });
         });
     } else {
-        messages.forEach(msg => {
+        messages.forEach((msg, index) => {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${msg.role}`;
             
@@ -343,13 +361,27 @@ function renderMessages() {
                 `;
             }
             
+            const copyButtonHtml = msg.role === 'assistant' ? 
+                `<button class="copy-btn" data-message-index="${index}" title="Copy to clipboard">Copy</button>` : '';
+            
             messageDiv.innerHTML = `
-                <div class="message-header">${msg.role === 'user' ? 'User' : 'Assistant'}</div>
+                <div class="message-header">
+                    ${msg.role === 'user' ? 'User' : 'Assistant'}
+                    ${copyButtonHtml}
+                </div>
                 <div class="message-content">${escapeHtml(msg.content)}</div>
                 ${metricsHtml}
             `;
             
             chatMessages.appendChild(messageDiv);
+        });
+        
+        // Add click handlers for copy buttons
+        chatMessages.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.dataset.messageIndex);
+                copyToClipboard(messages[index].content, btn);
+            });
         });
     }
     
@@ -756,6 +788,13 @@ function setupNER() {
     const submitBtn = document.getElementById('ner-submit-btn');
     const textInput = document.getElementById('ner-text-input');
     
+    // Add Enter key support
+    textInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !submitBtn.disabled) {
+            submitBtn.click();
+        }
+    });
+    
     submitBtn.addEventListener('click', async () => {
         const text = textInput.value.trim();
         if (!text) {
@@ -873,12 +912,31 @@ function displayNERResults(data) {
     resultsDiv.style.display = 'block';
     
     if (data.entities && data.entities.length > 0) {
-        entitiesDiv.innerHTML = data.entities.map(entity => `
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-btn';
+        copyButton.textContent = 'Copy Entities';
+        copyButton.style.marginBottom = '10px';
+        
+        entitiesDiv.innerHTML = '';
+        entitiesDiv.appendChild(copyButton);
+        
+        const entitiesContainer = document.createElement('div');
+        entitiesContainer.innerHTML = data.entities.map(entity => `
             <div class="entity-tag ${entity.label}">
                 <span>${entity.text}</span>
                 <span class="entity-label">${entity.label}</span>
             </div>
         `).join('');
+        entitiesDiv.appendChild(entitiesContainer);
+        
+        // Format entities for copying
+        const entitiesText = data.entities.map(entity => 
+            `${entity.text} (${entity.label})`
+        ).join('\n');
+        
+        copyButton.addEventListener('click', () => {
+            copyToClipboard(entitiesText, copyButton);
+        });
         
         metricsDiv.innerHTML = `
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
@@ -1074,7 +1132,22 @@ function displayOCRResults(data) {
     resultsDiv.style.display = 'block';
     
     if (data.text) {
-        textDiv.textContent = data.text;
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-btn';
+        copyButton.textContent = 'Copy Text';
+        copyButton.style.marginBottom = '10px';
+        
+        textDiv.innerHTML = '';
+        textDiv.appendChild(copyButton);
+        
+        const textContent = document.createElement('div');
+        textContent.textContent = data.text;
+        textDiv.appendChild(textContent);
+        
+        copyButton.addEventListener('click', () => {
+            copyToClipboard(data.text, copyButton);
+        });
+        
         metricsDiv.innerHTML = `
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
             <div><strong>Text Detections:</strong> ${data.num_detections}</div>

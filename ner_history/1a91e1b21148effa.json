@@ -25,7 +25,7 @@
     }
   ],
   "model": "BERT Base NER",
-  "processing_time": 1.1075282096862793,
+  "processing_time": 0.20655345916748047,
   "text_length": 47,
-  "created_at": "2025-11-08T20:53:49.360856"
+  "created_at": "2025-11-08T21:13:08.045132"
 }
