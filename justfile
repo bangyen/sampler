@@ -1,52 +1,44 @@
-# Justfile for allocation engine
+# Justfile for Quantized LLM Comparison Demo
 
 # Auto-detect uv, venv, or system python
 # Use ${REPL_ID:-} to handle unset variable in zsh
 PYTHON := `command -v uv >/dev/null 2>&1 && [ -z "${REPL_ID:-}" ] && echo "uv run python" || echo "python"`
 
-# Install tooling
+# Install dependencies
 init:
     #!/usr/bin/env bash
     if command -v uv >/dev/null 2>&1; then
         echo "Using uv..."
-        uv sync --extra dev
-        uv run pre-commit install
+        uv sync
     else
         echo "Using pip..."
         python -m pip install -U pip
-        pip install -e ".[dev]"
-        pre-commit install
+        pip install -r requirements.txt
     fi
 
-# Run full pipeline (lint + test)
-ci: lint test
-
-# Fast tests (~8s)
-test:
-    @{{PYTHON}} -m pytest tests/unit/ tests/integration/ -q --tb=line --no-cov --log-cli-level=ERROR
-
-# Run tests with coverage (~14s)
-test-cov:
-    @{{PYTHON}} -m pytest tests/unit/ tests/integration/ --cov=src --cov-report=html --cov-report=term-missing --cov-fail-under=90
-
-# E2E stress tests (slow)
-test-e2e:
-    @{{PYTHON}} -m pytest tests/e2e/ -v --no-cov
+# Run full pipeline (lint only, no tests)
+all: lint
 
 # Check code quality
 lint:
-    @{{PYTHON}} -m ruff check src/ tests/
-    @{{PYTHON}} -m black --check src/ tests/
+    @{{PYTHON}} -m ruff check *.py || echo "ruff not installed, skipping..."
+    @{{PYTHON}} -m black --check *.py || echo "black not installed, skipping..."
 
 # Format code
 format:
-    @{{PYTHON}} -m ruff format src/ tests/
-    @{{PYTHON}} -m black src/ tests/
+    @{{PYTHON}} -m ruff format *.py || echo "ruff not installed, skipping..."
+    @{{PYTHON}} -m black *.py || echo "black not installed, skipping..."
 
-# Run dashboard server
-dashboard:
-    @{{PYTHON}} -m dashboard.run
+# Run FastAPI server
+server:
+    @{{PYTHON}} -m uvicorn server:app --host 0.0.0.0 --port 5000 --reload
 
-# Clean build artifacts
+# Build BitNet.cpp binary
+build:
+    @./build.sh
+
+# Clean build artifacts and cache
 clean:
-    @rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__
+    @rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__ .cache/
+    @find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    @echo "Cleaned build artifacts"

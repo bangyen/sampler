@@ -1,35 +1,35 @@
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, AsyncGenerator, Callable
-import asyncio
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 from transformers.pipelines import pipeline
 from threading import Thread
 import json
-import uuid
 import time
 from sse_starlette.sse import EventSourceResponse
 import io
-import base64
 
 try:
-    import easyocr
+    import easyocr  # noqa: F401
+
     EASYOCR_AVAILABLE = True
 except ImportError:
     EASYOCR_AVAILABLE = False
 
 try:
-    from paddleocr import PaddleOCR
+    from paddleocr import PaddleOCR  # noqa: F401
+
     PADDLEOCR_AVAILABLE = True
 except ImportError:
     PADDLEOCR_AVAILABLE = False
-    
+
 try:
-    from PIL import Image
+    from PIL import Image  # noqa: F401
+
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
@@ -74,9 +74,10 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
             get_all_conversations,
             delete_conversation,
         )
+
         DATABASE_AVAILABLE = True
         PERSISTENCE_TYPE = "JSON"
-    except Exception as e:
+    except Exception:
         DATABASE_AVAILABLE = False
         PERSISTENCE_TYPE = "None"
 
@@ -92,21 +93,22 @@ except (ImportError, ModuleNotFoundError, ConnectionError):
         def delete_conversation(session_id: str) -> bool:
             return False
 
-from ner_storage import (
+
+from ner_storage import (  # noqa: E402
     save_ner_analysis,
     load_ner_analysis,
     get_all_ner_analyses,
     delete_ner_analysis,
 )
 
-from ocr_storage import (
+from ocr_storage import (  # noqa: E402
     save_ocr_analysis,
     load_ocr_analysis,
     get_all_ocr_analyses,
     delete_ocr_analysis,
 )
 
-from layout_storage import (
+from layout_storage import (  # noqa: E402
     save_layout_analysis,
     load_layout_analysis,
     get_all_layout_analyses,
@@ -115,7 +117,12 @@ from layout_storage import (
 
 # Import bitnet.cpp inference module (llama-cpp-python wrapper)
 try:
-    from bitnet_inference import BitNetInference, is_available as llama_cpp_available, download_gguf_model
+    from bitnet_inference import (
+        BitNetInference,
+        is_available as llama_cpp_available,
+        download_gguf_model,
+    )
+
     LLAMA_CPP_AVAILABLE = llama_cpp_available()
 except ImportError:
     LLAMA_CPP_AVAILABLE = False
@@ -125,6 +132,7 @@ except ImportError:
 # Import BitNet compiled binary bridge
 try:
     from bitnet_cpp_bridge import BitNetCppBridge, load_bitnet_model
+
     BITNET_CPP_AVAILABLE = True
 except ImportError:
     BITNET_CPP_AVAILABLE = False
@@ -142,7 +150,7 @@ AVAILABLE_MODELS = {
         "quantization": "FP16",
         "memory": "~1GB",
         "description": "Alibaba's smallest model, great for quick responses",
-        "backend": "transformers"
+        "backend": "transformers",
     }
 }
 
@@ -158,7 +166,7 @@ if LLAMA_CPP_AVAILABLE:
         "description": "SmolLM2 optimized with llama.cpp - 2-3x faster CPU inference!",
         "backend": "llamacpp",
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
-        "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf"
+        "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf",
     }
 else:
     # Fallback to transformers version if llama.cpp not available
@@ -168,7 +176,7 @@ else:
         "quantization": "FP16",
         "memory": "~3.4GB",
         "description": "HuggingFace's efficient model (transformers fallback)",
-        "backend": "transformers"
+        "backend": "transformers",
     }
 
 # BitNet GGUF with compiled bitnet.cpp binary
@@ -181,7 +189,7 @@ if BITNET_CPP_AVAILABLE:
         "description": "BitNet with custom bitnet.cpp - Ultimate 1.58-bit quantization!",
         "backend": "bitnet_cpp",
         "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
-        "gguf_file": "ggml-model-i2_s.gguf"
+        "gguf_file": "ggml-model-i2_s.gguf",
     }
 
 NER_MODELS = {
@@ -299,7 +307,7 @@ def load_model(model_id: str):
 
         model.to("cpu")
         model.eval()
-        
+
         load_time = time.time() - start_time
 
         loaded_models[model_id] = {"model": model, "tokenizer": tokenizer}
@@ -312,173 +320,198 @@ def load_llama_model(model_name: str):
     """Load GGUF model for llama.cpp backend"""
     if not LLAMA_CPP_AVAILABLE:
         raise HTTPException(
-            status_code=503, 
-            detail="llama.cpp backend not available. llama-cpp-python is not installed."
+            status_code=503,
+            detail="llama.cpp backend not available. llama-cpp-python is not installed.",
         )
-    
+
     if download_gguf_model is None or BitNetInference is None:
         raise HTTPException(
             status_code=503,
-            detail="llama.cpp functions not available. bitnet_inference module not properly loaded."
+            detail="llama.cpp functions not available. bitnet_inference module not properly loaded.",
         )
-    
+
     if model_name in loaded_llama_models:
         return loaded_llama_models[model_name], None
-    
+
     try:
         start_time = time.time()
         model_config = AVAILABLE_MODELS[model_name]
         gguf_repo = model_config.get("gguf_repo")
         gguf_file = model_config.get("gguf_file")
-        
+
         if not gguf_repo:
-            raise HTTPException(status_code=400, detail=f"Model {model_name} does not have GGUF configuration")
-        
+            raise HTTPException(
+                status_code=400,
+                detail=f"Model {model_name} does not have GGUF configuration",
+            )
+
         if not gguf_file:
-            raise HTTPException(status_code=400, detail=f"Model {model_name} missing GGUF file specification")
-        
+            raise HTTPException(
+                status_code=400,
+                detail=f"Model {model_name} missing GGUF file specification",
+            )
+
         # Download GGUF model from Hugging Face
         model_path = download_gguf_model(gguf_repo, gguf_file)
-        
+
         # Initialize BitNet inference engine
         inference = BitNetInference(model_path, n_ctx=2048)
-        
+
         load_time = time.time() - start_time
-        
+
         loaded_llama_models[model_name] = inference
         return inference, load_time
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading GGUF model: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error loading GGUF model: {str(e)}"
+        )
 
 
 def load_bitnet_cpp_model(model_name: str):
     """Load GGUF model for bitnet.cpp compiled binary backend"""
     if not BITNET_CPP_AVAILABLE:
         raise HTTPException(
-            status_code=503, 
-            detail="BitNet.cpp backend not available. Binary not compiled or bitnet_cpp_bridge not found."
+            status_code=503,
+            detail="BitNet.cpp backend not available. Binary not compiled or bitnet_cpp_bridge not found.",
         )
-    
+
     if load_bitnet_model is None:
         raise HTTPException(
             status_code=503,
-            detail="BitNet.cpp functions not available. bitnet_cpp_bridge module not properly loaded."
+            detail="BitNet.cpp functions not available. bitnet_cpp_bridge module not properly loaded.",
         )
-    
+
     if model_name in loaded_bitnet_models:
         return loaded_bitnet_models[model_name], None
-    
+
     try:
         start_time = time.time()
         model_config = AVAILABLE_MODELS[model_name]
         gguf_repo = model_config.get("gguf_repo")
         gguf_file = model_config.get("gguf_file")
-        
+
         if not gguf_repo:
-            raise HTTPException(status_code=400, detail=f"Model {model_name} does not have GGUF configuration")
-        
+            raise HTTPException(
+                status_code=400,
+                detail=f"Model {model_name} does not have GGUF configuration",
+            )
+
         if not gguf_file:
-            raise HTTPException(status_code=400, detail=f"Model {model_name} missing GGUF file specification")
-        
+            raise HTTPException(
+                status_code=400,
+                detail=f"Model {model_name} missing GGUF file specification",
+            )
+
         # Load BitNet model (downloads if needed)
         bridge = load_bitnet_model(gguf_repo, gguf_file)
-        
+
         load_time = time.time() - start_time
-        
+
         loaded_bitnet_models[model_name] = bridge
         return bridge, load_time
     except FileNotFoundError as e:
         # Binary not found - give clear guidance
         raise HTTPException(
-            status_code=503, 
-            detail=f"BitNet binary not compiled. Please compile it first: cd bin/BitNet/build && make. Error: {str(e)}"
+            status_code=503,
+            detail=f"BitNet binary not compiled. Please compile it first: cd bin/BitNet/build && make. Error: {str(e)}",
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading BitNet.cpp model: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error loading BitNet.cpp model: {str(e)}"
+        )
 
 
 def load_ner_model(model_name="BERT Base NER"):
     """Load NER model using transformers pipeline"""
     global ner_pipelines
-    
+
     if model_name not in NER_MODELS:
         raise HTTPException(status_code=400, detail=f"Invalid NER model: {model_name}")
-    
+
     model_id = NER_MODELS[model_name]["id"]
-    
+
     if model_id in ner_pipelines:
         return ner_pipelines[model_id], None
-    
+
     try:
         start_time = time.time()
         ner_pipelines[model_id] = pipeline(
-            "ner",
-            model=model_id,
-            aggregation_strategy="simple",
-            device=-1
+            "ner", model=model_id, aggregation_strategy="simple", device=-1
         )
         load_time = time.time() - start_time
         return ner_pipelines[model_id], load_time
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error loading NER model: {str(e)}"
+        )
 
 
 def load_ocr_model(config_name="English Only"):
     """Load OCR engine (EasyOCR or PaddleOCR) with specified configuration"""
     global ocr_readers
-    
+
     if not PILLOW_AVAILABLE:
         raise HTTPException(
-            status_code=503, 
-            detail="PIL/Pillow not installed. Please install: pip install Pillow"
+            status_code=503,
+            detail="PIL/Pillow not installed. Please install: pip install Pillow",
         )
-    
+
     if config_name not in OCR_CONFIGS:
-        raise HTTPException(status_code=400, detail=f"Invalid OCR configuration: {config_name}")
-    
+        raise HTTPException(
+            status_code=400, detail=f"Invalid OCR configuration: {config_name}"
+        )
+
     config = OCR_CONFIGS[config_name]
     engine = config["engine"]
-    
+
     if engine == "easyocr":
         if not EASYOCR_AVAILABLE:
             raise HTTPException(
                 status_code=503,
-                detail="EasyOCR not installed. Please install: pip install easyocr"
+                detail="EasyOCR not installed. Please install: pip install easyocr",
             )
-        
+
         languages = tuple(config["languages"])
-        
+
         if languages in ocr_readers:
             return ocr_readers[languages], None
-        
+
         try:
             import easyocr as easyocr_module
+
             start_time = time.time()
             ocr_readers[languages] = easyocr_module.Reader(list(languages), gpu=False)
             load_time = time.time() - start_time
             return ocr_readers[languages], load_time
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error loading EasyOCR: {str(e)}")
-    
+            raise HTTPException(
+                status_code=500, detail=f"Error loading EasyOCR: {str(e)}"
+            )
+
     elif engine == "paddleocr":
         if not PADDLEOCR_AVAILABLE:
             raise HTTPException(
                 status_code=503,
-                detail="PaddleOCR not installed. Please install: pip install paddleocr"
+                detail="PaddleOCR not installed. Please install: pip install paddleocr",
             )
-        
+
         if "paddleocr" in ocr_readers:
             return ocr_readers["paddleocr"], None
-        
+
         try:
             from paddleocr import PaddleOCR as PaddleOCREngine
+
             start_time = time.time()
-            ocr_readers["paddleocr"] = PaddleOCREngine(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+            ocr_readers["paddleocr"] = PaddleOCREngine(
+                use_angle_cls=True, lang="en", use_gpu=False, show_log=False
+            )
             load_time = time.time() - start_time
             return ocr_readers["paddleocr"], load_time
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
-    
+            raise HTTPException(
+                status_code=500, detail=f"Error loading PaddleOCR: {str(e)}"
+            )
+
     else:
         raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
 
@@ -509,20 +542,28 @@ def format_prompt(messages: List[Dict], tokenizer):
 
 
 async def generate_response_streaming(
-    model, tokenizer, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
+    model,
+    tokenizer,
+    messages,
+    temperature,
+    max_tokens,
+    top_p=0.9,
+    top_k=50,
+    request=None,
+    load_time=None,
 ) -> AsyncGenerator[str, None]:
     """Generate a streaming response from the model"""
     try:
         # Send model loading events if this was a fresh load
         if load_time is not None:
             print(f"[DEBUG] Model loaded in {load_time:.2f}s")
-            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
-        
-        print(f"[DEBUG] Starting transformers streaming generation")
+            yield json.dumps({"model_loading_end": True, "load_time": load_time})
+
+        print("[DEBUG] Starting transformers streaming generation")
         prompt = format_prompt(messages, tokenizer)
         if prompt is None:
-            print(f"[ERROR] Could not format prompt")
-            yield json.dumps({'error': 'Could not format prompt'})
+            print("[ERROR] Could not format prompt")
+            yield json.dumps({"error": "Could not format prompt"})
             return
 
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
@@ -551,35 +592,43 @@ async def generate_response_streaming(
             if request and await request.is_disconnected():
                 thread.join(timeout=0.1)  # Try to cleanup thread
                 return
-            
+
             if new_text.startswith("Assistant:"):
                 new_text = new_text[len("Assistant:") :].strip()
             token_count += 1
-            yield json.dumps({'text': new_text})
+            yield json.dumps({"text": new_text})
 
         thread.join()
         print(f"[DEBUG] Transformers generation complete, {token_count} tokens")
-        yield json.dumps({'done': True})
+        yield json.dumps({"done": True})
     except Exception as e:
         import traceback
+
         print(f"[ERROR] Exception in generate_response_streaming: {e}")
         print(traceback.format_exc())
-        yield json.dumps({'error': str(e)})
+        yield json.dumps({"error": str(e)})
 
 
 async def generate_response_streaming_llama(
-    inference, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
+    inference,
+    messages,
+    temperature,
+    max_tokens,
+    top_p=0.9,
+    top_k=50,
+    request=None,
+    load_time=None,
 ) -> AsyncGenerator[str, None]:
     """Generate a streaming response using llama.cpp backend"""
     try:
         # Send model loading events if this was a fresh load
         if load_time is not None:
             print(f"[DEBUG] Model loaded in {load_time:.2f}s")
-            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
-        
-        print(f"[DEBUG] Starting llama.cpp streaming generation")
+            yield json.dumps({"model_loading_end": True, "load_time": load_time})
+
+        print("[DEBUG] Starting llama.cpp streaming generation")
         token_count = 0
-        
+
         # Use the BitNetInference generate method
         for token in inference.generate(
             messages=messages,
@@ -587,44 +636,52 @@ async def generate_response_streaming_llama(
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
-            stream=True
+            stream=True,
         ):
             # Check if client disconnected
             if request and await request.is_disconnected():
-                print(f"[DEBUG] Client disconnected, stopping generation")
+                print("[DEBUG] Client disconnected, stopping generation")
                 return
-            
+
             token_count += 1
-            yield json.dumps({'text': token})
-        
+            yield json.dumps({"text": token})
+
         print(f"[DEBUG] llama.cpp generation complete, {token_count} tokens")
-        yield json.dumps({'done': True})
+        yield json.dumps({"done": True})
     except Exception as e:
         import traceback
+
         print(f"[ERROR] Exception in generate_response_streaming_llama: {e}")
         print(traceback.format_exc())
-        yield json.dumps({'error': str(e)})
+        yield json.dumps({"error": str(e)})
 
 
 async def generate_response_streaming_bitnet_cpp(
-    bridge, messages, temperature, max_tokens, top_p=0.9, top_k=50, request=None, load_time=None
+    bridge,
+    messages,
+    temperature,
+    max_tokens,
+    top_p=0.9,
+    top_k=50,
+    request=None,
+    load_time=None,
 ) -> AsyncGenerator[str, None]:
     """Generate a streaming response using bitnet.cpp compiled binary backend"""
     try:
         # Send model loading events if this was a fresh load
         if load_time is not None:
             print(f"[DEBUG] Model loaded in {load_time:.2f}s")
-            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
-        
-        print(f"[DEBUG] Starting bitnet.cpp streaming generation")
+            yield json.dumps({"model_loading_end": True, "load_time": load_time})
+
+        print("[DEBUG] Starting bitnet.cpp streaming generation")
         token_count = 0
-        
+
         # Extract prompt from messages
         # Combine all messages into a single prompt for the binary
         prompt_parts = []
         system_msg = None
         last_role = None
-        
+
         for msg in messages:
             if msg["role"] == "system":
                 system_msg = msg["content"]
@@ -634,14 +691,14 @@ async def generate_response_streaming_bitnet_cpp(
             elif msg["role"] == "assistant":
                 prompt_parts.append(f"Assistant: {msg['content']}")
                 last_role = "assistant"
-        
+
         prompt = "\n".join(prompt_parts)
-        
+
         # Always add "Assistant:" suffix when last message is from user
         # This signals the model to start generating the assistant's response
         if last_role == "user":
             prompt += "\nAssistant:"
-        
+
         # Use the BitNetCppBridge generate method
         for token in bridge.generate(
             prompt=prompt,
@@ -649,23 +706,24 @@ async def generate_response_streaming_bitnet_cpp(
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
-            system_message=system_msg
+            system_message=system_msg,
         ):
             # Check if client disconnected
             if request and await request.is_disconnected():
-                print(f"[DEBUG] Client disconnected, stopping generation")
+                print("[DEBUG] Client disconnected, stopping generation")
                 return
-            
+
             token_count += 1
-            yield json.dumps({'text': token})
-        
+            yield json.dumps({"text": token})
+
         print(f"[DEBUG] bitnet.cpp generation complete, {token_count} tokens")
-        yield json.dumps({'done': True})
+        yield json.dumps({"done": True})
     except Exception as e:
         import traceback
+
         print(f"[ERROR] Exception in generate_response_streaming_bitnet_cpp: {e}")
         print(traceback.format_exc())
-        yield json.dumps({'error': str(e)})
+        yield json.dumps({"error": str(e)})
 
 
 @app.get("/")
@@ -687,25 +745,19 @@ async def get_models():
 @app.get("/api/ner/models")
 async def get_ner_models():
     """Get list of available NER models"""
-    return {
-        "models": NER_MODELS
-    }
+    return {"models": NER_MODELS}
 
 
 @app.get("/api/ocr/configs")
 async def get_ocr_configs():
     """Get list of available OCR configurations"""
-    return {
-        "configs": OCR_CONFIGS
-    }
+    return {"configs": OCR_CONFIGS}
 
 
 @app.get("/api/layout/config")
 async def get_layout_config():
     """Get layout analysis configuration"""
-    return {
-        "config": LAYOUT_CONFIG
-    }
+    return {"config": LAYOUT_CONFIG}
 
 
 async def stream_with_loading_wrapper_transformers(
@@ -714,14 +766,14 @@ async def stream_with_loading_wrapper_transformers(
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
     is_cached = model_id in loaded_models
-    
+
     if not is_cached:
         # Emit model loading start event
-        yield json.dumps({'model_loading_start': True})
-    
+        yield json.dumps({"model_loading_start": True})
+
     # Load the model (returns cached model if already loaded)
     model_data, load_time = load_model(model_id)
-    
+
     # Stream the actual generation
     async for chunk in generate_response_streaming(
         model_data["model"],
@@ -743,14 +795,14 @@ async def stream_with_loading_wrapper_llama(
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
     is_cached = model_name in loaded_llama_models
-    
+
     if not is_cached:
         # Emit model loading start event
-        yield json.dumps({'model_loading_start': True})
-    
+        yield json.dumps({"model_loading_start": True})
+
     # Load the model (returns cached model if already loaded)
     inference, load_time = load_llama_model(model_name)
-    
+
     # Stream the actual generation
     async for chunk in generate_response_streaming_llama(
         inference,
@@ -771,14 +823,14 @@ async def stream_with_loading_wrapper_bitnet(
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
     is_cached = model_name in loaded_bitnet_models
-    
+
     if not is_cached:
         # Emit model loading start event
-        yield json.dumps({'model_loading_start': True})
-    
+        yield json.dumps({"model_loading_start": True})
+
     # Load the model (returns cached model if already loaded)
     bridge, load_time = load_bitnet_cpp_model(model_name)
-    
+
     # Stream the actual generation
     async for chunk in generate_response_streaming_bitnet_cpp(
         bridge,
@@ -802,9 +854,9 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
 
         model_config = AVAILABLE_MODELS[request.model_name]
         backend = model_config.get("backend", "transformers")
-        
+
         print(f"[DEBUG] Using backend: {backend} for model: {request.model_name}")
-        
+
         messages_dict = [
             {"role": "system", "content": "You are a helpful AI assistant."}
         ] + [{"role": msg.role, "content": msg.content} for msg in request.messages]
@@ -855,6 +907,7 @@ async def chat_stream(request: ChatRequest, raw_request: Request):
             )
     except Exception as e:
         import traceback
+
         print(f"[ERROR] Exception in chat_stream: {e}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
@@ -866,56 +919,57 @@ async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None
         # Check if model needs to be loaded
         model_id = NER_MODELS[request.model]["id"]
         is_cached = model_id in ner_pipelines
-        
+
         if not is_cached:
             # Emit model loading start event
-            yield json.dumps({'model_loading_start': True})
-        
+            yield json.dumps({"model_loading_start": True})
+
         # Load the model (returns cached model if already loaded)
         ner_model, load_time = load_ner_model(request.model)
-        
+
         # Emit model loading end event if this was a fresh load
         if load_time is not None:
-            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
-        
+            yield json.dumps({"model_loading_end": True, "load_time": load_time})
+
         start_time = time.time()
-        
+
         entities = ner_model(request.text)
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
-        
+
         formatted_entities = []
         for entity in entities:
-            formatted_entities.append({
-                "text": entity["word"],
-                "label": entity["entity_group"],
-                "score": float(entity["score"]),
-                "start": entity["start"],
-                "end": entity["end"]
-            })
-        
+            formatted_entities.append(
+                {
+                    "text": entity["word"],
+                    "label": entity["entity_group"],
+                    "score": float(entity["score"]),
+                    "start": entity["start"],
+                    "end": entity["end"],
+                }
+            )
+
         # Save to history
         ner_id = save_ner_analysis(
-            request.text,
-            formatted_entities,
-            request.model,
-            processing_time
+            request.text, formatted_entities, request.model, processing_time
         )
-        
+
         # Send the results
-        yield json.dumps({
-            "done": True,
-            "entities": formatted_entities,
-            "processing_time": processing_time,
-            "text_length": len(request.text),
-            "model": request.model,
-            "id": ner_id
-        })
+        yield json.dumps(
+            {
+                "done": True,
+                "entities": formatted_entities,
+                "processing_time": processing_time,
+                "text_length": len(request.text),
+                "model": request.model,
+                "id": ner_id,
+            }
+        )
     except HTTPException as e:
-        yield json.dumps({'error': str(e.detail)})
+        yield json.dumps({"error": str(e.detail)})
     except Exception as e:
-        yield json.dumps({'error': f"Error during NER: {str(e)}"})
+        yield json.dumps({"error": f"Error during NER: {str(e)}"})
 
 
 @app.post("/api/ner")
@@ -924,13 +978,15 @@ async def extract_entities(request: NERRequest):
     return EventSourceResponse(stream_ner_extraction(request))
 
 
-async def stream_ocr_extraction(file_contents, filename, config) -> AsyncGenerator[str, None]:
+async def stream_ocr_extraction(
+    file_contents, filename, config
+) -> AsyncGenerator[str, None]:
     """Stream OCR extraction with model loading events"""
     try:
         # Check if model needs to be loaded
         ocr_config = OCR_CONFIGS[config]
         engine = ocr_config["engine"]
-        
+
         # Determine cache key
         if engine == "easyocr":
             cache_key = tuple(ocr_config["languages"])
@@ -940,72 +996,78 @@ async def stream_ocr_extraction(file_contents, filename, config) -> AsyncGenerat
             is_cached = cache_key in ocr_readers
         else:
             raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
-        
+
         if not is_cached:
             # Emit model loading start event
-            yield json.dumps({'model_loading_start': True})
-        
+            yield json.dumps({"model_loading_start": True})
+
         # Load the model (returns cached model if already loaded)
         ocr_model, load_time = load_ocr_model(config)
-        
+
         # Emit model loading end event if this was a fresh load
         if load_time is not None:
-            yield json.dumps({'model_loading_end': True, 'load_time': load_time})
-        
+            yield json.dumps({"model_loading_end": True, "load_time": load_time})
+
         start_time = time.time()
-        
+
         if not PILLOW_AVAILABLE:
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
-        
+
         from PIL import Image as PILImage
         import numpy as np
-        
+
         extracted_text = ""
         bounding_boxes = []
-        
+
         if engine == "easyocr":
             image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
             results = ocr_model.readtext(img_array)  # type: ignore
-            
+
             extracted_text = " ".join([text for (bbox, text, conf) in results])
-            
+
             bounding_boxes = []
-            for (bbox, text, confidence) in results:
-                bounding_boxes.append({
-                    "text": text,
-                    "confidence": float(confidence),
-                    "bbox": [[int(point[0]), int(point[1])] for point in bbox]
-                })
-        
+            for bbox, text, confidence in results:
+                bounding_boxes.append(
+                    {
+                        "text": text,
+                        "confidence": float(confidence),
+                        "bbox": [[int(point[0]), int(point[1])] for point in bbox],
+                    }
+                )
+
         elif engine == "paddleocr":
             image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
-            
+
             results = ocr_model.ocr(img_array, cls=True)
-            
+
             extracted_text_parts = []
             bounding_boxes = []
-            
+
             if results and results[0]:
                 for line in results[0]:
                     bbox_coords = line[0]
                     text_info = line[1]
                     text = text_info[0]
                     confidence = text_info[1]
-                    
+
                     extracted_text_parts.append(text)
-                    bounding_boxes.append({
-                        "text": text,
-                        "confidence": float(confidence),
-                        "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
-                    })
-            
+                    bounding_boxes.append(
+                        {
+                            "text": text,
+                            "confidence": float(confidence),
+                            "bbox": [
+                                [int(point[0]), int(point[1])] for point in bbox_coords
+                            ],
+                        }
+                    )
+
             extracted_text = " ".join(extracted_text_parts)
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
-        
+
         # Save to history
         ocr_id = save_ocr_analysis(
             file_contents,
@@ -1014,27 +1076,31 @@ async def stream_ocr_extraction(file_contents, filename, config) -> AsyncGenerat
             bounding_boxes,
             config,
             processing_time,
-            len(bounding_boxes)
+            len(bounding_boxes),
         )
-        
+
         # Send the results
-        yield json.dumps({
-            "done": True,
-            "text": extracted_text,
-            "bounding_boxes": bounding_boxes,
-            "processing_time": processing_time,
-            "num_detections": len(bounding_boxes),
-            "config": config,
-            "id": ocr_id
-        })
+        yield json.dumps(
+            {
+                "done": True,
+                "text": extracted_text,
+                "bounding_boxes": bounding_boxes,
+                "processing_time": processing_time,
+                "num_detections": len(bounding_boxes),
+                "config": config,
+                "id": ocr_id,
+            }
+        )
     except HTTPException as e:
-        yield json.dumps({'error': str(e.detail)})
+        yield json.dumps({"error": str(e.detail)})
     except Exception as e:
-        yield json.dumps({'error': f"Error during OCR: {str(e)}"})
+        yield json.dumps({"error": f"Error during OCR: {str(e)}"})
 
 
 @app.post("/api/ocr")
-async def extract_text_from_image(file: UploadFile = File(...), config: str = "English Only"):
+async def extract_text_from_image(
+    file: UploadFile = File(...), config: str = "English Only"
+):
     """Extract text from uploaded image using OCR (streaming)"""
     contents = await file.read()
     return EventSourceResponse(stream_ocr_extraction(contents, file.filename, config))
@@ -1130,54 +1196,64 @@ async def analyze_layout(file: UploadFile = File(...)):
         if not PADDLEOCR_AVAILABLE:
             raise HTTPException(
                 status_code=503,
-                detail="PaddleOCR not installed. Please install: pip install paddleocr"
+                detail="PaddleOCR not installed. Please install: pip install paddleocr",
             )
-        
+
         if not PILLOW_AVAILABLE:
             raise HTTPException(status_code=503, detail="PIL/Pillow not installed")
-        
+
         # Load PaddleOCR model
         from paddleocr import PaddleOCR as PaddleOCREngine
+
         if "paddleocr" not in ocr_readers:
             try:
-                ocr_readers["paddleocr"] = PaddleOCREngine(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+                ocr_readers["paddleocr"] = PaddleOCREngine(
+                    use_angle_cls=True, lang="en", use_gpu=False, show_log=False
+                )
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error loading PaddleOCR: {str(e)}")
-        
+                raise HTTPException(
+                    status_code=500, detail=f"Error loading PaddleOCR: {str(e)}"
+                )
+
         ocr_model = ocr_readers["paddleocr"]
         start_time = time.time()
-        
+
         contents = await file.read()
-        
+
         from PIL import Image as PILImage
         import numpy as np
+
         image = PILImage.open(io.BytesIO(contents))
         img_array = np.array(image)
-        
+
         results = ocr_model.ocr(img_array, cls=True)
-        
+
         extracted_text_parts = []
         bounding_boxes = []
-        
+
         if results and results[0]:
             for line in results[0]:
                 bbox_coords = line[0]
                 text_info = line[1]
                 text = text_info[0]
                 confidence = text_info[1]
-                
+
                 extracted_text_parts.append(text)
-                bounding_boxes.append({
-                    "text": text,
-                    "confidence": float(confidence),
-                    "bbox": [[int(point[0]), int(point[1])] for point in bbox_coords]
-                })
-        
+                bounding_boxes.append(
+                    {
+                        "text": text,
+                        "confidence": float(confidence),
+                        "bbox": [
+                            [int(point[0]), int(point[1])] for point in bbox_coords
+                        ],
+                    }
+                )
+
         extracted_text = " ".join(extracted_text_parts)
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
-        
+
         # Save to history
         layout_id = save_layout_analysis(
             contents,
@@ -1185,20 +1261,22 @@ async def analyze_layout(file: UploadFile = File(...)):
             extracted_text,
             bounding_boxes,
             processing_time,
-            len(bounding_boxes)
+            len(bounding_boxes),
         )
-        
+
         return {
             "text": extracted_text,
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
             "num_detections": len(bounding_boxes),
-            "id": layout_id
+            "id": layout_id,
         }
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during layout analysis: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error during layout analysis: {str(e)}"
+        )
 
 
 @app.get("/api/layout/history")
