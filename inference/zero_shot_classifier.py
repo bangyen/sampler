@@ -47,76 +47,95 @@ def build_zero_shot_prompt(
     
     labels_str = json.dumps(candidate_labels)
     
-    prompt = f"""You are a precise text classifier. Classify the following text into one of the given labels.
+    hypotheses_examples = []
+    for label in candidate_labels[:3]:
+        hypothesis = hypothesis_template.replace("{label}", label)
+        hypotheses_examples.append(f'  - For label "{label}": "{hypothesis}"')
+    hypotheses_str = "\n".join(hypotheses_examples)
+    
+    prompt = f"""Classify this text into one category. Reply with valid JSON only.
 
-TEXT TO CLASSIFY:
-{text}
+Text: {text}
 
-CANDIDATE LABELS:
-{labels_str}
+Categories: {labels_str}
 
-INSTRUCTIONS:
-1. Analyze the text carefully
-2. Assign a confidence score (0.0 to 1.0) for each label
-3. Scores should sum to approximately 1.0
-4. Return your response as valid JSON matching this exact schema:
-
+Output format (JSON only):
 {{
-  "text": "{text[:50]}...",
   "labels": [
-    {{"label": "label1", "score": 0.0}},
-    {{"label": "label2", "score": 0.0}}
+    {{"label": "{candidate_labels[0]}", "score": 0.7}},
+    {{"label": "{candidate_labels[1] if len(candidate_labels) > 1 else candidate_labels[0]}", "score": 0.2}},
+    {{"label": "{candidate_labels[2] if len(candidate_labels) > 2 else candidate_labels[0]}", "score": 0.1}}
   ],
-  "top_label": "most_confident_label",
-  "top_score": 0.0
+  "top_label": "{candidate_labels[0]}",
+  "top_score": 0.7
 }}
 
-Return ONLY the JSON object, no other text."""
+JSON:"""
     
     return prompt
 
 
-def extract_logprobs_from_model(
+def extract_logprobs_from_sequences(
     model,
     tokenizer,
     text: str,
     candidate_labels: List[str],
+    hypothesis_template: str,
     device: str = "cpu"
 ) -> Dict[str, float]:
     """
-    Extract log probabilities for each label using the model's output logits.
-    This provides calibrated confidence scores.
+    Compute the log probability of each candidate label sequence.
+    Uses proper sequence probability: sum of log probs of generated label tokens.
     """
     logprobs = {}
     
     try:
         for label in candidate_labels:
-            prompt = f"Text: {text}\nThis text is classified as: {label}"
+            hypothesis = hypothesis_template.replace("{label}", label)
+            prompt = f"Text: {text}\nClassification: {hypothesis}\nLabel:"
             
-            inputs = tokenizer(
+            full_sequence = f"{prompt} {label}"
+            
+            prompt_inputs = tokenizer(
                 prompt,
+                return_tensors="pt",
+                truncation=True,
+                max_length=480
+            ).to(device)
+            
+            full_inputs = tokenizer(
+                full_sequence,
                 return_tensors="pt",
                 truncation=True,
                 max_length=512
             ).to(device)
             
+            prompt_len = prompt_inputs['input_ids'].shape[1]
+            
             with torch.no_grad():
-                outputs = model(**inputs)
+                outputs = model(**full_inputs, return_dict=True)
                 logits = outputs.logits
                 
-                if len(logits.shape) == 3:
-                    last_token_logits = logits[0, -1, :]
+                label_logprobs = []
+                for i in range(prompt_len, full_inputs['input_ids'].shape[1]):
+                    if i - 1 >= 0 and i - 1 < logits.shape[1]:
+                        token_logits = logits[0, i - 1, :]
+                        token_probs = F.softmax(token_logits, dim=-1)
+                        target_token_id = full_inputs['input_ids'][0, i]
+                        token_logprob = torch.log(token_probs[target_token_id] + 1e-10)
+                        label_logprobs.append(token_logprob.item())
+                
+                if label_logprobs:
+                    total_logprob = sum(label_logprobs)
                 else:
-                    last_token_logits = logits[-1, :]
+                    total_logprob = -100.0
                 
-                probs = F.softmax(last_token_logits, dim=-1)
-                avg_prob = probs.mean().item()
-                logprob = float(torch.log(torch.tensor(avg_prob)).item())
-                
-                logprobs[label] = logprob
+                logprobs[label] = float(total_logprob)
                 
     except Exception as e:
-        print(f"Warning: Could not extract logprobs: {e}")
+        print(f"Warning: Could not extract sequence logprobs: {e}")
+        import traceback
+        traceback.print_exc()
         for label in candidate_labels:
             logprobs[label] = None
     
@@ -128,44 +147,61 @@ def parse_json_response(response_text: str) -> Optional[Dict[str, Any]]:
     
     response_text = response_text.strip()
     
+    try:
+        return json.loads(response_text)
+    except json.JSONDecodeError:
+        pass
+    
     if "```json" in response_text:
         start = response_text.find("```json") + 7
         end = response_text.find("```", start)
         if end != -1:
             response_text = response_text[start:end].strip()
+            try:
+                return json.loads(response_text)
+            except json.JSONDecodeError:
+                pass
     elif "```" in response_text:
         start = response_text.find("```") + 3
         end = response_text.find("```", start)
         if end != -1:
             response_text = response_text[start:end].strip()
+            try:
+                return json.loads(response_text)
+            except json.JSONDecodeError:
+                pass
     
     lines = response_text.split('\n')
     json_lines = []
     in_json = False
+    brace_count = 0
     
     for line in lines:
         stripped = line.strip()
         if stripped.startswith('{') or in_json:
             in_json = True
             json_lines.append(line)
-            if stripped.endswith('}') and json_lines:
+            brace_count += stripped.count('{') - stripped.count('}')
+            if brace_count == 0 and in_json:
                 break
     
     if json_lines:
         response_text = '\n'.join(json_lines)
-    
-    try:
-        return json.loads(response_text)
-    except json.JSONDecodeError:
         try:
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}') + 1
-            if start_idx != -1 and end_idx > start_idx:
-                json_str = response_text[start_idx:end_idx]
-                return json.loads(json_str)
-        except:
+            return json.loads(response_text)
+        except json.JSONDecodeError:
             pass
     
+    start_idx = response_text.find('{')
+    end_idx = response_text.rfind('}') + 1
+    if start_idx != -1 and end_idx > start_idx:
+        json_str = response_text[start_idx:end_idx]
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            pass
+    
+    print(f"[DEBUG] Failed to parse JSON from response: {response_text[:500]}")
     return None
 
 
@@ -179,20 +215,17 @@ def create_zero_shot_result(
     """
     Create a schema-locked ZeroShotResult from model response.
     Ensures strict JSON schema compliance.
+    Raises ValueError if JSON parsing fails.
     """
     
     parsed = parse_json_response(model_response)
     
     if parsed is None:
-        scores = [1.0 / len(candidate_labels)] * len(candidate_labels)
-        parsed = {
-            "labels": [
-                {"label": label, "score": score}
-                for label, score in zip(candidate_labels, scores)
-            ],
-            "top_label": candidate_labels[0],
-            "top_score": scores[0]
-        }
+        raise ValueError(
+            f"Failed to parse JSON from model response. "
+            f"Model returned: {model_response[:200]}... "
+            f"Expected JSON with 'labels' array containing label/score pairs."
+        )
     
     labels_with_scores = []
     for label_data in parsed.get("labels", []):
@@ -299,11 +332,12 @@ class LLMZeroShotClassifier:
         
         logprobs = None
         if use_logprobs:
-            logprobs = extract_logprobs_from_model(
+            logprobs = extract_logprobs_from_sequences(
                 self.model,
                 self.tokenizer,
                 text,
                 candidate_labels,
+                hypothesis_template,
                 self.device
             )
         
