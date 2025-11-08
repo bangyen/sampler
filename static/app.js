@@ -228,12 +228,14 @@ async function loadConversationList() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.conversations.length - displayedConversationCount} remaining)`;
             showMoreBtn.onclick = () => {
-                conversationList.innerHTML += `
-                    <div class="skeleton-conversation">
-                        <div class="skeleton skeleton-conversation-title"></div>
-                        <div class="skeleton skeleton-conversation-meta"></div>
-                    </div>
+                // Insert skeleton before the button
+                const skeleton = document.createElement('div');
+                skeleton.className = 'skeleton-conversation';
+                skeleton.innerHTML = `
+                    <div class="skeleton skeleton-conversation-title"></div>
+                    <div class="skeleton skeleton-conversation-meta"></div>
                 `;
+                conversationList.insertBefore(skeleton, showMoreBtn);
                 displayedConversationCount += 5;
                 loadConversationList();
             };
@@ -1131,12 +1133,14 @@ async function loadNERHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.analyses.length - displayedNERCount} remaining)`;
             showMoreBtn.onclick = () => {
-                historyList.innerHTML += `
-                    <div class="skeleton-conversation">
-                        <div class="skeleton skeleton-conversation-title"></div>
-                        <div class="skeleton skeleton-conversation-meta"></div>
-                    </div>
+                // Insert skeleton before the button
+                const skeleton = document.createElement('div');
+                skeleton.className = 'skeleton-conversation';
+                skeleton.innerHTML = `
+                    <div class="skeleton skeleton-conversation-title"></div>
+                    <div class="skeleton skeleton-conversation-meta"></div>
                 `;
+                historyList.insertBefore(skeleton, showMoreBtn);
                 displayedNERCount += 5;
                 loadNERHistory();
             };
@@ -1236,12 +1240,14 @@ async function loadOCRHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${allAnalyses.length - displayedOCRCount} remaining)`;
             showMoreBtn.onclick = () => {
-                historyList.innerHTML += `
-                    <div class="skeleton-conversation">
-                        <div class="skeleton skeleton-conversation-title"></div>
-                        <div class="skeleton skeleton-conversation-meta"></div>
-                    </div>
+                // Insert skeleton before the button
+                const skeleton = document.createElement('div');
+                skeleton.className = 'skeleton-conversation';
+                skeleton.innerHTML = `
+                    <div class="skeleton skeleton-conversation-title"></div>
+                    <div class="skeleton skeleton-conversation-meta"></div>
                 `;
+                historyList.insertBefore(skeleton, showMoreBtn);
                 displayedOCRCount += 5;
                 loadOCRHistory();
             };
