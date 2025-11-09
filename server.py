@@ -159,6 +159,7 @@ AVAILABLE_MODELS = {
         "memory": "~1GB",
         "description": "Alibaba's smallest model, great for quick responses",
         "backend": "transformers",
+        "supported_tasks": ["chat", "zero-shot"],
     }
 }
 
@@ -175,6 +176,7 @@ if LLAMA_CPP_AVAILABLE:
         "backend": "llamacpp",
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf",
+        "supported_tasks": ["chat", "zero-shot"],
     }
 
     # Qwen 2.5 7B - Testing for improved accuracy
@@ -187,6 +189,7 @@ if LLAMA_CPP_AVAILABLE:
         "backend": "llamacpp",
         "gguf_repo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
         "gguf_file": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+        "supported_tasks": ["chat", "zero-shot"],
     }
 else:
     # Fallback to transformers version if llama.cpp not available
@@ -197,6 +200,7 @@ else:
         "memory": "~3.4GB",
         "description": "HuggingFace's efficient model (transformers fallback)",
         "backend": "transformers",
+        "supported_tasks": ["chat", "zero-shot"],
     }
 
 # BitNet GGUF with compiled bitnet.cpp binary
@@ -210,6 +214,7 @@ if BITNET_CPP_AVAILABLE:
         "backend": "bitnet_cpp",
         "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
         "gguf_file": "ggml-model-i2_s.gguf",
+        "supported_tasks": ["chat"],
     }
 
 NER_MODELS = {
