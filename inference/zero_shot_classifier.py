@@ -104,12 +104,12 @@ Available categories: {labels_str}
 
 Instructions:
 1. Read the text carefully and evaluate which category fits best
-2. Assign a confidence score (0 to 1) to each category based on how well it matches
+2. Assign a confidence score (0.0 to 1.0) to each category - USE ONLY 1-2 DECIMAL PLACES (e.g., 0.9, 0.85, 0.1)
 3. Higher scores mean better match, lower scores mean poor match
 4. The category with the highest score is the top prediction
-5. Output ONLY valid JSON, no other text
+5. Output ONLY valid JSON with SHORT decimal numbers, no other text
 
-Required JSON format:
+Required JSON format (use SHORT decimals like 0.9, not 0.9999999):
 {{
   "labels": [
 {labels_format}
@@ -355,8 +355,21 @@ class LLMZeroShotClassifier:
         
         prompt = build_zero_shot_prompt(text, candidate_labels, hypothesis_template)
         
+        # Use chat template if available (for instruction-tuned models like SmolLM2)
+        if hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
+            messages = [
+                {"role": "user", "content": prompt}
+            ]
+            formatted_prompt = self.tokenizer.apply_chat_template(
+                messages, 
+                tokenize=False, 
+                add_generation_prompt=True
+            )
+        else:
+            formatted_prompt = prompt
+        
         inputs = self.tokenizer(
-            prompt,
+            formatted_prompt,
             return_tensors="pt",
             truncation=True,
             max_length=2048
@@ -368,6 +381,8 @@ class LLMZeroShotClassifier:
             prompt_length=inputs['input_ids'].shape[1]
         )]
         
+        # Temporarily disable early stopping for SmolLM2 compatibility
+        # SmolLM2 generates very long decimal numbers that get truncated
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
@@ -377,7 +392,7 @@ class LLMZeroShotClassifier:
                 pad_token_id=self.tokenizer.eos_token_id,
                 return_dict_in_generate=True,
                 output_scores=use_logprobs,
-                stopping_criteria=stopping_criteria
+                # stopping_criteria=stopping_criteria  # Disabled temporarily
             )
         
         response_text = self.tokenizer.decode(

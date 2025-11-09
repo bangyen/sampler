@@ -1053,14 +1053,27 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
             return
         
         model_config = AVAILABLE_MODELS[request.model]
-        model_id = model_config["id"]
         backend = model_config.get("backend", "transformers")
         
-        if backend != "transformers":
+        # For zero-shot classification, we need transformers backend
+        # If user selected a GGUF model, use transformers fallback
+        if backend == "llamacpp":
+            # Use transformers version for zero-shot classification
+            if "SmolLM2" in request.model:
+                model_id = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+            else:
+                yield json.dumps({
+                    "error": f"Cannot use {request.model} for zero-shot classification. Please use Qwen 2.5 0.5B or SmolLM2 1.7B."
+                })
+                return
+        elif backend == "bitnet_cpp":
             yield json.dumps({
-                "error": "Zero-shot classification currently only supports transformers backend models"
+                "error": f"BitNet models are not supported for zero-shot classification. Please use Qwen 2.5 0.5B or SmolLM2 1.7B."
             })
             return
+        else:
+            # Regular transformers backend
+            model_id = model_config["id"]
         
         is_cached = model_id in loaded_models
         
