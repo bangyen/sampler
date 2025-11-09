@@ -167,6 +167,10 @@ function setupClassificationExamples() {
         newBtn.addEventListener('click', () => {
             const text = newBtn.dataset.classificationText;
             document.getElementById('classification-text-input').value = text;
+            
+            setTimeout(() => {
+                document.getElementById('classify-btn').click();
+            }, 100);
         });
     });
 }
@@ -335,6 +339,9 @@ async function classifyText() {
                 duration
             };
             
+            await saveClassification(currentClassification);
+            await loadClassificationHistory();
+            
             showToast('Classification complete');
         }
         
@@ -402,9 +409,123 @@ function renderClassificationResults(result) {
     resultsDiv.innerHTML = html;
 }
 
+async function saveClassification(classification) {
+    try {
+        await fetch('/api/zero-shot/history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(classification)
+        });
+    } catch (error) {
+        console.error('Error saving classification:', error);
+    }
+}
+
 async function loadClassificationHistory() {
-    const listDiv = document.getElementById('classification-list');
-    listDiv.innerHTML = '<p style="color: #888;">No classification history yet</p>';
+    try {
+        const response = await fetch('/api/zero-shot/history');
+        const data = await response.json();
+        
+        const historyList = document.getElementById('classification-list');
+        historyList.innerHTML = '';
+        
+        if (!data.analyses || data.analyses.length === 0) {
+            historyList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #888; margin-bottom: 10px;">No classifications yet</p>
+                    <small style="color: #999;">
+                        Try classifying some text!<br><br>
+                        Example uses:<br>
+                        • Sentiment analysis<br>
+                        • Intent detection<br>
+                        • Urgency classification
+                    </small>
+                </div>
+            `;
+            return;
+        }
+        
+        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} classification(s)</small>`;
+        
+        const displayedAnalyses = data.analyses.slice(0, displayedClassificationCount);
+        
+        displayedAnalyses.forEach(analysis => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            
+            const btn = document.createElement('button');
+            btn.className = 'conversation-btn';
+            
+            const previewText = analysis.text_preview || 'No text';
+            const topLabel = analysis.top_label || 'N/A';
+            
+            btn.innerHTML = `
+                <div style="font-size: 13px; margin-bottom: 4px;">${previewText}</div>
+                <div style="font-size: 11px; color: #888;">Top: ${topLabel}</div>
+            `;
+            
+            btn.onclick = () => loadClassificationAnalysis(analysis.id);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = async () => {
+                try {
+                    await fetch(`/api/zero-shot/history/${analysis.id}`, {
+                        method: 'DELETE'
+                    });
+                    await loadClassificationHistory();
+                    showToast('Classification deleted');
+                } catch (error) {
+                    console.error('Error deleting classification:', error);
+                    showToast('Failed to delete classification', 'error');
+                }
+            };
+            
+            item.appendChild(btn);
+            item.appendChild(deleteBtn);
+            historyList.appendChild(item);
+        });
+        
+        if (data.analyses.length > displayedClassificationCount) {
+            const showMoreBtn = document.createElement('button');
+            showMoreBtn.className = 'btn btn-secondary show-more-btn';
+            showMoreBtn.textContent = `Show More (${data.analyses.length - displayedClassificationCount} remaining)`;
+            showMoreBtn.onclick = () => {
+                displayedClassificationCount += 5;
+                loadClassificationHistory();
+            };
+            historyList.appendChild(showMoreBtn);
+        }
+    } catch (error) {
+        console.error('Error loading classification history:', error);
+    }
+}
+
+async function loadClassificationAnalysis(analysisId) {
+    try {
+        const response = await fetch(`/api/zero-shot/history/${analysisId}`);
+        const analysis = await response.json();
+        
+        document.getElementById('classification-text-input').value = analysis.text || '';
+        
+        if (analysis.candidate_labels && analysis.candidate_labels.length > 0) {
+            classificationLabels = [...analysis.candidate_labels];
+            renderLabelChips();
+        }
+        
+        if (analysis.results) {
+            renderClassificationResults(analysis.results);
+            document.getElementById('classification-results').style.display = 'block';
+        }
+        
+        closeMobileMenuHelper();
+    } catch (error) {
+        console.error('Error loading classification analysis:', error);
+        showToast('Failed to load classification', 'error');
+    }
 }
 
 async function init() {
@@ -1067,8 +1188,14 @@ function setupEventListeners() {
     const newClassificationBtn = document.getElementById('new-classification-btn');
     if (newClassificationBtn) {
         newClassificationBtn.addEventListener('click', () => {
-            document.getElementById('classification-text-input').value = '';
-            document.getElementById('classification-results').style.display = 'none';
+            const textInput = document.getElementById('classification-text-input');
+            const resultsDiv = document.getElementById('classification-results');
+            
+            if (textInput) textInput.value = '';
+            if (resultsDiv) {
+                resultsDiv.style.display = 'none';
+                resultsDiv.innerHTML = '';
+            }
             currentClassification = null;
             closeMobileMenuHelper();
         });
@@ -1078,8 +1205,19 @@ function setupEventListeners() {
     if (clearAllClassificationsBtn) {
         clearAllClassificationsBtn.addEventListener('click', async () => {
             if (confirm('Are you sure you want to delete ALL classification history? This cannot be undone.')) {
-                classificationHistory = [];
-                await loadClassificationHistory();
+                try {
+                    await fetch('/api/zero-shot/history', {
+                        method: 'DELETE'
+                    });
+                    currentClassification = null;
+                    document.getElementById('classification-text-input').value = '';
+                    document.getElementById('classification-results').style.display = 'none';
+                    await loadClassificationHistory();
+                    showToast('Classification history cleared');
+                } catch (error) {
+                    console.error('Error clearing classification history:', error);
+                    showToast('Failed to clear history', 'error');
+                }
             }
         });
     }

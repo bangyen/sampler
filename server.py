@@ -1397,6 +1397,21 @@ async def clear_all_ocr():
     return {"success": success}
 
 
+@app.post("/api/zero-shot/history")
+async def save_zero_shot_analysis_endpoint(analysis: Dict[str, Any]):
+    """Save a zero-shot classification analysis"""
+    analysis_id = save_zero_shot_analysis(
+        text=analysis.get("text", ""),
+        labels=analysis.get("labels", []),
+        results=analysis.get("result", {}),
+        model=analysis.get("model", ""),
+        processing_time=float(analysis.get("duration", 0)),
+        use_logprobs=True,
+        abstain_threshold=analysis.get("result", {}).get("abstain_threshold")
+    )
+    return {"success": analysis_id is not None, "id": analysis_id}
+
+
 @app.get("/api/zero-shot/history")
 async def list_zero_shot_analyses():
     """List all zero-shot classification analyses"""
