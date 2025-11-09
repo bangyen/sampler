@@ -94,6 +94,24 @@ function generateUUID() {
     });
 }
 
+function hide(element) {
+    if (typeof element === 'string') {
+        element = document.getElementById(element);
+    }
+    if (element) {
+        element.classList.add('hidden');
+    }
+}
+
+function show(element) {
+    if (typeof element === 'string') {
+        element = document.getElementById(element);
+    }
+    if (element) {
+        element.classList.remove('hidden');
+    }
+}
+
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -120,11 +138,11 @@ function copyToClipboard(text, button) {
     navigator.clipboard.writeText(text).then(() => {
         const originalText = button.textContent;
         button.textContent = 'Copied!';
-        button.style.background = '#4CAF50';
+        button.classList.add('copied');
         showToast('Text copied to clipboard');
         setTimeout(() => {
             button.textContent = originalText;
-            button.style.background = '';
+            button.classList.remove('copied');
         }, 2000);
     }).catch(err => {
         console.error('Failed to copy:', err);
@@ -293,11 +311,11 @@ async function classifyText() {
     }
     
     isGenerating = true;
-    document.getElementById('classify-btn').style.display = 'none';
-    document.getElementById('stop-classification-btn').style.display = 'inline-block';
+    hide('classify-btn');
+    show('stop-classification-btn');
     
     const resultsDiv = document.getElementById('classification-results');
-    resultsDiv.style.display = 'block';
+    show(resultsDiv);
     resultsDiv.innerHTML = '<p>Classifying...</p>';
     
     const abstainThreshold = parseFloat(document.getElementById('abstain-threshold-slider').value);
@@ -388,8 +406,8 @@ async function classifyText() {
         }
     } finally {
         isGenerating = false;
-        document.getElementById('classify-btn').style.display = 'inline-block';
-        document.getElementById('stop-classification-btn').style.display = 'none';
+        show('classify-btn');
+        hide('stop-classification-btn');
     }
 }
 
@@ -579,7 +597,7 @@ async function loadClassificationAnalysis(analysisId) {
         
         if (analysis.results) {
             renderClassificationResults(analysis.results);
-            document.getElementById('classification-results').style.display = 'block';
+            show('classification-results');
         }
         
         closeMobileMenuHelper();
@@ -1175,8 +1193,8 @@ async function sendMessage(userMessage) {
     }
     
     isGenerating = true;
-    sendBtn.style.display = 'none';
-    stopBtn.style.display = 'inline-block';
+    hide(sendBtn);
+    show(stopBtn);
     chatInput.disabled = true;
     
     messages.push({
@@ -1411,8 +1429,8 @@ async function sendMessage(userMessage) {
         const stopBtn = document.getElementById('stop-btn');
         const chatInput = document.getElementById('chat-input');
         
-        if (sendBtn) sendBtn.style.display = 'inline-block';
-        if (stopBtn) stopBtn.style.display = 'none';
+        if (sendBtn) show(sendBtn);
+        if (stopBtn) hide(stopBtn);
         if (chatInput) {
             chatInput.disabled = false;
             chatInput.value = '';
@@ -1469,7 +1487,7 @@ function setupEventListeners() {
                     });
                     currentClassification = null;
                     document.getElementById('classification-text-input').value = '';
-                    document.getElementById('classification-results').style.display = 'none';
+                    hide('classification-results');
                     await loadClassificationHistory();
                     showToast('Classification history cleared');
                 } catch (error) {
@@ -1593,11 +1611,11 @@ function setupTabs() {
             
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
-            sidebarContents.forEach(s => s.style.display = 'none');
+            sidebarContents.forEach(s => hide(s));
             
             btn.classList.add('active');
             document.getElementById(`${targetTab}-tab`).classList.add('active');
-            document.getElementById(`${targetTab}-sidebar`).style.display = 'block';
+            show(`${targetTab}-sidebar`);
             
             if (targetTab === 'chat') {
                 loadClassificationHistory();
@@ -1633,7 +1651,7 @@ function setupNER() {
         
         // Show loading skeleton
         const resultsDiv = document.getElementById('ner-results');
-        resultsDiv.style.display = 'block';
+        show(resultsDiv);
         resultsDiv.innerHTML = `
             <div class="skeleton-results">
                 <div class="skeleton skeleton-results-title"></div>
@@ -1860,8 +1878,8 @@ function setupOCR() {
         const reader = new FileReader();
         reader.onload = (e) => {
             previewImg.src = e.target.result;
-            previewDiv.style.display = 'block';
-            dropZone.style.display = 'none';
+            show(previewDiv);
+            hide(dropZone);
         };
         reader.readAsDataURL(file);
     }
@@ -1869,12 +1887,12 @@ function setupOCR() {
     function clearOCRImage() {
         ocrSelectedFile = null;
         previewImg.src = '';
-        previewDiv.style.display = 'none';
-        dropZone.style.display = 'block';
+        hide(previewDiv);
+        show(dropZone);
         fileInput.value = '';
         
         const resultsDiv = document.getElementById('ocr-results');
-        resultsDiv.style.display = 'none';
+        hide(resultsDiv);
     }
     
     const clearBtn = document.getElementById('ocr-clear-btn');
@@ -1891,7 +1909,7 @@ function setupOCR() {
         
         // Show loading skeleton
         const resultsDiv = document.getElementById('ocr-results');
-        resultsDiv.style.display = 'block';
+        show(resultsDiv);
         resultsDiv.innerHTML = `
             <div class="skeleton-results">
                 <div class="skeleton skeleton-results-title"></div>
@@ -2436,8 +2454,8 @@ async function setupOCRExamples() {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     document.getElementById('ocr-preview-img').src = e.target.result;
-                    document.getElementById('ocr-preview').style.display = 'block';
-                    document.getElementById('ocr-drop-zone').style.display = 'none';
+                    show('ocr-preview');
+                    hide('ocr-drop-zone');
                     document.getElementById('ocr-submit-btn').click();
                 };
                 reader.readAsDataURL(file);

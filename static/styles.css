@@ -150,14 +150,6 @@
     display: none !important;
 }
 
-.visible {
-    display: block !important;
-}
-
-.inline-block {
-    display: inline-block !important;
-}
-
 .mb-sm {
     margin-bottom: var(--space-sm) !important;
 }
@@ -779,6 +771,10 @@ body {
 
 .copy-btn:hover {
     background: var(--color-primary-hover);
+}
+
+.copy-btn.copied {
+    background: var(--color-success) !important;
 }
 
 .message-header .copy-btn {
