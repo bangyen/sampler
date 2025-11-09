@@ -1455,7 +1455,6 @@ body {
 .classification-header {
     text-align: center;
     padding-bottom: var(--space-lg);
-    border-bottom: var(--border-width-thin) solid var(--color-border);
 }
 
 .classification-header h2 {
@@ -1501,9 +1500,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-base);
-    padding: var(--space-lg);
-    background: var(--color-bg-light);
-    border-radius: var(--radius-base);
 }
 
 .label-section-header {

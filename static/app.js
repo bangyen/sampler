@@ -1185,22 +1185,6 @@ function setupEventListeners() {
         });
     }
     
-    const newClassificationBtn = document.getElementById('new-classification-btn');
-    if (newClassificationBtn) {
-        newClassificationBtn.addEventListener('click', () => {
-            const textInput = document.getElementById('classification-text-input');
-            const resultsDiv = document.getElementById('classification-results');
-            
-            if (textInput) textInput.value = '';
-            if (resultsDiv) {
-                resultsDiv.style.display = 'none';
-                resultsDiv.innerHTML = '';
-            }
-            currentClassification = null;
-            closeMobileMenuHelper();
-        });
-    }
-    
     const clearAllClassificationsBtn = document.getElementById('clear-all-classifications-btn');
     if (clearAllClassificationsBtn) {
         clearAllClassificationsBtn.addEventListener('click', async () => {
