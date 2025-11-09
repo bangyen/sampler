@@ -3,6 +3,49 @@ from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 import torch
 import torch.nn.functional as F
+from transformers.generation.stopping_criteria import StoppingCriteria
+
+
+class JSONCompletionStoppingCriteria(StoppingCriteria):
+    """Stop generation when valid JSON is detected"""
+    
+    def __init__(self, tokenizer, prompt_length: int):
+        self.tokenizer = tokenizer
+        self.prompt_length = prompt_length
+        self.checked_cache = {}
+    
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> torch.BoolTensor:
+        # Decode only the generated portion (skip prompt)
+        generated_ids = input_ids[0][self.prompt_length:]
+        generated_text = self.tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+        num_tokens = len(generated_ids)
+        
+        # Quick check: must have at least opening and closing braces
+        if not generated_text or '{' not in generated_text or '}' not in generated_text:
+            return torch.tensor(False, dtype=torch.bool)
+        
+        # Check cache to avoid redundant parsing
+        text_hash = hash(generated_text)
+        if text_hash in self.checked_cache:
+            return torch.tensor(self.checked_cache[text_hash], dtype=torch.bool)
+        
+        # Try to parse as JSON
+        try:
+            parsed = json.loads(generated_text)
+            # Verify it has the expected structure for zero-shot classification
+            has_labels = 'labels' in parsed and isinstance(parsed['labels'], list) and len(parsed['labels']) > 0
+            has_top = 'top_label' in parsed and 'top_score' in parsed
+            
+            is_complete = has_labels and has_top
+            self.checked_cache[text_hash] = is_complete
+            
+            if is_complete:
+                print(f"[EARLY STOP] Valid JSON detected at {num_tokens} tokens. Stopping generation.")
+            
+            return torch.tensor(is_complete, dtype=torch.bool)
+        except (json.JSONDecodeError, ValueError):
+            self.checked_cache[text_hash] = False
+            return torch.tensor(False, dtype=torch.bool)
 
 
 class ClassificationLabel(BaseModel):
@@ -314,6 +357,12 @@ class LLMZeroShotClassifier:
             max_length=2048
         ).to(self.device)
         
+        # Create early stopping criteria for valid JSON
+        stopping_criteria = [JSONCompletionStoppingCriteria(
+            tokenizer=self.tokenizer,
+            prompt_length=inputs['input_ids'].shape[1]
+        )]
+        
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
@@ -322,7 +371,8 @@ class LLMZeroShotClassifier:
                 do_sample=temperature > 0,
                 pad_token_id=self.tokenizer.eos_token_id,
                 return_dict_in_generate=True,
-                output_scores=use_logprobs
+                output_scores=use_logprobs,
+                stopping_criteria=stopping_criteria
             )
         
         response_text = self.tokenizer.decode(
