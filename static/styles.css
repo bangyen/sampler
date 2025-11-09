@@ -776,8 +776,8 @@ body {
 }
 
 .advanced-settings summary::before {
-    content: '›';
-    font-size: var(--font-size-2xl);
+    content: '▸';
+    font-size: var(--font-size-xl);
     font-weight: var(--font-weight-bold);
     transition: transform var(--transition-fast);
     display: inline-block;
@@ -813,8 +813,8 @@ body {
 }
 
 .label-customization-accordion summary::before {
-    content: '›';
-    font-size: var(--font-size-2xl);
+    content: '▸';
+    font-size: var(--font-size-xl);
     font-weight: var(--font-weight-bold);
     transition: transform var(--transition-fast);
     display: inline-block;
@@ -1742,11 +1742,11 @@ body {
 }
 
 .preset-btn {
-    padding: var(--space-xs) var(--space-base);
+    padding: var(--space-base) var(--space-lg);
     background: var(--color-bg-white);
     border: var(--border-width-thin) solid var(--color-border);
     border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-md);
     cursor: pointer;
     transition: all var(--transition-fast);
     color: var(--color-text-primary);
@@ -1808,6 +1808,7 @@ body {
 .add-label-section {
     display: flex;
     gap: var(--space-md);
+    margin-top: var(--space-xl);
 }
 
 .add-label-section input {
