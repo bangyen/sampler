@@ -13,6 +13,7 @@ let displayedConversationCount = 5;
 let displayedClassificationCount = 5;
 let displayedNERCount = 5;
 let displayedOCRCount = 5;
+let availableModelsData = {};
 
 const labelPresets = {
     sentiment: ['positive', 'negative', 'neutral'],
@@ -649,10 +650,27 @@ async function loadModels() {
         const modelsData = await modelsResponse.json();
         const statusData = await statusResponse.json();
         
+        availableModelsData = modelsData.models;
+        
         const modelList = document.getElementById('model-list');
         modelList.innerHTML = '';
         
-        Object.entries(modelsData.models).forEach(([name, info]) => {
+        const zeroShotModels = Object.entries(modelsData.models).filter(([name, info]) => {
+            const supportedTasks = info.supported_tasks || [];
+            return supportedTasks.includes('zero-shot');
+        });
+        
+        if (zeroShotModels.length === 0) {
+            modelList.innerHTML = '<p class="error-message">No models available for zero-shot classification</p>';
+            return;
+        }
+        
+        const currentModelSupportsZeroShot = availableModelsData[selectedModel]?.supported_tasks?.includes('zero-shot');
+        if (!currentModelSupportsZeroShot && zeroShotModels.length > 0) {
+            selectedModel = zeroShotModels[0][0];
+        }
+        
+        zeroShotModels.forEach(([name, info]) => {
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedModel ? 'selected' : ''}`;
             modelDiv.dataset.modelName = name;
