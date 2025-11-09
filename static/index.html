@@ -141,6 +141,16 @@
                         <p>Classify text into custom categories using LLMs with confidence scoring</p>
                     </div>
                     
+                    <div class="example-prompts" style="margin-bottom: 20px;">
+                        <div class="info-message" id="classification-example-info">Try one of these example texts for sentiment analysis:</div>
+                        <div class="example-grid" id="classification-example-grid">
+                            <button class="example-prompt" data-classification-text="This product exceeded all my expectations! The quality is outstanding and delivery was incredibly fast.">Positive review</button>
+                            <button class="example-prompt" data-classification-text="I'm very disappointed with this purchase. The item arrived damaged and customer service was unhelpful.">Negative review</button>
+                            <button class="example-prompt" data-classification-text="The product works as described. Nothing particularly special, but it gets the job done.">Neutral review</button>
+                            <button class="example-prompt" data-classification-text="I have mixed feelings about this. Some features are great, but others need improvement.">Mixed sentiment</button>
+                        </div>
+                    </div>
+                    
                     <div class="classification-input-section">
                         <label for="classification-text-input">Text to Classify:</label>
                         <textarea id="classification-text-input" placeholder="Enter the text you want to classify..." rows="4"></textarea>

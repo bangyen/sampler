@@ -21,6 +21,45 @@ const labelPresets = {
     cargo: ['standard cargo', 'refrigerated cargo', 'hazardous materials', 'oversized freight']
 };
 
+const examplePrompts = {
+    sentiment: {
+        info: 'Try one of these example texts for sentiment analysis:',
+        examples: [
+            { text: 'This product exceeded all my expectations! The quality is outstanding and delivery was incredibly fast.', label: 'Positive review' },
+            { text: "I'm very disappointed with this purchase. The item arrived damaged and customer service was unhelpful.", label: 'Negative review' },
+            { text: 'The product works as described. Nothing particularly special, but it gets the job done.', label: 'Neutral review' },
+            { text: 'I have mixed feelings about this. Some features are great, but others need improvement.', label: 'Mixed sentiment' }
+        ]
+    },
+    intent: {
+        info: 'Try one of these example texts for intent classification:',
+        examples: [
+            { text: 'How do I reset my password? I tried the link but it expired.', label: 'Question' },
+            { text: "I've been waiting 3 weeks for my order and still haven't received it. This is unacceptable!", label: 'Complaint' },
+            { text: 'Your team went above and beyond to help me resolve this issue. Thank you so much!', label: 'Praise' },
+            { text: 'Could you please send me the tracking information for order #12345?', label: 'Request' }
+        ]
+    },
+    urgency: {
+        info: 'Try one of these example texts for urgency classification:',
+        examples: [
+            { text: 'CRITICAL: Production line down. Need replacement part immediately or we lose $50K/hour.', label: 'Urgent' },
+            { text: 'Please ship the standard order when convenient. We have enough inventory for the next 2 weeks.', label: 'Low priority' },
+            { text: 'We need the shipment by next Friday for the scheduled installation. Standard delivery timeframe works.', label: 'Normal' },
+            { text: 'System failure affecting all customers. Escalate to senior engineering team now.', label: 'Critical emergency' }
+        ]
+    },
+    cargo: {
+        info: 'Try one of these example texts for cargo type classification:',
+        examples: [
+            { text: '20 containers of refrigerated pharmaceuticals requiring temperature control at 2-8°C throughout transit.', label: 'Refrigerated cargo' },
+            { text: 'Shipment contains 500 pallets of canned goods, ambient temperature, standard 40ft containers.', label: 'Standard cargo' },
+            { text: 'Transporting lithium-ion batteries, UN3480, Class 9 dangerous goods, requires special handling and documentation.', label: 'Hazardous materials' },
+            { text: 'Wind turbine blades, 65 meters long, requires flat rack containers and route survey for clearance.', label: 'Oversized freight' }
+        ]
+    }
+};
+
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
         const sidebar = document.querySelector('.sidebar');
@@ -90,9 +129,52 @@ function copyToClipboard(text, button) {
     });
 }
 
+function updateClassificationExamples(preset = 'sentiment') {
+    const infoElement = document.getElementById('classification-example-info');
+    const gridElement = document.getElementById('classification-example-grid');
+    
+    if (!infoElement || !gridElement) {
+        console.warn('Classification example elements not found');
+        return;
+    }
+    
+    const presetData = examplePrompts[preset];
+    if (!presetData) {
+        console.warn(`No example prompts found for preset: ${preset}`);
+        return;
+    }
+    
+    infoElement.textContent = presetData.info;
+    
+    gridElement.innerHTML = '';
+    presetData.examples.forEach(example => {
+        const button = document.createElement('button');
+        button.className = 'example-prompt';
+        button.setAttribute('data-classification-text', example.text);
+        button.textContent = example.label;
+        gridElement.appendChild(button);
+    });
+    
+    setupClassificationExamples();
+}
+
+function setupClassificationExamples() {
+    const exampleBtns = document.querySelectorAll('[data-classification-text]');
+    exampleBtns.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
+            const text = newBtn.dataset.classificationText;
+            document.getElementById('classification-text-input').value = text;
+        });
+    });
+}
+
 function setupClassificationUI() {
     try {
         renderLabelChips();
+        updateClassificationExamples('sentiment');
         
         const presetButtons = document.querySelectorAll('.preset-btn');
         
@@ -107,6 +189,7 @@ function setupClassificationUI() {
                 if (labelPresets[preset]) {
                     classificationLabels = [...labelPresets[preset]];
                     renderLabelChips();
+                    updateClassificationExamples(preset);
                 }
             });
         });

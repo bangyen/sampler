@@ -1155,6 +1155,7 @@ body {
         font-size: var(--font-size-base);
     }
     
+    .classification-container,
     .ner-container,
     .ocr-container,
     .layout-container {
@@ -1428,7 +1429,10 @@ body {
    ======================================== */
 
 .classification-container {
-    flex: 1;
+    width: 900px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: var(--space-3xl);
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
