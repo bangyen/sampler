@@ -247,6 +247,46 @@ body {
     color: var(--color-text-muted);
 }
 
+.model-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xs);
+}
+
+.model-load-btn {
+    padding: 4px 12px;
+    font-size: var(--font-size-sm);
+    background: var(--color-primary);
+    color: var(--color-text-white);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.model-load-btn:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.model-load-btn.loading {
+    background: var(--color-secondary);
+    cursor: wait;
+}
+
+.model-load-btn.loaded {
+    background: var(--color-success);
+    cursor: default;
+}
+
+.model-load-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
 .divider {
     height: var(--border-width-thin);
     background: var(--color-border);

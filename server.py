@@ -205,6 +205,18 @@ if LLAMA_CPP_AVAILABLE:
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf",
     }
+    
+    # Qwen 2.5 7B - Testing for improved accuracy
+    AVAILABLE_MODELS["Qwen 2.5 7B"] = {
+        "id": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+        "params": "7B",
+        "quantization": "Q4_K_M (GGUF)",
+        "memory": "~4.7GB",
+        "description": "Larger model with enhanced reasoning - testing for accuracy improvement",
+        "backend": "llamacpp",
+        "gguf_repo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+        "gguf_file": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    }
 else:
     # Fallback to transformers version if llama.cpp not available
     AVAILABLE_MODELS["SmolLM2 1.7B"] = {
@@ -823,6 +835,239 @@ async def check_zero_shot_available():
     }
 
 
+@app.get("/api/models/status")
+async def get_models_status():
+    """Get loading status of all LLM models"""
+    status = {}
+    for model_name, model_config in AVAILABLE_MODELS.items():
+        backend = model_config.get("backend", "transformers")
+        
+        if backend == "llamacpp":
+            status[model_name] = {
+                "loaded": model_name in loaded_llama_models,
+                "backend": backend
+            }
+        elif backend == "bitnet_cpp":
+            status[model_name] = {
+                "loaded": model_name in loaded_bitnet_models,
+                "backend": backend
+            }
+        else:
+            model_id = model_config["id"]
+            status[model_name] = {
+                "loaded": model_id in loaded_models,
+                "backend": backend
+            }
+    
+    return {"status": status}
+
+
+class LoadModelRequest(BaseModel):
+    model_name: str
+
+
+@app.post("/api/models/load")
+async def load_model_endpoint(request: LoadModelRequest):
+    """Preemptively load a model"""
+    try:
+        if request.model_name not in AVAILABLE_MODELS:
+            raise HTTPException(status_code=400, detail="Invalid model name")
+        
+        model_config = AVAILABLE_MODELS[request.model_name]
+        backend = model_config.get("backend", "transformers")
+        
+        start_time = time.time()
+        
+        if backend == "llamacpp":
+            if request.model_name in loaded_llama_models:
+                return {
+                    "success": True,
+                    "already_loaded": True,
+                    "model_name": request.model_name,
+                    "backend": backend
+                }
+            
+            inference, load_time = load_llama_model(request.model_name)
+            return {
+                "success": True,
+                "already_loaded": False,
+                "model_name": request.model_name,
+                "backend": backend,
+                "load_time": load_time
+            }
+        
+        elif backend == "bitnet_cpp":
+            if request.model_name in loaded_bitnet_models:
+                return {
+                    "success": True,
+                    "already_loaded": True,
+                    "model_name": request.model_name,
+                    "backend": backend
+                }
+            
+            bridge, load_time = load_bitnet_cpp_model(request.model_name)
+            return {
+                "success": True,
+                "already_loaded": False,
+                "model_name": request.model_name,
+                "backend": backend,
+                "load_time": load_time
+            }
+        
+        else:
+            model_id = model_config["id"]
+            if model_id in loaded_models:
+                return {
+                    "success": True,
+                    "already_loaded": True,
+                    "model_name": request.model_name,
+                    "backend": backend
+                }
+            
+            model_data, load_time = load_model(model_id)
+            return {
+                "success": True,
+                "already_loaded": False,
+                "model_name": request.model_name,
+                "backend": backend,
+                "load_time": load_time
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
+
+
+@app.get("/api/ner/models/status")
+async def get_ner_models_status():
+    """Get loading status of all NER models"""
+    status = {}
+    for model_name, model_config in NER_MODELS.items():
+        model_id = model_config["id"]
+        status[model_name] = {
+            "loaded": model_id in ner_pipelines
+        }
+    
+    return {"status": status}
+
+
+class LoadNERModelRequest(BaseModel):
+    model_name: str
+
+
+@app.post("/api/ner/models/load")
+async def load_ner_model_endpoint(request: LoadNERModelRequest):
+    """Preemptively load a NER model"""
+    try:
+        if request.model_name not in NER_MODELS:
+            raise HTTPException(status_code=400, detail="Invalid NER model name")
+        
+        model_id = NER_MODELS[request.model_name]["id"]
+        
+        if model_id in ner_pipelines:
+            return {
+                "success": True,
+                "already_loaded": True,
+                "model_name": request.model_name
+            }
+        
+        ner_model, load_time = load_ner_model(request.model_name)
+        
+        return {
+            "success": True,
+            "already_loaded": False,
+            "model_name": request.model_name,
+            "load_time": load_time
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
+
+
+@app.get("/api/ocr/configs/status")
+async def get_ocr_configs_status():
+    """Get loading status of all OCR configurations"""
+    status = {}
+    for config_name, config in OCR_CONFIGS.items():
+        engine = config["engine"]
+        
+        if engine == "easyocr":
+            cache_key = tuple(config["languages"])
+            status[config_name] = {
+                "loaded": cache_key in ocr_readers,
+                "engine": engine
+            }
+        elif engine == "paddleocr":
+            status[config_name] = {
+                "loaded": "paddleocr" in ocr_readers,
+                "engine": engine
+            }
+        elif engine == "tesseract":
+            status[config_name] = {
+                "loaded": "tesseract" in ocr_readers,
+                "engine": engine
+            }
+        else:
+            status[config_name] = {
+                "loaded": False,
+                "engine": engine
+            }
+    
+    return {"status": status}
+
+
+class LoadOCRConfigRequest(BaseModel):
+    config_name: str
+
+
+@app.post("/api/ocr/configs/load")
+async def load_ocr_config_endpoint(request: LoadOCRConfigRequest):
+    """Preemptively load an OCR configuration"""
+    try:
+        if request.config_name not in OCR_CONFIGS:
+            raise HTTPException(status_code=400, detail="Invalid OCR configuration name")
+        
+        config = OCR_CONFIGS[request.config_name]
+        engine = config["engine"]
+        
+        # Check if already loaded
+        if engine == "easyocr":
+            cache_key = tuple(config["languages"])
+            already_loaded = cache_key in ocr_readers
+        elif engine == "paddleocr":
+            already_loaded = "paddleocr" in ocr_readers
+        elif engine == "tesseract":
+            already_loaded = "tesseract" in ocr_readers
+        else:
+            already_loaded = False
+        
+        if already_loaded:
+            return {
+                "success": True,
+                "already_loaded": True,
+                "config_name": request.config_name,
+                "engine": engine
+            }
+        
+        ocr_model, load_time = load_ocr_model(request.config_name)
+        
+        return {
+            "success": True,
+            "already_loaded": False,
+            "config_name": request.config_name,
+            "engine": engine,
+            "load_time": load_time
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading OCR config: {str(e)}")
+
+
 async def stream_with_loading_wrapper_transformers(
     model_id, messages, temperature, max_tokens, top_p, top_k, request
 ) -> AsyncGenerator[str, None]:
@@ -1078,6 +1323,8 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
             # Map GGUF models to their base tokenizer repos
             if "SmolLM2" in request.model:
                 tokenizer_repo = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+            elif "Qwen 2.5 7B" in request.model:
+                tokenizer_repo = "Qwen/Qwen2.5-7B-Instruct"
             else:
                 # Fallback to base model ID if available
                 tokenizer_repo = model_config.get("id", model_config.get("gguf_repo"))

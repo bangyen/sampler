@@ -25,37 +25,37 @@ const examplePrompts = {
     sentiment: {
         info: 'Try one of these example texts for sentiment analysis:',
         examples: [
-            { text: 'This product exceeded all my expectations! The quality is outstanding and delivery was incredibly fast.', label: 'Positive review' },
-            { text: "I'm very disappointed with this purchase. The item arrived damaged and customer service was unhelpful.", label: 'Negative review' },
-            { text: 'The product works as described. Nothing particularly special, but it gets the job done.', label: 'Neutral review' },
-            { text: 'I have mixed feelings about this. Some features are great, but others need improvement.', label: 'Mixed sentiment' }
+            { text: 'Major shipping alliance announces new ultra-large container vessels with 50% reduction in emissions per container. Industry leaders praise breakthrough in sustainable maritime transport.', label: 'Positive news' },
+            { text: "Port strike enters third week as dockworkers reject latest offer. Container backlog grows to record levels, threatening supply chain collapse across major retail sectors.", label: 'Negative news' },
+            { text: 'Global container shipping rates remain stable in Q3 according to latest freight index. Trans-Pacific routes show minimal fluctuation from previous quarter.', label: 'Neutral news' },
+            { text: 'New Panama Canal expansion opens to fanfare, but analysts warn increased capacity may not offset rising fuel costs. Mixed reactions from shipping executives.', label: 'Mixed sentiment' }
         ]
     },
     intent: {
         info: 'Try one of these example texts for intent classification:',
         examples: [
-            { text: 'How do I reset my password? I tried the link but it expired.', label: 'Question' },
-            { text: "I've been waiting 3 weeks for my order and still haven't received it. This is unacceptable!", label: 'Complaint' },
-            { text: 'Your team went above and beyond to help me resolve this issue. Thank you so much!', label: 'Praise' },
-            { text: 'Could you please send me the tracking information for order #12345?', label: 'Request' }
+            { text: 'How will the new IMO 2025 sulfur regulations impact freight rates for Asia-Europe routes? Shipping economists weigh in on compliance costs.', label: 'Question' },
+            { text: "Cargo owners slam terminal operators for chronic delays at Los Angeles port. Shipper coalition demands immediate infrastructure improvements to prevent further disruptions.", label: 'Complaint' },
+            { text: 'Port of Rotterdam achieves record throughput while maintaining industry-leading sustainability metrics. Officials credit advanced automation and green initiatives.', label: 'Praise' },
+            { text: 'Maritime authority seeks public comment on proposed amendments to dangerous goods handling regulations for container terminals. Submissions due by month end.', label: 'Request' }
         ]
     },
     urgency: {
         info: 'Try one of these example texts for urgency classification:',
         examples: [
-            { text: 'CRITICAL: Production line down. Need replacement part immediately or we lose $50K/hour.', label: 'Urgent' },
-            { text: 'Please ship the standard order when convenient. We have enough inventory for the next 2 weeks.', label: 'Low priority' },
-            { text: 'We need the shipment by next Friday for the scheduled installation. Standard delivery timeframe works.', label: 'Normal' },
-            { text: 'System failure affecting all customers. Escalate to senior engineering team now.', label: 'Critical emergency' }
+            { text: 'BREAKING: Container ship experiencing engine failure in Suez Canal. Vessel blocking northbound traffic. Immediate tugboat assistance required to prevent extended closure of critical waterway.', label: 'Urgent' },
+            { text: 'Industry conference announces 2025 dates for annual maritime logistics summit. Early bird registration opens next quarter for Singapore venue.', label: 'Low priority' },
+            { text: 'New container terminal at Port of Hamburg scheduled to open next spring. Facility will add 2 million TEU annual capacity to Northern European hub.', label: 'Normal' },
+            { text: 'MARITIME EMERGENCY: Typhoon Haikui forces evacuation of Shanghai port. All vessel movements suspended. Hundreds of ships seeking emergency anchorage. Coast guard on high alert.', label: 'Critical emergency' }
         ]
     },
     cargo: {
         info: 'Try one of these example texts for cargo type classification:',
         examples: [
-            { text: '20 containers of refrigerated pharmaceuticals requiring temperature control at 2-8°C throughout transit.', label: 'Refrigerated cargo' },
-            { text: 'Shipment contains 500 pallets of canned goods, ambient temperature, standard 40ft containers.', label: 'Standard cargo' },
-            { text: 'Transporting lithium-ion batteries, UN3480, Class 9 dangerous goods, requires special handling and documentation.', label: 'Hazardous materials' },
-            { text: 'Wind turbine blades, 65 meters long, requires flat rack containers and route survey for clearance.', label: 'Oversized freight' }
+            { text: 'Pharmaceutical shipment of temperature-sensitive vaccines requires uninterrupted cold chain at 2-8°C from manufacturing facility through final delivery. Advanced reefer monitoring deployed.', label: 'Refrigerated cargo' },
+            { text: 'Container manifest shows 500 TEU of consumer electronics and textiles loaded at Shenzhen. Standard dry containers with ambient temperature storage for trans-Pacific crossing.', label: 'Standard cargo' },
+            { text: 'Vessel carries 200 tons of lithium-ion batteries classified as UN3480 Class 9 dangerous goods. Special segregation and fire suppression protocols in effect per IMDG Code.', label: 'Hazardous materials' },
+            { text: 'Breakbulk carrier loading 80-meter wind turbine blades onto reinforced flat racks. Route survey completed for overhead clearances through Panama Canal transit.', label: 'Oversized freight' }
         ]
     }
 };
@@ -582,24 +582,55 @@ async function init() {
 
 async function loadModels() {
     try {
-        const response = await fetch('/api/models');
-        const data = await response.json();
+        const [modelsResponse, statusResponse] = await Promise.all([
+            fetch('/api/models'),
+            fetch('/api/models/status')
+        ]);
+        
+        const modelsData = await modelsResponse.json();
+        const statusData = await statusResponse.json();
         
         const modelList = document.getElementById('model-list');
         modelList.innerHTML = '';
         
-        Object.entries(data.models).forEach(([name, info]) => {
+        Object.entries(modelsData.models).forEach(([name, info]) => {
+            const isLoaded = statusData.status[name]?.loaded || false;
+            
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedModel ? 'selected' : ''}`;
+            modelDiv.dataset.modelName = name;
+            
+            const loadButtonHtml = isLoaded 
+                ? `<button class="model-load-btn loaded" data-model="${name}" disabled>✓ Loaded</button>`
+                : `<button class="model-load-btn" data-model="${name}">Load</button>`;
+            
             modelDiv.innerHTML = `
-                <h4>${name}</h4>
+                <div class="model-header-row">
+                    <h4>${name}</h4>
+                    ${loadButtonHtml}
+                </div>
                 <div class="model-specs">
                     <span class="model-badge">${info.params} params</span>
                     <span class="model-badge">${info.memory}</span>
                 </div>
                 <div class="model-description">${info.description}</div>
             `;
-            modelDiv.onclick = (evt) => selectModel(name, evt);
+            
+            const selectableArea = modelDiv.querySelector('h4').parentElement.parentElement;
+            selectableArea.onclick = (evt) => {
+                if (!evt.target.closest('.model-load-btn')) {
+                    selectModel(name, evt);
+                }
+            };
+            
+            const loadBtn = modelDiv.querySelector('.model-load-btn');
+            if (loadBtn && !isLoaded) {
+                loadBtn.onclick = (evt) => {
+                    evt.stopPropagation();
+                    preloadModel(name);
+                };
+            }
+            
             modelList.appendChild(modelDiv);
         });
     } catch (error) {
@@ -609,24 +640,55 @@ async function loadModels() {
 
 async function loadNERModels() {
     try {
-        const response = await fetch('/api/ner/models');
-        const data = await response.json();
+        const [modelsResponse, statusResponse] = await Promise.all([
+            fetch('/api/ner/models'),
+            fetch('/api/ner/models/status')
+        ]);
+        
+        const modelsData = await modelsResponse.json();
+        const statusData = await statusResponse.json();
         
         const modelList = document.getElementById('ner-model-list');
         modelList.innerHTML = '';
         
-        Object.entries(data.models).forEach(([name, info]) => {
+        Object.entries(modelsData.models).forEach(([name, info]) => {
+            const isLoaded = statusData.status[name]?.loaded || false;
+            
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedNERModel ? 'selected' : ''}`;
+            modelDiv.dataset.modelName = name;
+            
+            const loadButtonHtml = isLoaded 
+                ? `<button class="model-load-btn loaded" data-ner-model="${name}" disabled>✓ Loaded</button>`
+                : `<button class="model-load-btn" data-ner-model="${name}">Load</button>`;
+            
             modelDiv.innerHTML = `
-                <h4>${name}</h4>
+                <div class="model-header-row">
+                    <h4>${name}</h4>
+                    ${loadButtonHtml}
+                </div>
                 <div class="model-specs">
                     <span class="model-badge">${info.params} params</span>
                     <span class="model-badge">${info.memory}</span>
                 </div>
                 <div class="model-description">${info.description}</div>
             `;
-            modelDiv.onclick = (evt) => selectNERModel(name, evt);
+            
+            const selectableArea = modelDiv.querySelector('h4').parentElement.parentElement;
+            selectableArea.onclick = (evt) => {
+                if (!evt.target.closest('.model-load-btn')) {
+                    selectNERModel(name, evt);
+                }
+            };
+            
+            const loadBtn = modelDiv.querySelector('.model-load-btn');
+            if (loadBtn && !isLoaded) {
+                loadBtn.onclick = (evt) => {
+                    evt.stopPropagation();
+                    preloadNERModel(name);
+                };
+            }
+            
             modelList.appendChild(modelDiv);
         });
     } catch (error) {
@@ -636,20 +698,51 @@ async function loadNERModels() {
 
 async function loadOCRConfigs() {
     try {
-        const response = await fetch('/api/ocr/configs');
-        const data = await response.json();
+        const [configsResponse, statusResponse] = await Promise.all([
+            fetch('/api/ocr/configs'),
+            fetch('/api/ocr/configs/status')
+        ]);
+        
+        const configsData = await configsResponse.json();
+        const statusData = await statusResponse.json();
         
         const modelList = document.getElementById('ocr-model-list');
         modelList.innerHTML = '';
         
-        Object.entries(data.configs).forEach(([name, info]) => {
+        Object.entries(configsData.configs).forEach(([name, info]) => {
+            const isLoaded = statusData.status[name]?.loaded || false;
+            
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedOCRConfig ? 'selected' : ''}`;
+            modelDiv.dataset.configName = name;
+            
+            const loadButtonHtml = isLoaded 
+                ? `<button class="model-load-btn loaded" data-ocr-config="${name}" disabled>✓ Loaded</button>`
+                : `<button class="model-load-btn" data-ocr-config="${name}">Load</button>`;
+            
             modelDiv.innerHTML = `
-                <h4>${name}</h4>
+                <div class="model-header-row">
+                    <h4>${name}</h4>
+                    ${loadButtonHtml}
+                </div>
                 <div class="model-description">${info.description}</div>
             `;
-            modelDiv.onclick = (evt) => selectOCRConfig(name, evt);
+            
+            const selectableArea = modelDiv.querySelector('h4').parentElement.parentElement;
+            selectableArea.onclick = (evt) => {
+                if (!evt.target.closest('.model-load-btn')) {
+                    selectOCRConfig(name, evt);
+                }
+            };
+            
+            const loadBtn = modelDiv.querySelector('.model-load-btn');
+            if (loadBtn && !isLoaded) {
+                loadBtn.onclick = (evt) => {
+                    evt.stopPropagation();
+                    preloadOCRConfig(name);
+                };
+            }
+            
             modelList.appendChild(modelDiv);
         });
     } catch (error) {
@@ -697,6 +790,126 @@ function selectOCRConfig(name, evt) {
     setTimeout(() => {
         closeMobileMenuHelper();
     }, 100);
+}
+
+async function preloadModel(modelName) {
+    const modelDiv = document.querySelector(`[data-model-name="${modelName}"]`);
+    const loadBtn = modelDiv?.querySelector('.model-load-btn');
+    
+    if (!loadBtn) return;
+    
+    try {
+        loadBtn.textContent = 'Loading...';
+        loadBtn.disabled = true;
+        loadBtn.classList.add('loading');
+        
+        const response = await fetch('/api/models/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model_name: modelName })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadBtn.textContent = '✓ Loaded';
+            loadBtn.classList.remove('loading');
+            loadBtn.classList.add('loaded');
+            
+            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
+            showToast(`${modelName} loaded${loadTime}`);
+        } else {
+            throw new Error('Failed to load model');
+        }
+    } catch (error) {
+        console.error('Error preloading model:', error);
+        loadBtn.textContent = 'Load';
+        loadBtn.disabled = false;
+        loadBtn.classList.remove('loading');
+        showToast(`Failed to load ${modelName}`, 'error');
+    }
+}
+
+async function preloadNERModel(modelName) {
+    const modelDiv = document.querySelector(`[data-model-name="${modelName}"]`);
+    const loadBtn = modelDiv?.querySelector('.model-load-btn');
+    
+    if (!loadBtn) return;
+    
+    try {
+        loadBtn.textContent = 'Loading...';
+        loadBtn.disabled = true;
+        loadBtn.classList.add('loading');
+        
+        const response = await fetch('/api/ner/models/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model_name: modelName })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadBtn.textContent = '✓ Loaded';
+            loadBtn.classList.remove('loading');
+            loadBtn.classList.add('loaded');
+            
+            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
+            showToast(`${modelName} loaded${loadTime}`);
+        } else {
+            throw new Error('Failed to load NER model');
+        }
+    } catch (error) {
+        console.error('Error preloading NER model:', error);
+        loadBtn.textContent = 'Load';
+        loadBtn.disabled = false;
+        loadBtn.classList.remove('loading');
+        showToast(`Failed to load ${modelName}`, 'error');
+    }
+}
+
+async function preloadOCRConfig(configName) {
+    const modelDiv = document.querySelector(`[data-config-name="${configName}"]`);
+    const loadBtn = modelDiv?.querySelector('.model-load-btn');
+    
+    if (!loadBtn) return;
+    
+    try {
+        loadBtn.textContent = 'Loading...';
+        loadBtn.disabled = true;
+        loadBtn.classList.add('loading');
+        
+        const response = await fetch('/api/ocr/configs/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ config_name: configName })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadBtn.textContent = '✓ Loaded';
+            loadBtn.classList.remove('loading');
+            loadBtn.classList.add('loaded');
+            
+            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
+            showToast(`${configName} loaded${loadTime}`);
+        } else {
+            throw new Error('Failed to load OCR config');
+        }
+    } catch (error) {
+        console.error('Error preloading OCR config:', error);
+        loadBtn.textContent = 'Load';
+        loadBtn.disabled = false;
+        loadBtn.classList.remove('loading');
+        showToast(`Failed to load ${configName}`, 'error');
+    }
 }
 
 async function loadConversation() {
