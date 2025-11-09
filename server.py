@@ -1090,7 +1090,7 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
             hypothesis_template=request.hypothesis_template,
             use_logprobs=request.use_logprobs,
             abstain_threshold=request.abstain_threshold,
-            max_tokens=300,
+            max_tokens=100,
             temperature=0.1
         )
         
