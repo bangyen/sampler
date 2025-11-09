@@ -1888,6 +1888,7 @@ body {
 
 .confidence-bar {
     height: 100%;
+    width: var(--confidence-width, 0%);
     background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
     transition: width var(--transition-base) ease-out;
     display: flex;
