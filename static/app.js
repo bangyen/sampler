@@ -503,8 +503,8 @@ async function loadClassificationHistory() {
         if (!data.analyses || data.analyses.length === 0) {
             historyList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #888; margin-bottom: 10px;">No classifications yet</p>
-                    <small style="color: #999;">
+                    <p class="empty-state">No classifications yet</p>
+                    <small class="empty-state-hint">
                         Try classifying some text!<br><br>
                         Example uses:<br>
                         • Sentiment analysis<br>
@@ -516,7 +516,7 @@ async function loadClassificationHistory() {
             return;
         }
         
-        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} classification(s)</small>`;
+        historyList.innerHTML = `<small class="history-count">Found ${data.analyses.length} classification(s)</small>`;
         
         const displayedAnalyses = data.analyses.slice(0, displayedClassificationCount);
         
@@ -531,8 +531,8 @@ async function loadClassificationHistory() {
             const topLabel = analysis.top_label || 'N/A';
             
             btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${previewText}</div>
-                <div style="font-size: 11px; color: #888;">Top: ${topLabel}</div>
+                <div class="history-item-preview">${previewText}</div>
+                <div class="history-item-meta">Top: ${topLabel}</div>
             `;
             
             btn.onclick = () => loadClassificationAnalysis(analysis.id);
@@ -574,8 +574,8 @@ async function loadClassificationHistory() {
         if (historyList) {
             historyList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #dc3545;">Failed to load history</p>
-                    <small style="color: #888;">${error.message || 'Unknown error'}</small>
+                    <p class="text-error">Failed to load history</p>
+                    <small class="text-muted">${error.message || 'Unknown error'}</small>
                 </div>
             `;
         }
@@ -984,8 +984,8 @@ async function loadConversationList() {
         if (!data.conversations || data.conversations.length === 0) {
             conversationList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #888; margin-bottom: 10px;">No saved conversations yet</p>
-                    <small style="color: #999;">
+                    <p class="empty-state">No saved conversations yet</p>
+                    <small class="empty-state-hint">
                         Try selecting a model and starting a conversation!<br><br>
                         Example use cases:<br>
                         • Classify cargo shipments<br>
@@ -997,7 +997,7 @@ async function loadConversationList() {
             return;
         }
         
-        conversationList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.conversations.length} saved conversation(s)</small>`;
+        conversationList.innerHTML = `<small class="history-count">Found ${data.conversations.length} saved conversation(s)</small>`;
         
         data.conversations.slice(0, displayedConversationCount).forEach(conv => {
             const item = document.createElement('div');
@@ -1006,8 +1006,8 @@ async function loadConversationList() {
             const btn = document.createElement('button');
             btn.className = `conversation-btn ${conv.session_id === sessionId ? 'active' : ''}`;
             btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${conv.first_message || 'No messages'}</div>
-                <div style="font-size: 11px; color: #888;">${conv.message_count} messages</div>
+                <div class="history-item-preview">${conv.first_message || 'No messages'}</div>
+                <div class="history-item-meta">${conv.message_count} messages</div>
             `;
             btn.onclick = () => loadConversationById(conv.session_id);
             
@@ -2102,8 +2102,8 @@ async function loadNERHistory() {
         if (!data.analyses || data.analyses.length === 0) {
             historyList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #888; margin-bottom: 10px;">No analyses yet</p>
-                    <small style="color: #999;">
+                    <p class="empty-state">No analyses yet</p>
+                    <small class="empty-state-hint">
                         Try analyzing some text to extract entities!<br><br>
                         Example uses:<br>
                         • Extract people, organizations, locations<br>
@@ -2115,7 +2115,7 @@ async function loadNERHistory() {
             return;
         }
         
-        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${data.analyses.length} analysis/analyses</small>`;
+        historyList.innerHTML = `<small class="history-count">Found ${data.analyses.length} analysis/analyses</small>`;
         
         data.analyses.slice(0, displayedNERCount).forEach(analysis => {
             const item = document.createElement('div');
@@ -2124,8 +2124,8 @@ async function loadNERHistory() {
             const btn = document.createElement('button');
             btn.className = 'conversation-btn';
             btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.text_preview}</div>
-                <div style="font-size: 11px; color: #888;">${analysis.entity_count} entities | ${analysis.model}</div>
+                <div class="history-item-preview">${analysis.text_preview}</div>
+                <div class="history-item-meta">${analysis.entity_count} entities | ${analysis.model}</div>
             `;
             btn.onclick = () => loadNERAnalysis(analysis.id);
             
@@ -2165,8 +2165,8 @@ async function loadNERHistory() {
         if (historyList) {
             historyList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #dc3545;">Failed to load history</p>
-                    <small style="color: #888;">${error.message || 'Unknown error'}</small>
+                    <p class="text-error">Failed to load history</p>
+                    <small class="text-muted">${error.message || 'Unknown error'}</small>
                 </div>
             `;
         }
@@ -2235,8 +2235,8 @@ async function loadOCRHistory() {
         if (allAnalyses.length === 0) {
             historyList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #888; margin-bottom: 10px;">No extractions yet</p>
-                    <small style="color: #999;">
+                    <p class="empty-state">No extractions yet</p>
+                    <small class="empty-state-hint">
                         Try uploading an image to extract text!<br><br>
                         Works great for:<br>
                         • Scanned documents<br>
@@ -2248,7 +2248,7 @@ async function loadOCRHistory() {
             return;
         }
         
-        historyList.innerHTML = `<small style="color: #888; display: block; margin-bottom: 15px;">Found ${allAnalyses.length} extraction(s)</small>`;
+        historyList.innerHTML = `<small class="history-count">Found ${allAnalyses.length} extraction(s)</small>`;
         
         const displayedAnalyses = allAnalyses.slice(0, displayedOCRCount);
         
@@ -2263,8 +2263,8 @@ async function loadOCRHistory() {
             const configText = isLayout ? 'PaddleOCR' : analysis.config;
             
             btn.innerHTML = `
-                <div style="font-size: 13px; margin-bottom: 4px;">${analysis.filename}</div>
-                <div style="font-size: 11px; color: #888;">${analysis.num_detections} detections | ${configText}</div>
+                <div class="history-item-preview">${analysis.filename}</div>
+                <div class="history-item-meta">${analysis.num_detections} detections | ${configText}</div>
             `;
             btn.onclick = () => isLayout ? loadLayoutAnalysis(analysis.id) : loadOCRAnalysis(analysis.id);
             
@@ -2304,8 +2304,8 @@ async function loadOCRHistory() {
         if (historyList) {
             historyList.innerHTML = `
                 <div class="empty-state">
-                    <p style="color: #dc3545;">Failed to load history</p>
-                    <small style="color: #888;">${error.message || 'Unknown error'}</small>
+                    <p class="text-error">Failed to load history</p>
+                    <small class="text-muted">${error.message || 'Unknown error'}</small>
                 </div>
             `;
         }
