@@ -166,25 +166,29 @@
                             </div>
                         </div>
                         
-                        <div class="label-chips-container" id="label-chips-container">
-                            <div class="label-chip">
-                                <span>positive</span>
-                                <button class="remove-label" data-label="positive">&times;</button>
+                        <details class="label-customization-accordion">
+                            <summary>Customize Labels</summary>
+                            
+                            <div class="label-chips-container" id="label-chips-container">
+                                <div class="label-chip">
+                                    <span>positive</span>
+                                    <button class="remove-label" data-label="positive">&times;</button>
+                                </div>
+                                <div class="label-chip">
+                                    <span>negative</span>
+                                    <button class="remove-label" data-label="negative">&times;</button>
+                                </div>
+                                <div class="label-chip">
+                                    <span>neutral</span>
+                                    <button class="remove-label" data-label="neutral">&times;</button>
+                                </div>
                             </div>
-                            <div class="label-chip">
-                                <span>negative</span>
-                                <button class="remove-label" data-label="negative">&times;</button>
+                            
+                            <div class="add-label-section">
+                                <input type="text" id="new-label-input" placeholder="Add custom label..." />
+                                <button id="add-label-btn" class="btn btn-secondary">Add Label</button>
                             </div>
-                            <div class="label-chip">
-                                <span>neutral</span>
-                                <button class="remove-label" data-label="neutral">&times;</button>
-                            </div>
-                        </div>
-                        
-                        <div class="add-label-section">
-                            <input type="text" id="new-label-input" placeholder="Add custom label..." />
-                            <button id="add-label-btn" class="btn btn-secondary">Add Label</button>
-                        </div>
+                        </details>
                     </div>
                     
                     <div class="classification-actions">

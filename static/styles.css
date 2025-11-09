@@ -635,8 +635,9 @@ body {
     transition: all var(--transition-fast);
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-sm);
-    text-align: left;
+    text-align: center;
 }
 
 .example-prompt:hover {
@@ -787,6 +788,43 @@ body {
 }
 
 .advanced-settings[open] {
+    padding: var(--space-lg) var(--space-lg) var(--space-md) var(--space-lg);
+}
+
+.label-customization-accordion {
+    margin-top: var(--space-lg);
+    padding: var(--space-lg) var(--space-lg) 0 var(--space-lg);
+    background: var(--color-bg-light);
+    border-radius: var(--radius-md);
+}
+
+.label-customization-accordion summary {
+    cursor: pointer;
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-lg);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.label-customization-accordion summary::-webkit-details-marker {
+    display: none;
+}
+
+.label-customization-accordion summary::before {
+    content: '›';
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    transition: transform var(--transition-fast);
+    display: inline-block;
+}
+
+.label-customization-accordion[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.label-customization-accordion[open] {
     padding: var(--space-lg) var(--space-lg) var(--space-md) var(--space-lg);
 }
 
