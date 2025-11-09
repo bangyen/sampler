@@ -792,6 +792,26 @@ body {
     background: var(--color-bg-white);
     color: var(--color-text-primary);
     transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.label-customization-accordion summary::after {
+    content: '▼';
+    font-size: var(--font-size-sm);
+    transition: transform var(--transition-fast);
+    display: inline-block;
+}
+
+.label-customization-accordion[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.label-customization-accordion[open] summary {
+    background: var(--color-bg-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 .label-customization-accordion summary:hover {
