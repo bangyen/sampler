@@ -1055,47 +1055,72 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
         model_config = AVAILABLE_MODELS[request.model]
         backend = model_config.get("backend", "transformers")
         
-        # For zero-shot classification, we need transformers backend
-        # If user selected a GGUF model, use transformers fallback
+        # Route to appropriate backend for zero-shot classification
         if backend == "llamacpp":
-            # Use transformers version for zero-shot classification
-            if "SmolLM2" in request.model:
-                model_id = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
-            else:
-                yield json.dumps({
-                    "error": f"Cannot use {request.model} for zero-shot classification. Please use Qwen 2.5 0.5B or SmolLM2 1.7B."
-                })
+            # Use GGUF model via llama.cpp backend (2-3x faster)
+            is_cached = request.model in loaded_llama_models
+            
+            if not is_cached:
+                yield json.dumps({"model_loading_start": True})
+            
+            model_instance, load_time = load_llama_model(request.model)
+            
+            if load_time is not None:
+                yield json.dumps({"model_loading_end": True, "load_time": load_time})
+            
+            start_time = time.time()
+            
+            if LLMZeroShotClassifier is None:
+                yield json.dumps({"error": "Zero-shot classifier not properly loaded"})
                 return
+            
+            # Load tokenizer from base model (not GGUF repo) for encoding labels
+            # Map GGUF models to their base tokenizer repos
+            if "SmolLM2" in request.model:
+                tokenizer_repo = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+            else:
+                # Fallback to base model ID if available
+                tokenizer_repo = model_config.get("id", model_config.get("gguf_repo"))
+            
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_repo)
+            
+            # Pass BitNetInference instance with tokenizer
+            classifier = LLMZeroShotClassifier(
+                model=model_instance,
+                tokenizer=tokenizer,
+                device="cpu"
+            )
+            
         elif backend == "bitnet_cpp":
+            # BitNet.cpp doesn't support logits/logprobs extraction yet
             yield json.dumps({
-                "error": f"BitNet models are not supported for zero-shot classification. Please use Qwen 2.5 0.5B or SmolLM2 1.7B."
+                "error": f"BitNet.cpp models are not supported for zero-shot classification yet. Please use SmolLM2 1.7B or Qwen 2.5 0.5B."
             })
             return
         else:
             # Regular transformers backend
             model_id = model_config["id"]
-        
-        is_cached = model_id in loaded_models
-        
-        if not is_cached:
-            yield json.dumps({"model_loading_start": True})
-        
-        model_data, load_time = load_model(model_id)
-        
-        if load_time is not None:
-            yield json.dumps({"model_loading_end": True, "load_time": load_time})
-        
-        start_time = time.time()
-        
-        if LLMZeroShotClassifier is None:
-            yield json.dumps({"error": "Zero-shot classifier not properly loaded"})
-            return
-        
-        classifier = LLMZeroShotClassifier(
-            model=model_data["model"],
-            tokenizer=model_data["tokenizer"],
-            device="cpu"
-        )
+            is_cached = model_id in loaded_models
+            
+            if not is_cached:
+                yield json.dumps({"model_loading_start": True})
+            
+            model_data, load_time = load_model(model_id)
+            
+            if load_time is not None:
+                yield json.dumps({"model_loading_end": True, "load_time": load_time})
+            
+            start_time = time.time()
+            
+            if LLMZeroShotClassifier is None:
+                yield json.dumps({"error": "Zero-shot classifier not properly loaded"})
+                return
+            
+            classifier = LLMZeroShotClassifier(
+                model=model_data["model"],
+                tokenizer=model_data["tokenizer"],
+                device="cpu"
+            )
         
         result = classifier.classify(
             text=request.text,

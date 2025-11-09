@@ -407,36 +407,33 @@ def extract_gguf_logprobs(
         if "top_logprobs" in last_logprobs:
             top_logprobs_list = last_logprobs["top_logprobs"]
             
-            # For each candidate label, compute its total logprob
-            # by summing the logprobs of its constituent tokens
-            for label in candidate_labels:
-                label_tokens = label_token_sequences[label]
+            # With constrained generation, we only generate ONE label
+            # To get logprobs for ALL labels, we need to look at the FIRST position
+            # (right after the prompt) where all labels are still valid options
+            if len(top_logprobs_list) > 0:
+                # Get logprobs at first generation position where all labels diverge
+                first_position_logprobs = top_logprobs_list[0]
                 
-                # We need to find the logprobs for this label's tokens in top_logprobs
-                # The tokens were generated sequentially, so we look at the last N positions
-                if len(top_logprobs_list) >= len(label_tokens):
-                    # Get the top_logprobs for the positions where this label's tokens would be
-                    relevant_positions = top_logprobs_list[-len(label_tokens):]
-                    
-                    # Sum up the logprobs for this label's specific tokens
-                    label_logprob = 0.0
-                    found_all_tokens = True
-                    
-                    for i, token_id in enumerate(label_tokens):
-                        position_logprobs = relevant_positions[i]
+                # For labels, look up by string (llama-cpp returns strings, not token IDs)
+                for label in candidate_labels:
+                    # Try to find label in top_logprobs by string representation
+                    if label in first_position_logprobs:
+                        logprobs[label] = float(first_position_logprobs[label])
+                    else:
+                        # Try lowercase/capitalized variants
+                        found = False
+                        for variant in [label.lower(), label.capitalize(), label.upper()]:
+                            if variant in first_position_logprobs:
+                                logprobs[label] = float(first_position_logprobs[variant])
+                                found = True
+                                break
                         
-                        # Look for this token_id in the top_logprobs
-                        if token_id in position_logprobs:
-                            label_logprob += position_logprobs[token_id]
-                        else:
-                            # Token not in top_logprobs (very low probability)
-                            # Assign a large negative logprob as penalty
-                            label_logprob += -20.0  # e^(-20) ≈ 2e-9 probability
-                            found_all_tokens = False
-                    
-                    logprobs[label] = float(label_logprob)
-                else:
-                    # Not enough positions in logprobs
+                        if not found:
+                            # Label not in top-k, assign low probability
+                            logprobs[label] = -20.0
+            else:
+                # No logprobs available
+                for label in candidate_labels:
                     logprobs[label] = None
         
         elif "tokens" in last_logprobs and "token_logprobs" in last_logprobs:
@@ -742,7 +739,12 @@ class LLMZeroShotClassifier:
         # Use simplified label-only prompt (avoids hallucinated scores)
         prompt = build_label_only_prompt(text, candidate_labels)
         
-        # Use chat template if available (for instruction-tuned models like SmolLM2)
+        # Detect backend type first (GGUF vs transformers)
+        from inference import bitnet_inference
+        is_gguf_backend = isinstance(self.model, bitnet_inference.BitNetInference)
+        
+        # Build formatted prompt once and reuse for both backends
+        # This ensures prompt_length matches actual prompt sent to model
         if hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
             messages = [
                 {"role": "user", "content": prompt}
@@ -755,22 +757,23 @@ class LLMZeroShotClassifier:
         else:
             formatted_prompt = prompt
         
-        inputs = self.tokenizer(
-            formatted_prompt,
-            return_tensors="pt",
-            truncation=True,
-            max_length=2048
-        ).to(self.device)
-        
-        # Detect backend type (GGUF vs transformers)
-        from inference import bitnet_inference
-        is_gguf_backend = isinstance(self.model, bitnet_inference.BitNetInference)
+        # Tokenize only for transformers backend
+        if not is_gguf_backend:
+            inputs = self.tokenizer(
+                formatted_prompt,
+                return_tensors="pt",
+                truncation=True,
+                max_length=2048
+            ).to(self.device)
+        else:
+            inputs = None
         
         if is_gguf_backend:
             # GGUF backend path (llama-cpp-python) - 2-3x faster
             print(f"[DEBUG] Using GGUF backend for zero-shot classification")
             
             # Create NumPy-compatible constrained processor
+            # Use same formatted_prompt for both token counting and generation
             constrained_processor = LabelConstrainedLogitsProcessorNumPy(
                 tokenizer=self.tokenizer,
                 candidate_labels=candidate_labels,
@@ -778,13 +781,11 @@ class LLMZeroShotClassifier:
                 prompt_length=len(self.tokenizer.encode(formatted_prompt))
             )
             
-            # Convert to messages format for GGUF
-            messages = [{"role": "user", "content": prompt}]
-            
-            # Generate using GGUF backend with constrained generation
+            # Generate using GGUF backend with pre-formatted prompt
+            # This ensures prompt_length matches actual prompt sent to model
             response_text = ""
             for chunk in self.model.generate(
-                messages=messages,
+                prompt=formatted_prompt,  # Use pre-formatted prompt, not messages
                 max_tokens=50,
                 temperature=temperature,
                 stream=False,

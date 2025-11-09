@@ -50,6 +50,7 @@ class BitNetInference:
             n_threads=self.n_threads,
             n_gpu_layers=0,  # CPU only
             verbose=False,
+            logits_all=True,  # Enable logprobs extraction for zero-shot classification
         )
 
     def format_chat_prompt(self, messages: List[Dict[str, str]]) -> str:
@@ -77,7 +78,8 @@ class BitNetInference:
 
     def generate(
         self,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, str]] = None,
+        prompt: str = None,
         max_tokens: int = 256,
         temperature: float = 0.7,
         top_p: float = 0.9,
@@ -87,10 +89,11 @@ class BitNetInference:
         logprobs: Optional[int] = None,
     ) -> Iterator[str]:
         """
-        Generate response from messages.
+        Generate response from messages or pre-formatted prompt.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys
+            messages: List of message dicts with 'role' and 'content' keys (used if prompt not provided)
+            prompt: Pre-formatted prompt string (bypasses chat template formatting)
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature (0.0 = deterministic)
             top_p: Nucleus sampling threshold
@@ -102,7 +105,11 @@ class BitNetInference:
         Yields:
             Generated text tokens (if stream=True) or full response (if stream=False)
         """
-        prompt = self.format_chat_prompt(messages)
+        # Use pre-formatted prompt if provided, otherwise format from messages
+        if prompt is None:
+            if messages is None:
+                raise ValueError("Either 'messages' or 'prompt' must be provided")
+            prompt = self.format_chat_prompt(messages)
 
         # Prepare generation parameters
         gen_params = {
