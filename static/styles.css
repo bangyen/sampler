@@ -421,6 +421,59 @@ body {
     padding: 0;
 }
 
+.sidebar-settings-accordion {
+    margin-bottom: var(--space-lg);
+}
+
+.sidebar-settings-accordion summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.sidebar-settings-accordion summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-settings-accordion summary h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    transition: color var(--transition-fast);
+}
+
+.sidebar-settings-accordion summary::after {
+    content: '▼';
+    font-size: var(--font-size-sm);
+    transition: transform var(--transition-fast);
+    display: inline-block;
+    margin-left: auto;
+}
+
+.sidebar-settings-accordion[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.sidebar-settings-accordion summary:hover h3 {
+    color: var(--color-primary);
+}
+
+.sidebar-settings-content {
+    padding-top: var(--space-lg);
+}
+
+.sidebar-settings-content .setting-group {
+    margin-bottom: var(--space-xl);
+}
+
+.sidebar-settings-content .setting-group:last-child {
+    margin-bottom: 0;
+}
+
 .conversation-list {
     flex: 1;
     margin-top: var(--space-md);
@@ -685,19 +738,7 @@ body {
    ======================================== */
 
 .settings-panel {
-    flex: 0 0 var(--settings-panel-width);
-    max-width: var(--settings-panel-width);
-    min-width: 0;
-    padding: var(--space-xl);
-    background: var(--color-bg-white);
-    border-left: var(--border-width-thin) solid var(--color-border);
-    overflow-y: auto;
-}
-
-.settings-panel h2 {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--space-xl);
+    display: none;
 }
 
 .setting-group {
@@ -1069,10 +1110,8 @@ body {
 }
 
 #chat-tab.active {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--settings-panel-width);
-    overflow: hidden;
-    gap: 0;
+    display: block;
+    overflow: visible;
 }
 
 /* ========================================
