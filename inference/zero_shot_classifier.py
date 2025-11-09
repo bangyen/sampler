@@ -3,14 +3,15 @@ from typing import List, Dict, Any, Optional, Union, Set
 from pydantic import BaseModel, Field
 import torch
 import torch.nn.functional as F
+import numpy as np
 from transformers.generation.stopping_criteria import StoppingCriteria
 from transformers.generation.logits_process import LogitsProcessor
 
 
-class LabelConstrainedLogitsProcessor(LogitsProcessor):
+class LabelConstrainedLogitsProcessorBase:
     """
-    Constrain generation to only produce valid candidate labels using prefix trie.
-    Ensures model can only generate complete, valid labels - no mixing or truncation.
+    Base class for label-constrained generation shared by PyTorch and NumPy backends.
+    Contains core prefix-trie logic for validating token sequences.
     """
     
     def __init__(self, tokenizer, candidate_labels: List[str], eos_token_id: int, prompt_length: int):
@@ -68,6 +69,30 @@ class LabelConstrainedLogitsProcessor(LogitsProcessor):
         
         return valid_tokens
     
+    def _debug_log(self, generated_ids: List[int]):
+        """Shared debug logging for both backends"""
+        if len(generated_ids) == 0:
+            print(f"[DEBUG] First token: {len(self.get_valid_next_tokens(generated_ids))} valid options")
+        else:
+            decoded = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+            
+            # Count matching labels
+            matching_count = 0
+            for label, token_seq in self.label_token_sequences.items():
+                if len(generated_ids) < len(token_seq):
+                    if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
+                        matching_count += 1
+            
+            if matching_count == 1:
+                print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → UNIQUE MATCH, forcing next token")
+            else:
+                valid_count = len(self.get_valid_next_tokens(generated_ids))
+                print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → {matching_count} possible labels, {valid_count} valid next tokens")
+
+
+class LabelConstrainedLogitsProcessor(LabelConstrainedLogitsProcessorBase, LogitsProcessor):
+    """PyTorch implementation for transformers backend"""
+    
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
         """
         Mask out logits for tokens that don't form valid label prefixes.
@@ -90,25 +115,48 @@ class LabelConstrainedLogitsProcessor(LogitsProcessor):
         valid_token_list = sorted(list(valid_next_tokens))
         mask[:, valid_token_list] = 0
         
-        # Debug output
-        if len(generated_ids) == 0:
-            print(f"[DEBUG] First token: {len(valid_next_tokens)} valid options")
-        else:
-            decoded = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-            
-            # Get matching labels for debug output
-            matching_count = 0
-            for label, token_seq in self.label_token_sequences.items():
-                if len(generated_ids) < len(token_seq):
-                    if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
-                        matching_count += 1
-            
-            if matching_count == 1:
-                print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → UNIQUE MATCH, forcing next token")
-            else:
-                print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → {matching_count} possible labels, {len(valid_next_tokens)} valid next tokens")
+        # Debug logging
+        self._debug_log(generated_ids)
         
         # Apply mask
+        return scores + mask
+
+
+class LabelConstrainedLogitsProcessorNumPy(LabelConstrainedLogitsProcessorBase):
+    """NumPy implementation for llama-cpp-python backend"""
+    
+    def __call__(self, input_ids: np.ndarray, scores: np.ndarray) -> np.ndarray:
+        """
+        Mask out logits for tokens that don't form valid label prefixes.
+        NumPy version for llama-cpp-python compatibility.
+        """
+        # Extract generated tokens (skip prompt)
+        # input_ids shape: (n_tokens,) for llama-cpp
+        if input_ids.ndim == 1:
+            generated_ids = input_ids[self.prompt_length:].tolist()
+        else:
+            # Handle batch dimension if present
+            generated_ids = input_ids[0, self.prompt_length:].tolist()
+        
+        # Get valid next tokens based on current prefix
+        valid_next_tokens = self.get_valid_next_tokens(generated_ids)
+        
+        if not valid_next_tokens:
+            # Safety: if no valid continuations, allow EOS to terminate
+            valid_next_tokens = {self.eos_token_id}
+        
+        # Create mask: -inf for invalid tokens, 0 for valid tokens
+        # Ensure dtype matches scores (typically float32)
+        mask = np.full_like(scores, float('-inf'), dtype=np.float32)
+        
+        # Allow only valid next tokens
+        valid_token_list = sorted(list(valid_next_tokens))
+        mask[valid_token_list] = 0
+        
+        # Debug logging
+        self._debug_log(generated_ids)
+        
+        # Apply mask (return new array to avoid modifying llama-cpp buffers)
         return scores + mask
 
 
@@ -311,6 +359,115 @@ def extract_logprobs_from_sequences(
                 
     except Exception as e:
         print(f"Warning: Could not extract sequence logprobs: {e}")
+        import traceback
+        traceback.print_exc()
+        for label in candidate_labels:
+            logprobs[label] = None
+    
+    return logprobs
+
+
+def extract_gguf_logprobs(
+    last_logprobs: Optional[Dict],
+    tokenizer,
+    candidate_labels: List[str],
+    generated_text: str
+) -> Dict[str, float]:
+    """
+    Extract logprobs from llama-cpp generation output using top_logprobs.
+    Computes accurate probabilities for ALL candidate labels by looking up their
+    token probabilities in the top_logprobs returned during generation.
+    
+    Args:
+        last_logprobs: Logprobs dict from llama-cpp output (choices[0].logprobs)
+        tokenizer: Tokenizer to encode candidate labels
+        candidate_labels: List of possible labels
+        generated_text: The generated label text
+    
+    Returns:
+        Dict mapping each label to its total logprob (sum of token logprobs)
+    """
+    logprobs = {}
+    
+    if not last_logprobs:
+        print("[WARNING] No logprobs available from GGUF generation")
+        for label in candidate_labels:
+            logprobs[label] = None
+        return logprobs
+    
+    try:
+        # Build token sequences for each candidate label
+        label_token_sequences = {}
+        for label in candidate_labels:
+            token_ids = tokenizer.encode(label, add_special_tokens=False)
+            label_token_sequences[label] = token_ids
+        
+        # llama-cpp format: {"tokens": [...], "token_logprobs": [...], "top_logprobs": [...]}
+        # top_logprobs[i] = {token_id: logprob, ...} for each position
+        if "top_logprobs" in last_logprobs:
+            top_logprobs_list = last_logprobs["top_logprobs"]
+            
+            # For each candidate label, compute its total logprob
+            # by summing the logprobs of its constituent tokens
+            for label in candidate_labels:
+                label_tokens = label_token_sequences[label]
+                
+                # We need to find the logprobs for this label's tokens in top_logprobs
+                # The tokens were generated sequentially, so we look at the last N positions
+                if len(top_logprobs_list) >= len(label_tokens):
+                    # Get the top_logprobs for the positions where this label's tokens would be
+                    relevant_positions = top_logprobs_list[-len(label_tokens):]
+                    
+                    # Sum up the logprobs for this label's specific tokens
+                    label_logprob = 0.0
+                    found_all_tokens = True
+                    
+                    for i, token_id in enumerate(label_tokens):
+                        position_logprobs = relevant_positions[i]
+                        
+                        # Look for this token_id in the top_logprobs
+                        if token_id in position_logprobs:
+                            label_logprob += position_logprobs[token_id]
+                        else:
+                            # Token not in top_logprobs (very low probability)
+                            # Assign a large negative logprob as penalty
+                            label_logprob += -20.0  # e^(-20) ≈ 2e-9 probability
+                            found_all_tokens = False
+                    
+                    logprobs[label] = float(label_logprob)
+                else:
+                    # Not enough positions in logprobs
+                    logprobs[label] = None
+        
+        elif "tokens" in last_logprobs and "token_logprobs" in last_logprobs:
+            # Fallback: Only have token_logprobs for generated sequence
+            # Can only accurately score the generated label
+            gen_logprobs_list = last_logprobs["token_logprobs"]
+            generated_token_ids = tokenizer.encode(generated_text.strip(), add_special_tokens=False)
+            
+            print("[WARNING] top_logprobs not available, only generated label will have accurate score")
+            
+            for label in candidate_labels:
+                label_tokens = label_token_sequences[label]
+                
+                if generated_token_ids == label_tokens:
+                    # This is the generated label - sum its logprobs
+                    if len(gen_logprobs_list) >= len(label_tokens):
+                        relevant_logprobs = gen_logprobs_list[-len(label_tokens):]
+                        total_logprob = sum(lp for lp in relevant_logprobs if lp is not None)
+                        logprobs[label] = float(total_logprob)
+                    else:
+                        logprobs[label] = None
+                else:
+                    # Fallback to None for ungenerated labels (can't compute without top_logprobs)
+                    logprobs[label] = None
+        else:
+            print(f"[WARNING] Unexpected logprobs format from GGUF: {last_logprobs.keys()}")
+            for label in candidate_labels:
+                logprobs[label] = None
+                
+    except Exception as e:
+        print(f"[WARNING] Could not extract GGUF logprobs: {e}")
         import traceback
         traceback.print_exc()
         for label in candidate_labels:
@@ -605,48 +762,95 @@ class LLMZeroShotClassifier:
             max_length=2048
         ).to(self.device)
         
-        # Create constrained logits processor to guarantee valid label output
-        constrained_processor = LabelConstrainedLogitsProcessor(
-            tokenizer=self.tokenizer,
-            candidate_labels=candidate_labels,
-            eos_token_id=self.tokenizer.eos_token_id,
-            prompt_length=inputs['input_ids'].shape[1]
-        )
+        # Detect backend type (GGUF vs transformers)
+        from inference import bitnet_inference
+        is_gguf_backend = isinstance(self.model, bitnet_inference.BitNetInference)
         
-        # Generate just the label (short output, ~1-10 tokens)
-        # Constrained generation guarantees output is a valid candidate label
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=50,  # Reduced - we only need label name
-                temperature=temperature,
-                do_sample=temperature > 0,
-                pad_token_id=self.tokenizer.eos_token_id,
-                return_dict_in_generate=True,
-                logits_processor=[constrained_processor]  # Enforce valid labels only
+        if is_gguf_backend:
+            # GGUF backend path (llama-cpp-python) - 2-3x faster
+            print(f"[DEBUG] Using GGUF backend for zero-shot classification")
+            
+            # Create NumPy-compatible constrained processor
+            constrained_processor = LabelConstrainedLogitsProcessorNumPy(
+                tokenizer=self.tokenizer,
+                candidate_labels=candidate_labels,
+                eos_token_id=self.tokenizer.eos_token_id,
+                prompt_length=len(self.tokenizer.encode(formatted_prompt))
             )
-        
-        response_text = self.tokenizer.decode(
-            outputs.sequences[0][inputs['input_ids'].shape[1]:],
-            skip_special_tokens=True
-        ).strip()
+            
+            # Convert to messages format for GGUF
+            messages = [{"role": "user", "content": prompt}]
+            
+            # Generate using GGUF backend with constrained generation
+            response_text = ""
+            for chunk in self.model.generate(
+                messages=messages,
+                max_tokens=50,
+                temperature=temperature,
+                stream=False,
+                logits_processor=constrained_processor,
+                logprobs=10 if use_logprobs else None  # Request logprobs if needed
+            ):
+                response_text = chunk
+            
+            response_text = response_text.strip()
+            
+        else:
+            # Transformers backend path (fallback)
+            print(f"[DEBUG] Using transformers backend for zero-shot classification")
+            
+            # Create PyTorch constrained processor
+            constrained_processor = LabelConstrainedLogitsProcessor(
+                tokenizer=self.tokenizer,
+                candidate_labels=candidate_labels,
+                eos_token_id=self.tokenizer.eos_token_id,
+                prompt_length=inputs['input_ids'].shape[1]
+            )
+            
+            # Generate just the label (short output, ~1-10 tokens)
+            # Constrained generation guarantees output is a valid candidate label
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=50,  # Reduced - we only need label name
+                    temperature=temperature,
+                    do_sample=temperature > 0,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                    return_dict_in_generate=True,
+                    logits_processor=[constrained_processor]  # Enforce valid labels only
+                )
+            
+            response_text = self.tokenizer.decode(
+                outputs.sequences[0][inputs['input_ids'].shape[1]:],
+                skip_special_tokens=True
+            ).strip()
         
         print(f"[DEBUG] Model predicted label: {response_text}")
         
-        # Conditionally compute logprobs based on user preference
+        # Conditionally compute logprobs based on user preference and backend
         logprobs = None
         if use_logprobs:
-            # Compute real confidence scores from model internal probabilities
-            # This is the ground truth - not hallucinated by the model
-            logprobs = extract_logprobs_from_sequences(
-                self.model,
-                self.tokenizer,
-                text,
-                candidate_labels,
-                hypothesis_template,
-                self.device
-            )
-            print(f"[DEBUG] Logprobs computed: {logprobs}")
+            if is_gguf_backend:
+                # GGUF backend: Extract logprobs from generation output (faster)
+                last_logprobs = self.model.get_last_logprobs()
+                logprobs = extract_gguf_logprobs(
+                    last_logprobs=last_logprobs,
+                    tokenizer=self.tokenizer,
+                    candidate_labels=candidate_labels,
+                    generated_text=response_text
+                )
+                print(f"[DEBUG] GGUF logprobs extracted: {logprobs}")
+            else:
+                # Transformers backend: Compute via separate forward passes (more accurate)
+                logprobs = extract_logprobs_from_sequences(
+                    self.model,
+                    self.tokenizer,
+                    text,
+                    candidate_labels,
+                    hypothesis_template,
+                    self.device
+                )
+                print(f"[DEBUG] Transformers logprobs computed: {logprobs}")
         else:
             # Skip expensive logprob computation - use uniform scores
             print(f"[DEBUG] Logprobs disabled - using uniform scores for speed")

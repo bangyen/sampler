@@ -83,6 +83,8 @@ class BitNetInference:
         top_p: float = 0.9,
         top_k: int = 50,
         stream: bool = False,
+        logits_processor: Optional[any] = None,
+        logprobs: Optional[int] = None,
     ) -> Iterator[str]:
         """
         Generate response from messages.
@@ -94,21 +96,45 @@ class BitNetInference:
             top_p: Nucleus sampling threshold
             top_k: Top-k sampling parameter
             stream: Whether to stream tokens
+            logits_processor: Optional logits processor (or list) for constrained generation
+            logprobs: Number of logprobs to return per token (for confidence scoring)
 
         Yields:
             Generated text tokens (if stream=True) or full response (if stream=False)
         """
         prompt = self.format_chat_prompt(messages)
 
-        output = self.model(
-            prompt,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            echo=False,
-            stream=stream,
-        )
+        # Prepare generation parameters
+        gen_params = {
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "echo": False,
+            "stream": stream,
+        }
+        
+        # Add logits processor if provided
+        if logits_processor is not None:
+            try:
+                from llama_cpp import LogitsProcessorList
+                # Wrap single processor in list
+                if not isinstance(logits_processor, LogitsProcessorList):
+                    if callable(logits_processor):
+                        gen_params["logits_processor"] = LogitsProcessorList([logits_processor])
+                    else:
+                        gen_params["logits_processor"] = logits_processor
+                else:
+                    gen_params["logits_processor"] = logits_processor
+            except ImportError:
+                print("[WARNING] LogitsProcessorList not available, ignoring logits_processor")
+        
+        # Add logprobs if requested
+        if logprobs is not None:
+            gen_params["logprobs"] = logprobs
+
+        output = self.model(**gen_params)
 
         if stream:
             # Stream tokens one by one
@@ -118,10 +144,25 @@ class BitNetInference:
                     if delta:
                         yield delta
         else:
-            # Return complete response
+            # Return complete response (including logprobs if requested)
             if "choices" in output and len(output["choices"]) > 0:
                 yield output["choices"][0]["text"]
+                
+                # Store logprobs for later retrieval if requested
+                if logprobs is not None and "logprobs" in output["choices"][0]:
+                    self._last_logprobs = output["choices"][0]["logprobs"]
+                else:
+                    self._last_logprobs = None
 
+    def get_last_logprobs(self) -> Optional[Dict]:
+        """
+        Get logprobs from the last non-streaming generation.
+        
+        Returns:
+            Dictionary with logprobs data, or None if not available
+        """
+        return getattr(self, '_last_logprobs', None)
+    
     def get_model_info(self) -> Dict[str, any]:
         """
         Get information about the loaded model.
