@@ -35,24 +35,36 @@ class LabelConstrainedLogitsProcessor(LogitsProcessor):
         """
         Given current generated token sequence, return set of valid next tokens.
         Uses prefix matching against candidate label sequences.
+        
+        Optimization: If prefix uniquely identifies one label, force that label's next token.
         """
         valid_tokens = set()
+        matching_labels = []
         
-        # For each candidate label, check if it's a valid continuation
+        # Find all labels that match the current prefix
         for label, token_seq in self.label_token_sequences.items():
             # Check if generated sequence is a prefix of this label
             if len(generated_ids) < len(token_seq):
                 # Check if generated tokens match label prefix
                 if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
-                    # Next token from this label is valid
-                    next_token = token_seq[len(generated_ids)]
-                    valid_tokens.add(next_token)
+                    matching_labels.append((label, token_seq))
             
             # Check if we've completed this exact label
-            if len(generated_ids) == len(token_seq):
+            elif len(generated_ids) == len(token_seq):
                 if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
                     # Exact match - allow EOS to end generation
                     valid_tokens.add(self.eos_token_id)
+        
+        # Optimization: if only one label matches, force its next token (early termination)
+        if len(matching_labels) == 1:
+            label, token_seq = matching_labels[0]
+            next_token = token_seq[len(generated_ids)]
+            valid_tokens.add(next_token)
+        elif len(matching_labels) > 1:
+            # Multiple labels possible, allow all valid next tokens
+            for label, token_seq in matching_labels:
+                next_token = token_seq[len(generated_ids)]
+                valid_tokens.add(next_token)
         
         return valid_tokens
     
@@ -83,7 +95,18 @@ class LabelConstrainedLogitsProcessor(LogitsProcessor):
             print(f"[DEBUG] First token: {len(valid_next_tokens)} valid options")
         else:
             decoded = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-            print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → {len(valid_next_tokens)} valid next tokens")
+            
+            # Get matching labels for debug output
+            matching_count = 0
+            for label, token_seq in self.label_token_sequences.items():
+                if len(generated_ids) < len(token_seq):
+                    if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
+                        matching_count += 1
+            
+            if matching_count == 1:
+                print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → UNIQUE MATCH, forcing next token")
+            else:
+                print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → {matching_count} possible labels, {len(valid_next_tokens)} valid next tokens")
         
         # Apply mask
         return scores + mask
