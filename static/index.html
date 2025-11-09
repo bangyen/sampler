@@ -32,11 +32,11 @@
                 </div>
 
                 <div class="sidebar-section">
-                    <details class="sidebar-settings-accordion">
+                    <details class="settings-accordion">
                         <summary>
                             <h3>Classification Settings</h3>
                         </summary>
-                        <div class="sidebar-settings-content">
+                        <div class="settings-content">
                             <div class="setting-group">
                                 <label for="abstain-threshold-slider">
                                     Abstain Threshold: <span id="abstain-threshold-value">0.5</span>
@@ -66,7 +66,7 @@
 
                 <div class="sidebar-section">
                     <h3>Recent Classifications</h3>
-                    <button id="clear-all-classifications-btn" class="btn btn-secondary">Clear All History</button>
+                    <button id="clear-all-classifications-btn" class="btn btn-secondary mb-md">Clear All History</button>
                     <div id="classification-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
@@ -98,16 +98,16 @@
                         <h3>NER Settings</h3>
                     </summary>
                     <div class="settings-content">
-                        <div class="setting-item">
+                        <div class="setting-group">
                             <label for="ner-confidence-threshold">
                                 Confidence Threshold
                                 <span class="setting-value" id="ner-confidence-value">0.50</span>
                             </label>
                             <input type="range" id="ner-confidence-threshold" min="0" max="1" step="0.05" value="0.50">
-                            <p class="setting-description">Filter entities below this confidence score</p>
+                            <small>Filter entities below this confidence score</small>
                         </div>
                         
-                        <div class="setting-item">
+                        <div class="setting-group">
                             <label>Entity Types</label>
                             <div class="entity-type-filters">
                                 <label class="checkbox-label">
@@ -127,7 +127,7 @@
                                     <span>Miscellaneous</span>
                                 </label>
                             </div>
-                            <p class="setting-description">Select which entity types to display</p>
+                            <small>Select which entity types to display</small>
                         </div>
                     </div>
                 </details>
@@ -173,22 +173,22 @@
                         <h3>OCR Settings</h3>
                     </summary>
                     <div class="settings-content">
-                        <div class="setting-item">
+                        <div class="setting-group">
                             <label for="ocr-confidence-threshold">
                                 Confidence Threshold
                                 <span class="setting-value" id="ocr-confidence-value">0.50</span>
                             </label>
                             <input type="range" id="ocr-confidence-threshold" min="0" max="1" step="0.05" value="0.50">
-                            <p class="setting-description">Filter text detections below this confidence score</p>
+                            <small>Filter text detections below this confidence score</small>
                         </div>
                         
-                        <div class="setting-item">
+                        <div class="setting-group">
                             <label for="ocr-min-text-size">
                                 Min Text Size (pixels)
                                 <span class="setting-value" id="ocr-min-text-size-value">10</span>
                             </label>
                             <input type="range" id="ocr-min-text-size" min="5" max="50" step="5" value="10">
-                            <p class="setting-description">Filter out text smaller than this height</p>
+                            <small>Filter out text smaller than this height</small>
                         </div>
                     </div>
                 </details>
