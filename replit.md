@@ -24,19 +24,30 @@ The backend is built with FastAPI, providing REST APIs and Server-Sent Events (S
 - **Build Automation:** `build.sh` script automates BitNet.cpp binary compilation for easy deployment.
 - **Named Entity Recognition (NER):** Extracts Person, Organization, Location, and Miscellaneous entities from text using `dslim/bert-base-NER`.
 - **Optical Character Recognition (OCR):** Extracts text from uploaded images using EasyOCR, providing bounding boxes and confidence scores.
-- **Conversation Persistence:** Conversations are saved and loaded, primarily using JSON file storage as a robust fallback to a PostgreSQL database.
+- **Database Persistence:** All application data (conversations, NER analyses, OCR results, zero-shot classifications, layout analyses) is persisted in PostgreSQL database with proper schema design and transactional safety.
 - **Tabbed Interface:** Separates LLM Chat, NER, and OCR functionalities into distinct tabs.
 - **Performance Optimization:** Automatically downloads and caches GGUF models for accelerated inference when using llama.cpp backend.
 
 ### System Design Choices
 The project uses a clear separation of concerns with modular organization:
 - **`server.py`**: Main FastAPI application entry point
-- **`storage/`**: Persistence layer modules (database, JSON, NER, OCR, layout storage)
+- **`storage/`**: Persistence layer modules using PostgreSQL database exclusively
+  - `database.py`: SQLAlchemy models and core database functions
+  - `ner_storage.py`, `ocr_storage.py`, `zero_shot_storage.py`, `layout_storage.py`: Domain-specific storage with consistent API
 - **`inference/`**: LLM inference backends (bitnet_inference, bitnet_cpp_bridge)
 - **`static/`**: Frontend assets (HTML, CSS, JavaScript)
 - **`tests/`**: Pytest test suite with comprehensive coverage
 
-The system is designed for robustness, including graceful error handling, automatic fallback mechanisms (e.g., database to JSON storage), and optional dependency loading for features like NER/OCR.
+**Database Architecture:**
+- PostgreSQL database required (no fallback to JSON)
+- Five tables: conversations, messages, ner_analyses, ocr_analyses, zero_shot_analyses, layout_analyses
+- All tables use auto-increment primary keys and unique indexed analysis_id columns
+- Hash-based IDs (MD5) for NER/OCR/Layout ensure idempotent saves
+- Timestamp-based IDs for zero-shot classifications prevent collisions
+- Transactional safety with rollback on errors
+- JSON columns for complex data (entities, results, candidate_labels)
+
+The system is designed for robustness, including graceful error handling, proper transaction management with rollback support, and optional dependency loading for features like NER/OCR.
 
 ### Testing Infrastructure
 The project includes a comprehensive pytest testing suite that validates backend modules and API endpoints. Tests are organized in the `tests/` directory with the following coverage:
@@ -64,6 +75,6 @@ The test suite uses fixtures for consistent test data and mocking for external d
 - **accelerate:** Required by BitNet models for efficient computation.
 - **EasyOCR:** Used for Optical Character Recognition.
 - **Pillow:** Image processing library, a dependency for EasyOCR.
-- **SQLAlchemy:** ORM for database interactions (intended for PostgreSQL, currently uses JSON fallback).
-- **psycopg2-binary:** PostgreSQL adapter (declared, but JSON fallback is active).
+- **SQLAlchemy:** ORM for database interactions with PostgreSQL.
+- **psycopg2-binary:** PostgreSQL adapter for database connectivity.
 - **dslim/bert-base-NER:** Hugging Face model used for Named Entity Recognition.
