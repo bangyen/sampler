@@ -52,6 +52,7 @@ from storage.database import (
 )
 from sqlalchemy import text
 
+
 # Test database connection on startup
 def test_database_connection():
     try:
@@ -65,8 +66,11 @@ def test_database_connection():
         print(f"Database connection test failed: {e}")
         return False
 
+
 if not test_database_connection():
-    raise RuntimeError("PostgreSQL database is not available. Please ensure DATABASE_URL is set correctly.")
+    raise RuntimeError(
+        "PostgreSQL database is not available. Please ensure DATABASE_URL is set correctly."
+    )
 
 DATABASE_AVAILABLE = True
 PERSISTENCE_TYPE = "PostgreSQL"
@@ -111,6 +115,7 @@ try:
         ZeroShotResult,
         build_zero_shot_prompt,
     )
+
     ZERO_SHOT_AVAILABLE = True
 except ImportError:
     ZERO_SHOT_AVAILABLE = False
@@ -171,7 +176,7 @@ if LLAMA_CPP_AVAILABLE:
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "gguf_file": "smollm2-1.7b-instruct-q4_k_m.gguf",
     }
-    
+
     # Qwen 2.5 7B - Testing for improved accuracy
     AVAILABLE_MODELS["Qwen 2.5 7B"] = {
         "id": "bartowski/Qwen2.5-7B-Instruct-GGUF",
@@ -528,7 +533,7 @@ def load_ocr_model(config_name="English Only"):
         except Exception as e:
             raise HTTPException(
                 status_code=503,
-                detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}"
+                detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}",
             )
 
     elif engine == "tesseract":
@@ -797,7 +802,7 @@ async def check_zero_shot_available():
     """Check if zero-shot classification is available"""
     return {
         "available": ZERO_SHOT_AVAILABLE,
-        "models": list(AVAILABLE_MODELS.keys()) if ZERO_SHOT_AVAILABLE else []
+        "models": list(AVAILABLE_MODELS.keys()) if ZERO_SHOT_AVAILABLE else [],
     }
 
 
@@ -807,24 +812,24 @@ async def get_models_status():
     status = {}
     for model_name, model_config in AVAILABLE_MODELS.items():
         backend = model_config.get("backend", "transformers")
-        
+
         if backend == "llamacpp":
             status[model_name] = {
                 "loaded": model_name in loaded_llama_models,
-                "backend": backend
+                "backend": backend,
             }
         elif backend == "bitnet_cpp":
             status[model_name] = {
                 "loaded": model_name in loaded_bitnet_models,
-                "backend": backend
+                "backend": backend,
             }
         else:
             model_id = model_config["id"]
             status[model_name] = {
                 "loaded": model_id in loaded_models,
-                "backend": backend
+                "backend": backend,
             }
-    
+
     return {"status": status}
 
 
@@ -838,46 +843,46 @@ async def load_model_endpoint(request: LoadModelRequest):
     try:
         if request.model_name not in AVAILABLE_MODELS:
             raise HTTPException(status_code=400, detail="Invalid model name")
-        
+
         model_config = AVAILABLE_MODELS[request.model_name]
         backend = model_config.get("backend", "transformers")
-        
+
         if backend == "llamacpp":
             if request.model_name in loaded_llama_models:
                 return {
                     "success": True,
                     "already_loaded": True,
                     "model_name": request.model_name,
-                    "backend": backend
+                    "backend": backend,
                 }
-            
+
             inference, load_time = load_llama_model(request.model_name)
             return {
                 "success": True,
                 "already_loaded": False,
                 "model_name": request.model_name,
                 "backend": backend,
-                "load_time": load_time
+                "load_time": load_time,
             }
-        
+
         elif backend == "bitnet_cpp":
             if request.model_name in loaded_bitnet_models:
                 return {
                     "success": True,
                     "already_loaded": True,
                     "model_name": request.model_name,
-                    "backend": backend
+                    "backend": backend,
                 }
-            
+
             bridge, load_time = load_bitnet_cpp_model(request.model_name)
             return {
                 "success": True,
                 "already_loaded": False,
                 "model_name": request.model_name,
                 "backend": backend,
-                "load_time": load_time
+                "load_time": load_time,
             }
-        
+
         else:
             model_id = model_config["id"]
             if model_id in loaded_models:
@@ -885,18 +890,18 @@ async def load_model_endpoint(request: LoadModelRequest):
                     "success": True,
                     "already_loaded": True,
                     "model_name": request.model_name,
-                    "backend": backend
+                    "backend": backend,
                 }
-            
+
             model_data, load_time = load_model(model_id)
             return {
                 "success": True,
                 "already_loaded": False,
                 "model_name": request.model_name,
                 "backend": backend,
-                "load_time": load_time
+                "load_time": load_time,
             }
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -909,10 +914,8 @@ async def get_ner_models_status():
     status = {}
     for model_name, model_config in NER_MODELS.items():
         model_id = model_config["id"]
-        status[model_name] = {
-            "loaded": model_id in ner_pipelines
-        }
-    
+        status[model_name] = {"loaded": model_id in ner_pipelines}
+
     return {"status": status}
 
 
@@ -926,29 +929,31 @@ async def load_ner_model_endpoint(request: LoadNERModelRequest):
     try:
         if request.model_name not in NER_MODELS:
             raise HTTPException(status_code=400, detail="Invalid NER model name")
-        
+
         model_id = NER_MODELS[request.model_name]["id"]
-        
+
         if model_id in ner_pipelines:
             return {
                 "success": True,
                 "already_loaded": True,
-                "model_name": request.model_name
+                "model_name": request.model_name,
             }
-        
+
         ner_model, load_time = load_ner_model(request.model_name)
-        
+
         return {
             "success": True,
             "already_loaded": False,
             "model_name": request.model_name,
-            "load_time": load_time
+            "load_time": load_time,
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading NER model: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error loading NER model: {str(e)}"
+        )
 
 
 @app.get("/api/ocr/configs/status")
@@ -957,29 +962,23 @@ async def get_ocr_configs_status():
     status = {}
     for config_name, config in OCR_CONFIGS.items():
         engine = config["engine"]
-        
+
         if engine == "easyocr":
             cache_key = tuple(config["languages"])
-            status[config_name] = {
-                "loaded": cache_key in ocr_readers,
-                "engine": engine
-            }
+            status[config_name] = {"loaded": cache_key in ocr_readers, "engine": engine}
         elif engine == "paddleocr":
             status[config_name] = {
                 "loaded": "paddleocr" in ocr_readers,
-                "engine": engine
+                "engine": engine,
             }
         elif engine == "tesseract":
             status[config_name] = {
                 "loaded": "tesseract" in ocr_readers,
-                "engine": engine
+                "engine": engine,
             }
         else:
-            status[config_name] = {
-                "loaded": False,
-                "engine": engine
-            }
-    
+            status[config_name] = {"loaded": False, "engine": engine}
+
     return {"status": status}
 
 
@@ -992,11 +991,13 @@ async def load_ocr_config_endpoint(request: LoadOCRConfigRequest):
     """Preemptively load an OCR configuration"""
     try:
         if request.config_name not in OCR_CONFIGS:
-            raise HTTPException(status_code=400, detail="Invalid OCR configuration name")
-        
+            raise HTTPException(
+                status_code=400, detail="Invalid OCR configuration name"
+            )
+
         config = OCR_CONFIGS[request.config_name]
         engine = config["engine"]
-        
+
         # Check if already loaded
         if engine == "easyocr":
             cache_key = tuple(config["languages"])
@@ -1007,29 +1008,31 @@ async def load_ocr_config_endpoint(request: LoadOCRConfigRequest):
             already_loaded = "tesseract" in ocr_readers
         else:
             already_loaded = False
-        
+
         if already_loaded:
             return {
                 "success": True,
                 "already_loaded": True,
                 "config_name": request.config_name,
-                "engine": engine
+                "engine": engine,
             }
-        
+
         ocr_model, load_time = load_ocr_model(request.config_name)
-        
+
         return {
             "success": True,
             "already_loaded": False,
             "config_name": request.config_name,
             "engine": engine,
-            "load_time": load_time
+            "load_time": load_time,
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading OCR config: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error loading OCR config: {str(e)}"
+        )
 
 
 async def stream_with_loading_wrapper_transformers(
@@ -1250,39 +1253,41 @@ async def extract_entities(request: NERRequest):
     return EventSourceResponse(stream_ner_extraction(request))
 
 
-async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGenerator[str, None]:
+async def stream_zero_shot_classification(
+    request: ZeroShotRequest,
+) -> AsyncGenerator[str, None]:
     """Stream zero-shot classification with schema-locked JSON outputs and logprob scoring"""
     try:
         if not ZERO_SHOT_AVAILABLE:
             yield json.dumps({"error": "Zero-shot classification not available"})
             return
-        
+
         if request.model not in AVAILABLE_MODELS:
             yield json.dumps({"error": f"Invalid model: {request.model}"})
             return
-        
+
         model_config = AVAILABLE_MODELS[request.model]
         backend = model_config.get("backend", "transformers")
-        
+
         # Route to appropriate backend for zero-shot classification
         if backend == "llamacpp":
             # Use GGUF model via llama.cpp backend (2-3x faster)
             is_cached = request.model in loaded_llama_models
-            
+
             if not is_cached:
                 yield json.dumps({"model_loading_start": True})
-            
+
             model_instance, load_time = load_llama_model(request.model)
-            
+
             if load_time is not None:
                 yield json.dumps({"model_loading_end": True, "load_time": load_time})
-            
+
             start_time = time.time()
-            
+
             if LLMZeroShotClassifier is None:
                 yield json.dumps({"error": "Zero-shot classifier not properly loaded"})
                 return
-            
+
             # Load tokenizer from base model (not GGUF repo) for encoding labels
             # Map GGUF models to their base tokenizer repos
             if "SmolLM2" in request.model:
@@ -1292,47 +1297,47 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
             else:
                 # Fallback to base model ID if available
                 tokenizer_repo = model_config.get("id", model_config.get("gguf_repo"))
-            
+
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_repo)
-            
+
             # Pass BitNetInference instance with tokenizer
             classifier = LLMZeroShotClassifier(
-                model=model_instance,
-                tokenizer=tokenizer,
-                device="cpu"
+                model=model_instance, tokenizer=tokenizer, device="cpu"
             )
-            
+
         elif backend == "bitnet_cpp":
             # BitNet.cpp doesn't support logits/logprobs extraction yet
-            yield json.dumps({
-                "error": "BitNet.cpp models are not supported for zero-shot classification yet. Please use SmolLM2 1.7B or Qwen 2.5 0.5B."
-            })
+            yield json.dumps(
+                {
+                    "error": "BitNet.cpp models are not supported for zero-shot classification yet. Please use SmolLM2 1.7B or Qwen 2.5 0.5B."
+                }
+            )
             return
         else:
             # Regular transformers backend
             model_id = model_config["id"]
             is_cached = model_id in loaded_models
-            
+
             if not is_cached:
                 yield json.dumps({"model_loading_start": True})
-            
+
             model_data, load_time = load_model(model_id)
-            
+
             if load_time is not None:
                 yield json.dumps({"model_loading_end": True, "load_time": load_time})
-            
+
             start_time = time.time()
-            
+
             if LLMZeroShotClassifier is None:
                 yield json.dumps({"error": "Zero-shot classifier not properly loaded"})
                 return
-            
+
             classifier = LLMZeroShotClassifier(
                 model=model_data["model"],
                 tokenizer=model_data["tokenizer"],
-                device="cpu"
+                device="cpu",
             )
-        
+
         result = classifier.classify(
             text=request.text,
             candidate_labels=request.candidate_labels,
@@ -1340,14 +1345,14 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
             use_logprobs=request.use_logprobs,
             abstain_threshold=request.abstain_threshold,
             max_tokens=100,
-            temperature=0.1
+            temperature=0.1,
         )
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
-        
+
         result_dict = result.model_dump()
-        
+
         zs_id = save_zero_shot_analysis(
             text=request.text,
             labels=request.candidate_labels,
@@ -1355,21 +1360,24 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
             model=request.model,
             processing_time=processing_time,
             use_logprobs=request.use_logprobs,
-            abstain_threshold=request.abstain_threshold
+            abstain_threshold=request.abstain_threshold,
         )
-        
-        yield json.dumps({
-            "done": True,
-            "result": result_dict,
-            "processing_time": processing_time,
-            "model": request.model,
-            "id": zs_id,
-        })
-        
+
+        yield json.dumps(
+            {
+                "done": True,
+                "result": result_dict,
+                "processing_time": processing_time,
+                "model": request.model,
+                "id": zs_id,
+            }
+        )
+
     except HTTPException as e:
         yield json.dumps({"error": str(e.detail)})
     except Exception as e:
         import traceback
+
         print(f"[ERROR] Exception in zero-shot classification: {e}")
         print(traceback.format_exc())
         yield json.dumps({"error": f"Error during classification: {str(e)}"})
@@ -1476,16 +1484,18 @@ async def stream_ocr_extraction(
             from PIL import Image as PILImage
 
             image = PILImage.open(io.BytesIO(file_contents))
-            
+
             # Get language code (tesseract uses different codes than easyocr)
             lang = "+".join(ocr_config["languages"])
-            
+
             # Extract text using pytesseract
             extracted_text = pytesseract.image_to_string(image, lang=lang)
-            
+
             # Get bounding box data
-            data = pytesseract.image_to_data(image, lang=lang, output_type=pytesseract.Output.DICT)
-            
+            data = pytesseract.image_to_data(
+                image, lang=lang, output_type=pytesseract.Output.DICT
+            )
+
             # Filter out empty detections and create bounding boxes
             bounding_boxes = []
             for i in range(len(data["text"])):
@@ -1493,12 +1503,22 @@ async def stream_ocr_extraction(
                 if text:  # Only include non-empty text
                     conf = float(data["conf"][i]) / 100.0  # Convert to 0-1 range
                     if conf > 0:  # Only include confident detections
-                        x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+                        x, y, w, h = (
+                            data["left"][i],
+                            data["top"][i],
+                            data["width"][i],
+                            data["height"][i],
+                        )
                         bounding_boxes.append(
                             {
                                 "text": text,
                                 "confidence": conf,
-                                "bbox": [[x, y], [x + w, y], [x + w, y + h], [x, y + h]],
+                                "bbox": [
+                                    [x, y],
+                                    [x + w, y],
+                                    [x + w, y + h],
+                                    [x, y + h],
+                                ],
                             }
                         )
 
@@ -1656,7 +1676,7 @@ async def save_zero_shot_analysis_endpoint(analysis: Dict[str, Any]):
         model=analysis.get("model", ""),
         processing_time=float(analysis.get("duration", 0)),
         use_logprobs=True,
-        abstain_threshold=analysis.get("result", {}).get("abstain_threshold")
+        abstain_threshold=analysis.get("result", {}).get("abstain_threshold"),
     )
     return {"success": analysis_id is not None, "id": analysis_id}
 
@@ -1665,10 +1685,10 @@ async def save_zero_shot_analysis_endpoint(analysis: Dict[str, Any]):
 async def list_zero_shot_analyses(limit: Optional[int] = None, offset: int = 0):
     """List zero-shot classification analyses with optional pagination"""
     result = get_all_zero_shot_analyses(limit=limit, offset=offset)
-    
+
     if limit is None:
         return {"analyses": result["analyses"]}
-    
+
     return result
 
 
@@ -1718,7 +1738,7 @@ async def analyze_layout(file: UploadFile = File(...)):
             except Exception as e:
                 raise HTTPException(
                     status_code=503,
-                    detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}"
+                    detail=f"PaddleOCR initialization failed in this environment. Please use EasyOCR instead. Error: {str(e)[:100]}",
                 )
 
         ocr_model = ocr_readers["paddleocr"]
