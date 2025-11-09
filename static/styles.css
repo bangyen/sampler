@@ -1768,14 +1768,14 @@ body {
 
 .classification-header h2 {
     margin: 0 0 var(--space-sm) 0;
-    font-size: var(--font-size-2xl);
+    font-size: var(--font-size-3xl);
     color: var(--color-text-primary);
 }
 
 .classification-header p {
     margin: 0;
     color: var(--color-text-secondary);
-    font-size: var(--font-size-md);
+    font-size: var(--font-size-regular);
 }
 
 .classification-input-section {
@@ -1787,7 +1787,7 @@ body {
 .classification-input-section label {
     font-weight: var(--font-weight-medium);
     color: var(--color-text-primary);
-    font-size: var(--font-size-md);
+    font-size: var(--font-size-regular);
 }
 
 .classification-input-section textarea {
@@ -1795,7 +1795,7 @@ body {
     border: var(--border-width-thin) solid var(--color-border);
     border-radius: var(--radius-base);
     font-family: var(--font-family-base);
-    font-size: var(--font-size-md);
+    font-size: var(--font-size-regular);
     resize: vertical;
     min-height: 100px;
 }
@@ -1822,7 +1822,7 @@ body {
 .label-section-header label {
     font-weight: var(--font-weight-medium);
     color: var(--color-text-primary);
-    font-size: var(--font-size-md);
+    font-size: var(--font-size-regular);
 }
 
 .label-presets {
