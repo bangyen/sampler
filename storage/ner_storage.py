@@ -44,6 +44,7 @@ def save_ner_analysis(text, entities, model, processing_time):
     except Exception as e:
         print(f"Error saving NER analysis: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return None
 
@@ -139,6 +140,7 @@ def delete_ner_analysis(ner_id):
     except Exception as e:
         print(f"Error deleting NER analysis: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return False
 
@@ -158,5 +160,6 @@ def clear_all_ner_analyses():
     except Exception as e:
         print(f"Error clearing all NER analyses: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return False

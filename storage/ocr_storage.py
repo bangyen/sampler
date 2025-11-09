@@ -61,6 +61,7 @@ def save_ocr_analysis(
     except Exception as e:
         print(f"Error saving OCR analysis: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return None
 
@@ -156,6 +157,7 @@ def delete_ocr_analysis(ocr_id):
     except Exception as e:
         print(f"Error deleting OCR analysis: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return False
 
@@ -175,5 +177,6 @@ def clear_all_ocr_analyses():
     except Exception as e:
         print(f"Error clearing all OCR analyses: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return False

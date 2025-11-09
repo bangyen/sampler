@@ -40,6 +40,7 @@ def save_zero_shot_analysis(
     except Exception as e:
         print(f"Error saving zero-shot analysis: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return None
 
@@ -156,6 +157,7 @@ def delete_zero_shot_analysis(analysis_id: str) -> bool:
     except Exception as e:
         print(f"Error deleting zero-shot analysis {analysis_id}: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return False
 
@@ -175,5 +177,6 @@ def clear_all_zero_shot_analyses() -> bool:
     except Exception as e:
         print(f"Error clearing zero-shot analyses: {e}")
         if db_session:
+            db_session.rollback()
             db_session.close()
         return False

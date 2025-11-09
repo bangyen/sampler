@@ -74,6 +74,18 @@ class ZeroShotAnalysis(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class LayoutAnalysis(Base):
+    __tablename__ = "layout_analyses"
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(String(255), unique=True, nullable=False, index=True)
+    filename = Column(String(500), nullable=False)
+    image_base64 = Column(Text, nullable=False)
+    results = Column(JSON, nullable=False)
+    processing_time = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 _engine_cache = None
 
 
