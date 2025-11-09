@@ -1,4 +1,5 @@
 let sessionId = generateUUID();
+let messages = [];
 let classificationLabels = ['positive', 'negative', 'neutral'];
 let classificationHistory = [];
 let currentClassification = null;
@@ -8,6 +9,7 @@ let selectedOCRConfig = 'EasyOCR English';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
+let displayedConversationCount = 5;
 let displayedClassificationCount = 5;
 let displayedNERCount = 5;
 let displayedOCRCount = 5;
