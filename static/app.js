@@ -174,7 +174,7 @@ function updateClassificationExamples(preset = 'sentiment') {
     gridElement.innerHTML = '';
     presetData.examples.forEach(example => {
         const button = document.createElement('button');
-        button.className = 'example-prompt';
+        button.className = 'btn btn-secondary example-prompt';
         button.setAttribute('data-classification-text', example.text);
         
         button.innerHTML = `
