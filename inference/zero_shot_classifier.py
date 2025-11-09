@@ -414,23 +414,35 @@ def extract_gguf_logprobs(
                 # Get logprobs at first generation position where all labels diverge
                 first_position_logprobs = top_logprobs_list[0]
                 
-                # For labels, look up by string (llama-cpp returns strings, not token IDs)
+                # llama-cpp returns token strings, not full labels
+                # For multi-token labels, we need to decode the first token and look it up
                 for label in candidate_labels:
-                    # Try to find label in top_logprobs by string representation
-                    if label in first_position_logprobs:
-                        logprobs[label] = float(first_position_logprobs[label])
+                    label_token_ids = label_token_sequences[label]
+                    if len(label_token_ids) == 0:
+                        print(f"[WARNING] Empty token sequence for label '{label}'")
+                        logprobs[label] = -20.0
+                        continue
+                    
+                    # Decode the first token of this label
+                    first_token_id = label_token_ids[0]
+                    first_token_str = tokenizer.decode([first_token_id], skip_special_tokens=True)
+                    
+                    # Look up the first token string in top_logprobs
+                    found = False
+                    if first_token_str in first_position_logprobs:
+                        logprobs[label] = float(first_position_logprobs[first_token_str])
+                        found = True
                     else:
-                        # Try lowercase/capitalized variants
-                        found = False
-                        for variant in [label.lower(), label.capitalize(), label.upper()]:
+                        # Try variations with/without leading space
+                        for variant in [first_token_str, first_token_str.strip(), ' ' + first_token_str.strip()]:
                             if variant in first_position_logprobs:
                                 logprobs[label] = float(first_position_logprobs[variant])
                                 found = True
                                 break
-                        
-                        if not found:
-                            # Label not in top-k, assign low probability
-                            logprobs[label] = -20.0
+                    
+                    if not found:
+                        # Token not in top-k, assign low probability
+                        logprobs[label] = -20.0
             else:
                 # No logprobs available
                 for label in candidate_labels:
