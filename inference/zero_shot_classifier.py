@@ -81,12 +81,35 @@ class ZeroShotResult(BaseModel):
         }
 
 
+def build_label_only_prompt(
+    text: str,
+    candidate_labels: List[str]
+) -> str:
+    """
+    Build a simple prompt that asks model to output only the label.
+    For small models - avoids hallucinated confidence scores.
+    """
+    labels_str = ", ".join([f'"{label}"' for label in candidate_labels])
+    
+    prompt = f"""Classify the following text into one of these categories: {labels_str}
+
+Text: {text}
+
+Output only the category name that best matches the text (nothing else):"""
+    
+    return prompt
+
+
 def build_zero_shot_prompt(
     text: str,
     candidate_labels: List[str],
     hypothesis_template: str = "This text is about {label}."
 ) -> str:
-    """Build a prompt for zero-shot classification with JSON schema enforcement"""
+    """
+    Build a prompt for zero-shot classification with JSON schema enforcement.
+    DEPRECATED: Use build_label_only_prompt + logprob scoring instead.
+    This is kept for backward compatibility with larger models.
+    """
     
     labels_str = json.dumps(candidate_labels)
     
@@ -258,49 +281,154 @@ def create_zero_shot_result(
     candidate_labels: List[str],
     model_response: str,
     logprobs: Optional[Dict[str, float]] = None,
-    abstain_threshold: Optional[float] = None
+    abstain_threshold: Optional[float] = None,
+    label_only_mode: bool = False
 ) -> ZeroShotResult:
     """
     Create a schema-locked ZeroShotResult from model response.
-    Ensures strict JSON schema compliance.
-    Raises ValueError if JSON parsing fails.
+    
+    New Architecture (label_only_mode=True):
+    - Model outputs only the label (no JSON)
+    - Backend computes confidence scores from logprobs
+    - Avoids hallucinated scores from small models
+    
+    Legacy Architecture (label_only_mode=False):
+    - Model outputs JSON with scores
+    - Ensures strict JSON schema compliance
+    - Raises ValueError if JSON parsing fails
     """
     
-    parsed = parse_json_response(model_response)
-    
-    if parsed is None:
-        raise ValueError(
-            f"Failed to parse JSON from model response. "
-            f"Model returned: {model_response[:200]}... "
-            f"Expected JSON with 'labels' array containing label/score pairs."
-        )
-    
-    labels_with_scores = []
-    for label_data in parsed.get("labels", []):
-        label = label_data.get("label", "")
-        score = float(label_data.get("score", 0.0))
+    if label_only_mode:
+        # NEW ARCHITECTURE: Label-only mode with backend logprob scoring
+        # Normalize and validate model output against candidate labels
+        import re
         
-        logprob_val = None
-        if logprobs and label in logprobs:
-            logprob_val = logprobs[label]
+        # Normalize output: strip punctuation, lowercase
+        predicted_label_normalized = re.sub(r'[^\w\s]', '', model_response.strip().lower())
         
-        labels_with_scores.append(
-            ClassificationLabel(
-                label=label,
-                score=score,
-                logprob=logprob_val
-            )
-        )
-    
-    labels_with_scores.sort(key=lambda x: x.score, reverse=True)
-    
-    if labels_with_scores:
-        top_label = labels_with_scores[0].label
-        top_score = labels_with_scores[0].score
+        # Find matching candidate label with strict exact matching
+        matched_label = None
+        for label in candidate_labels:
+            label_normalized = re.sub(r'[^\w\s]', '', label.lower())
+            if label_normalized == predicted_label_normalized:
+                matched_label = label
+                break
+        
+        # If no exact match, trust the model output (don't silently default to first label)
+        if matched_label is None:
+            print(f"[WARNING] Model output '{model_response}' doesn't exactly match any candidate labels. Trusting model output.")
+            # Use the original model response as the predicted label
+            matched_label = model_response.strip()
+        
+        # Compute scores from logprobs (ground truth confidence)
+        # Guard against missing logprob entries
+        if logprobs:
+            import math
+            
+            # Filter to only labels that have logprobs
+            valid_labels = [label for label in candidate_labels if label in logprobs and logprobs[label] is not None]
+            
+            if valid_labels:
+                # Convert logprobs to probabilities using softmax (only for valid labels)
+                logprob_values = [logprobs[label] for label in valid_labels]
+                max_logprob = max(logprob_values)
+                
+                # Numerically stable softmax
+                exp_values = [math.exp(lp - max_logprob) for lp in logprob_values]
+                sum_exp = sum(exp_values)
+                probabilities = [exp_val / sum_exp for exp_val in exp_values]
+                
+                # Build labels with normalized scores
+                labels_with_scores = []
+                for label, prob, lp in zip(valid_labels, probabilities, logprob_values):
+                    labels_with_scores.append(
+                        ClassificationLabel(
+                            label=label,
+                            score=prob,
+                            logprob=lp
+                        )
+                    )
+                
+                # Sort by score (highest first)
+                labels_with_scores.sort(key=lambda x: x.score, reverse=True)
+                top_label = labels_with_scores[0].label
+                top_score = labels_with_scores[0].score
+            else:
+                # Fallback: logprobs exist but all are None/invalid
+                print(f"[WARNING] Logprobs unavailable for all labels. Using matched label with uniform score.")
+                labels_with_scores = []
+                
+                # Ensure matched label appears in results even if not in candidates
+                all_labels = candidate_labels if matched_label in candidate_labels else [matched_label] + candidate_labels
+                
+                for label in all_labels:
+                    score = 1.0 / len(all_labels)
+                    labels_with_scores.append(
+                        ClassificationLabel(
+                            label=label,
+                            score=score,
+                            logprob=None
+                        )
+                    )
+                top_label = matched_label
+                top_score = 1.0 / len(all_labels)
+        else:
+            # Fallback: no logprobs computed at all
+            print(f"[WARNING] Logprobs not computed. Using matched label with uniform scores.")
+            labels_with_scores = []
+            
+            # Ensure matched label appears in results even if not in candidates
+            all_labels = candidate_labels if matched_label in candidate_labels else [matched_label] + candidate_labels
+            
+            for label in all_labels:
+                score = 1.0 / len(all_labels)
+                labels_with_scores.append(
+                    ClassificationLabel(
+                        label=label,
+                        score=score,
+                        logprob=None
+                    )
+                )
+            top_label = matched_label
+            top_score = 1.0 / len(all_labels)
     else:
-        top_label = parsed.get("top_label", candidate_labels[0] if candidate_labels else "unknown")
-        top_score = float(parsed.get("top_score", 0.0))
+        # LEGACY ARCHITECTURE: JSON parsing mode
+        parsed = parse_json_response(model_response)
+        
+        if parsed is None:
+            raise ValueError(
+                f"Failed to parse JSON from model response. "
+                f"Model returned: {model_response[:200]}... "
+                f"Expected JSON with 'labels' array containing label/score pairs."
+            )
+        
+        labels_with_scores = []
+        for label_data in parsed.get("labels", []):
+            label = label_data.get("label", "")
+            score = float(label_data.get("score", 0.0))
+            
+            logprob_val = None
+            if logprobs and label in logprobs:
+                logprob_val = logprobs[label]
+            
+            labels_with_scores.append(
+                ClassificationLabel(
+                    label=label,
+                    score=score,
+                    logprob=logprob_val
+                )
+            )
+        
+        labels_with_scores.sort(key=lambda x: x.score, reverse=True)
+        
+        if labels_with_scores:
+            top_label = labels_with_scores[0].label
+            top_score = labels_with_scores[0].score
+        else:
+            top_label = parsed.get("top_label", candidate_labels[0] if candidate_labels else "unknown")
+            top_score = float(parsed.get("top_score", 0.0))
     
+    # Check abstain threshold
     should_abstain = False
     if abstain_threshold is not None and top_score < abstain_threshold:
         should_abstain = True
@@ -338,22 +466,28 @@ class LLMZeroShotClassifier:
         temperature: float = 0.1
     ) -> ZeroShotResult:
         """
-        Perform zero-shot classification with schema-locked JSON output.
+        Perform zero-shot classification with logprob-based scoring.
+        
+        New Architecture:
+        - Model outputs only the label (no hallucinated scores)
+        - Backend computes real confidence scores from logprobs
+        - JSON response assembled server-side with calibrated scores
         
         Args:
             text: Input text to classify
             candidate_labels: List of possible labels
-            hypothesis_template: Template for classification (not used in current implementation)
-            use_logprobs: Whether to extract and include log probabilities
+            hypothesis_template: Template for classification
+            use_logprobs: Whether to use logprob-based scoring (recommended: True)
             abstain_threshold: Confidence threshold below which to abstain from classification
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature (lower = more deterministic)
         
         Returns:
-            ZeroShotResult with schema-locked JSON structure
+            ZeroShotResult with backend-computed confidence scores
         """
         
-        prompt = build_zero_shot_prompt(text, candidate_labels, hypothesis_template)
+        # Use simplified label-only prompt (avoids hallucinated scores)
+        prompt = build_label_only_prompt(text, candidate_labels)
         
         # Use chat template if available (for instruction-tuned models like SmolLM2)
         if hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
@@ -375,50 +509,42 @@ class LLMZeroShotClassifier:
             max_length=2048
         ).to(self.device)
         
-        # Create early stopping criteria for valid JSON
-        stopping_criteria = [JSONCompletionStoppingCriteria(
-            tokenizer=self.tokenizer,
-            prompt_length=inputs['input_ids'].shape[1]
-        )]
-        
-        # Temporarily disable early stopping for SmolLM2 compatibility
-        # SmolLM2 generates very long decimal numbers that get truncated
+        # Generate just the label (short output, ~1-10 tokens)
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=max_tokens,
+                max_new_tokens=50,  # Reduced - we only need label name
                 temperature=temperature,
                 do_sample=temperature > 0,
                 pad_token_id=self.tokenizer.eos_token_id,
-                return_dict_in_generate=True,
-                output_scores=use_logprobs,
-                # stopping_criteria=stopping_criteria  # Disabled temporarily
+                return_dict_in_generate=True
             )
         
         response_text = self.tokenizer.decode(
             outputs.sequences[0][inputs['input_ids'].shape[1]:],
             skip_special_tokens=True
+        ).strip()
+        
+        print(f"[DEBUG] Model predicted label: {response_text}")
+        
+        # ALWAYS compute logprobs for real confidence scores
+        # This is the ground truth - not hallucinated by the model
+        logprobs = extract_logprobs_from_sequences(
+            self.model,
+            self.tokenizer,
+            text,
+            candidate_labels,
+            hypothesis_template,
+            self.device
         )
-        
-        print(f"[DEBUG] Model response: {response_text}")
-        
-        logprobs = None
-        if use_logprobs:
-            logprobs = extract_logprobs_from_sequences(
-                self.model,
-                self.tokenizer,
-                text,
-                candidate_labels,
-                hypothesis_template,
-                self.device
-            )
         
         result = create_zero_shot_result(
             text=text,
             candidate_labels=candidate_labels,
             model_response=response_text,
             logprobs=logprobs,
-            abstain_threshold=abstain_threshold
+            abstain_threshold=abstain_threshold,
+            label_only_mode=True  # New parameter indicating backend scoring
         )
         
         return result
