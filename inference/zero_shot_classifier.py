@@ -588,10 +588,16 @@ def create_zero_shot_result(
                 # This happens when extract_gguf_logprobs fails and assigns -20.0 to all labels
                 if abs(max_logprob - min_logprob) < 1e-6:
                     print(f"[WARNING] All logprobs are equal ({max_logprob:.3f}), indicating failed extraction. Using matched label: {matched_label}")
-                    # Fall back to using the matched label with uniform scores
+                    # Fall back to using the matched label with high confidence
+                    # This prevents spurious abstentions and trusts constrained generation
                     labels_with_scores = []
                     for label in candidate_labels:
-                        score = 1.0 / len(candidate_labels)
+                        if label == matched_label:
+                            # High confidence for the actually generated label
+                            score = 0.95
+                        else:
+                            # Low confidence for other labels (distribute remaining 0.05)
+                            score = 0.05 / (len(candidate_labels) - 1) if len(candidate_labels) > 1 else 0.0
                         labels_with_scores.append(
                             ClassificationLabel(
                                 label=label,
@@ -601,7 +607,7 @@ def create_zero_shot_result(
                         )
                     # Use the actually generated label as top prediction
                     top_label = matched_label
-                    top_score = 1.0 / len(candidate_labels)
+                    top_score = 0.95
                 else:
                     # Normal case: logprobs are different, use softmax
                     # Numerically stable softmax
