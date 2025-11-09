@@ -1822,6 +1822,7 @@ body {
 .model-status-section {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: var(--space-lg);
     background: var(--color-bg-light);
     border-radius: var(--radius-base);
@@ -1849,7 +1850,6 @@ body {
 .classification-actions {
     display: flex;
     gap: var(--space-md);
-    justify-content: center;
 }
 
 .classification-results {
@@ -1992,8 +1992,15 @@ body {
         align-items: flex-start;
     }
     
+    .model-status-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-md);
+    }
+    
     .classification-actions {
         flex-direction: column;
+        width: 100%;
     }
     
     .classification-actions button {
