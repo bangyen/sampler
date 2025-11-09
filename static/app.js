@@ -360,6 +360,7 @@ async function classifyText() {
                     } else if (data.model_loading_end) {
                         resultsDiv.innerHTML = '<p>Model loaded. Classifying...</p>';
                         startTime = performance.now();
+                        updateModelLoadButton(selectedModel, true);
                     } else if (data.result) {
                         result = data.result;
                         renderClassificationResults(result, useLogprobs);
@@ -887,6 +888,24 @@ async function preloadModel(modelName) {
         loadBtn.disabled = false;
         loadBtn.classList.remove('loading');
         showToast(`Failed to load ${modelName}`, 'error');
+    }
+}
+
+function updateModelLoadButton(modelName, isLoaded) {
+    const modelDiv = document.querySelector(`[data-model-name="${modelName}"]`);
+    const loadBtn = modelDiv?.querySelector('.model-load-btn');
+    
+    if (!loadBtn) return;
+    
+    if (isLoaded) {
+        loadBtn.textContent = 'Loaded';
+        loadBtn.disabled = true;
+        loadBtn.classList.remove('loading');
+        loadBtn.classList.add('loaded');
+    } else {
+        loadBtn.textContent = 'Load';
+        loadBtn.disabled = false;
+        loadBtn.classList.remove('loading', 'loaded');
     }
 }
 
