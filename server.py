@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any, AsyncGenerator, Callable
+from typing import List, Optional, Dict, Any, AsyncGenerator
 import torch
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
@@ -842,8 +842,6 @@ async def load_model_endpoint(request: LoadModelRequest):
         model_config = AVAILABLE_MODELS[request.model_name]
         backend = model_config.get("backend", "transformers")
         
-        start_time = time.time()
-        
         if backend == "llamacpp":
             if request.model_name in loaded_llama_models:
                 return {
@@ -1307,7 +1305,7 @@ async def stream_zero_shot_classification(request: ZeroShotRequest) -> AsyncGene
         elif backend == "bitnet_cpp":
             # BitNet.cpp doesn't support logits/logprobs extraction yet
             yield json.dumps({
-                "error": f"BitNet.cpp models are not supported for zero-shot classification yet. Please use SmolLM2 1.7B or Qwen 2.5 0.5B."
+                "error": "BitNet.cpp models are not supported for zero-shot classification yet. Please use SmolLM2 1.7B or Qwen 2.5 0.5B."
             })
             return
         else:
