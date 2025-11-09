@@ -863,6 +863,19 @@ body {
     color: var(--color-primary);
 }
 
+.btn-secondary.loaded {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: var(--color-text-white);
+}
+
+.btn-secondary.loaded:hover {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: var(--color-text-white);
+    cursor: default;
+}
+
 .btn-danger {
     background: var(--color-danger);
     color: var(--color-text-white);
@@ -1804,6 +1817,34 @@ body {
 .add-label-section input:focus {
     outline: none;
     border-color: var(--color-primary);
+}
+
+.model-status-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    background: var(--color-bg-light);
+    border-radius: var(--radius-base);
+    margin-bottom: var(--space-lg);
+}
+
+.model-status-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.model-status-label {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-md);
+}
+
+.model-status-name {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-md);
 }
 
 .classification-actions {

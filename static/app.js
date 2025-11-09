@@ -360,7 +360,7 @@ async function classifyText() {
                     } else if (data.model_loading_end) {
                         resultsDiv.innerHTML = '<p>Model loaded. Classifying...</p>';
                         startTime = performance.now();
-                        updateModelLoadButton(selectedModel, true);
+                        updateMainLoadButton(true);
                     } else if (data.result) {
                         result = data.result;
                         renderClassificationResults(result, useLogprobs);
@@ -653,20 +653,13 @@ async function loadModels() {
         modelList.innerHTML = '';
         
         Object.entries(modelsData.models).forEach(([name, info]) => {
-            const isLoaded = statusData.status[name]?.loaded || false;
-            
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedModel ? 'selected' : ''}`;
             modelDiv.dataset.modelName = name;
             
-            const loadButtonHtml = isLoaded 
-                ? `<button class="model-load-btn loaded" data-model="${name}" disabled>Loaded</button>`
-                : `<button class="model-load-btn" data-model="${name}">Load</button>`;
-            
             modelDiv.innerHTML = `
                 <div class="model-header-row">
                     <h4>${name}</h4>
-                    ${loadButtonHtml}
                 </div>
                 <div class="model-specs">
                     <span class="model-badge">${info.params} params</span>
@@ -675,23 +668,20 @@ async function loadModels() {
                 <div class="model-description">${info.description}</div>
             `;
             
-            const selectableArea = modelDiv.querySelector('h4').parentElement.parentElement;
-            selectableArea.onclick = (evt) => {
-                if (!evt.target.closest('.model-load-btn')) {
-                    selectModel(name, evt);
-                }
+            modelDiv.onclick = (evt) => {
+                selectModel(name, evt);
             };
-            
-            const loadBtn = modelDiv.querySelector('.model-load-btn');
-            if (loadBtn && !isLoaded) {
-                loadBtn.onclick = (evt) => {
-                    evt.stopPropagation();
-                    preloadModel(name);
-                };
-            }
             
             modelList.appendChild(modelDiv);
         });
+        
+        const modelNameDisplay = document.getElementById('selected-model-display');
+        if (modelNameDisplay) {
+            modelNameDisplay.textContent = selectedModel;
+        }
+        
+        const isLoaded = statusData.status[selectedModel]?.loaded || false;
+        updateMainLoadButton(isLoaded);
     } catch (error) {
         console.error('Error loading models:', error);
     }
@@ -711,20 +701,13 @@ async function loadNERModels() {
         modelList.innerHTML = '';
         
         Object.entries(modelsData.models).forEach(([name, info]) => {
-            const isLoaded = statusData.status[name]?.loaded || false;
-            
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedNERModel ? 'selected' : ''}`;
             modelDiv.dataset.modelName = name;
             
-            const loadButtonHtml = isLoaded 
-                ? `<button class="model-load-btn loaded" data-ner-model="${name}" disabled>Loaded</button>`
-                : `<button class="model-load-btn" data-ner-model="${name}">Load</button>`;
-            
             modelDiv.innerHTML = `
                 <div class="model-header-row">
                     <h4>${name}</h4>
-                    ${loadButtonHtml}
                 </div>
                 <div class="model-specs">
                     <span class="model-badge">${info.params} params</span>
@@ -733,20 +716,9 @@ async function loadNERModels() {
                 <div class="model-description">${info.description}</div>
             `;
             
-            const selectableArea = modelDiv.querySelector('h4').parentElement.parentElement;
-            selectableArea.onclick = (evt) => {
-                if (!evt.target.closest('.model-load-btn')) {
-                    selectNERModel(name, evt);
-                }
+            modelDiv.onclick = (evt) => {
+                selectNERModel(name, evt);
             };
-            
-            const loadBtn = modelDiv.querySelector('.model-load-btn');
-            if (loadBtn && !isLoaded) {
-                loadBtn.onclick = (evt) => {
-                    evt.stopPropagation();
-                    preloadNERModel(name);
-                };
-            }
             
             modelList.appendChild(modelDiv);
         });
@@ -769,38 +741,20 @@ async function loadOCRConfigs() {
         modelList.innerHTML = '';
         
         Object.entries(configsData.configs).forEach(([name, info]) => {
-            const isLoaded = statusData.status[name]?.loaded || false;
-            
             const modelDiv = document.createElement('div');
             modelDiv.className = `model-option ${name === selectedOCRConfig ? 'selected' : ''}`;
             modelDiv.dataset.configName = name;
             
-            const loadButtonHtml = isLoaded 
-                ? `<button class="model-load-btn loaded" data-ocr-config="${name}" disabled>Loaded</button>`
-                : `<button class="model-load-btn" data-ocr-config="${name}">Load</button>`;
-            
             modelDiv.innerHTML = `
                 <div class="model-header-row">
                     <h4>${name}</h4>
-                    ${loadButtonHtml}
                 </div>
                 <div class="model-description">${info.description}</div>
             `;
             
-            const selectableArea = modelDiv.querySelector('h4').parentElement.parentElement;
-            selectableArea.onclick = (evt) => {
-                if (!evt.target.closest('.model-load-btn')) {
-                    selectOCRConfig(name, evt);
-                }
+            modelDiv.onclick = (evt) => {
+                selectOCRConfig(name, evt);
             };
-            
-            const loadBtn = modelDiv.querySelector('.model-load-btn');
-            if (loadBtn && !isLoaded) {
-                loadBtn.onclick = (evt) => {
-                    evt.stopPropagation();
-                    preloadOCRConfig(name);
-                };
-            }
             
             modelList.appendChild(modelDiv);
         });
@@ -809,7 +763,7 @@ async function loadOCRConfigs() {
     }
 }
 
-function selectModel(name, evt) {
+async function selectModel(name, evt) {
     selectedModel = name;
     
     document.querySelectorAll('#model-list .model-option').forEach(el => {
@@ -817,6 +771,21 @@ function selectModel(name, evt) {
     });
     
     evt.target.closest('.model-option').classList.add('selected');
+    
+    const modelNameDisplay = document.getElementById('selected-model-display');
+    if (modelNameDisplay) {
+        modelNameDisplay.textContent = name;
+    }
+    
+    try {
+        const statusResponse = await fetch('/api/models/status');
+        const statusData = await statusResponse.json();
+        const isLoaded = statusData.status[name]?.loaded || false;
+        updateMainLoadButton(isLoaded);
+    } catch (error) {
+        console.error('Error fetching model status:', error);
+        updateMainLoadButton(false);
+    }
     
     setTimeout(() => {
         closeMobileMenuHelper();
@@ -849,6 +818,54 @@ function selectOCRConfig(name, evt) {
     setTimeout(() => {
         closeMobileMenuHelper();
     }, 100);
+}
+
+function updateMainLoadButton(isLoaded) {
+    const mainLoadBtn = document.getElementById('main-load-model-btn');
+    if (!mainLoadBtn) return;
+    
+    if (isLoaded) {
+        mainLoadBtn.textContent = 'Model Loaded ✓';
+        mainLoadBtn.disabled = true;
+        mainLoadBtn.classList.add('loaded');
+    } else {
+        mainLoadBtn.textContent = 'Load Model';
+        mainLoadBtn.disabled = false;
+        mainLoadBtn.classList.remove('loaded');
+    }
+}
+
+async function loadSelectedModel() {
+    const mainLoadBtn = document.getElementById('main-load-model-btn');
+    if (!mainLoadBtn) return;
+    
+    try {
+        mainLoadBtn.textContent = 'Loading...';
+        mainLoadBtn.disabled = true;
+        
+        const response = await fetch('/api/models/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model_name: selectedModel })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            updateMainLoadButton(true);
+            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
+            showToast(`${selectedModel} loaded${loadTime}`);
+        } else {
+            throw new Error('Failed to load model');
+        }
+    } catch (error) {
+        console.error('Error loading model:', error);
+        mainLoadBtn.textContent = 'Load Model';
+        mainLoadBtn.disabled = false;
+        showToast(`Failed to load ${selectedModel}`, 'error');
+    }
 }
 
 async function preloadModel(modelName) {
@@ -1522,6 +1539,13 @@ function setupEventListeners() {
                     showToast('Failed to clear history', 'error');
                 }
             }
+        });
+    }
+    
+    const mainLoadModelBtn = document.getElementById('main-load-model-btn');
+    if (mainLoadModelBtn) {
+        mainLoadModelBtn.addEventListener('click', async () => {
+            await loadSelectedModel();
         });
     }
     
