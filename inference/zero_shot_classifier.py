@@ -582,27 +582,48 @@ def create_zero_shot_result(
                 # Convert logprobs to probabilities using softmax (only for valid labels)
                 logprob_values = [logprobs[label] for label in valid_labels]
                 max_logprob = max(logprob_values)
+                min_logprob = min(logprob_values)
                 
-                # Numerically stable softmax
-                exp_values = [math.exp(lp - max_logprob) for lp in logprob_values]
-                sum_exp = sum(exp_values)
-                probabilities = [exp_val / sum_exp for exp_val in exp_values]
-                
-                # Build labels with normalized scores
-                labels_with_scores = []
-                for label, prob, lp in zip(valid_labels, probabilities, logprob_values):
-                    labels_with_scores.append(
-                        ClassificationLabel(
-                            label=label,
-                            score=prob,
-                            logprob=lp
+                # Check if all logprobs are equal (indicating failed extraction)
+                # This happens when extract_gguf_logprobs fails and assigns -20.0 to all labels
+                if abs(max_logprob - min_logprob) < 1e-6:
+                    print(f"[WARNING] All logprobs are equal ({max_logprob:.3f}), indicating failed extraction. Using matched label: {matched_label}")
+                    # Fall back to using the matched label with uniform scores
+                    labels_with_scores = []
+                    for label in candidate_labels:
+                        score = 1.0 / len(candidate_labels)
+                        labels_with_scores.append(
+                            ClassificationLabel(
+                                label=label,
+                                score=score,
+                                logprob=logprobs.get(label)
+                            )
                         )
-                    )
-                
-                # Sort by score (highest first)
-                labels_with_scores.sort(key=lambda x: x.score, reverse=True)
-                top_label = labels_with_scores[0].label
-                top_score = labels_with_scores[0].score
+                    # Use the actually generated label as top prediction
+                    top_label = matched_label
+                    top_score = 1.0 / len(candidate_labels)
+                else:
+                    # Normal case: logprobs are different, use softmax
+                    # Numerically stable softmax
+                    exp_values = [math.exp(lp - max_logprob) for lp in logprob_values]
+                    sum_exp = sum(exp_values)
+                    probabilities = [exp_val / sum_exp for exp_val in exp_values]
+                    
+                    # Build labels with normalized scores
+                    labels_with_scores = []
+                    for label, prob, lp in zip(valid_labels, probabilities, logprob_values):
+                        labels_with_scores.append(
+                            ClassificationLabel(
+                                label=label,
+                                score=prob,
+                                logprob=lp
+                            )
+                        )
+                    
+                    # Sort by score (highest first)
+                    labels_with_scores.sort(key=lambda x: x.score, reverse=True)
+                    top_label = labels_with_scores[0].label
+                    top_score = labels_with_scores[0].score
             else:
                 # Fallback: logprobs exist but all are None/invalid
                 print(f"[WARNING] Logprobs unavailable for all labels. Using matched label with uniform score.")

@@ -1,0 +1,64 @@
+================================================================================
+DEBUGGING LOGPROBS MODE
+================================================================================
+Model: Qwen 2.5 7B
+Text: 'This container needs refrigeration for the perishable goods'
+Labels: ['standard cargo', 'refrigerated cargo', 'hazardous materials', 'oversized freight']
+Expected: refrigerated cargo
+
+================================================================================
+Testing: use_logprobs=False
+================================================================================
+
+  ✓ Success!
+  Processing Time: 7.31s
+  Total Elapsed: 14.75s
+
+  Top Prediction: refrigerated cargo (25.0%)
+  Expected: refrigerated cargo
+  Correct: True
+
+  All Labels:
+    standard cargo              25.0% (no logprob)
+  ★ refrigerated cargo          25.0% (no logprob)
+    hazardous materials         25.0% (no logprob)
+    oversized freight           25.0% (no logprob)
+
+================================================================================
+Testing: use_logprobs=True
+================================================================================
+
+  ✓ Success!
+  Processing Time: 3.03s
+  Total Elapsed: 3.27s
+
+  Top Prediction: standard cargo (25.0%)
+  Expected: refrigerated cargo
+  Correct: False
+
+  All Labels:
+  ★ standard cargo              25.0% (logprob: -20.000)
+    refrigerated cargo          25.0% (logprob: -20.000)
+    hazardous materials         25.0% (logprob: -20.000)
+    oversized freight           25.0% (logprob: -20.000)
+
+
+================================================================================
+COMPARISON
+================================================================================
+
+FAST MODE (use_logprobs=False):
+  Predicted: refrigerated cargo
+  Confidence: 25.0%
+  Correct: True
+
+SLOW MODE (use_logprobs=True):
+  Predicted: standard cargo
+  Confidence: 25.0%
+  Correct: False
+
+🔍 Analysis:
+  ⚠️  Different predictions!
+  Fast mode: refrigerated cargo
+  Slow mode: standard cargo
+================================================================================
