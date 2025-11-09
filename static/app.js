@@ -60,6 +60,13 @@ const examplePrompts = {
     }
 };
 
+const hypothesisTemplates = {
+    sentiment: 'The sentiment of this text is {label}.',
+    intent: 'The intent of this message is {label}.',
+    urgency: 'The urgency level is {label}.',
+    cargo: 'This describes {label}.'
+};
+
 function closeMobileMenuHelper() {
     if (window.innerWidth <= 900) {
         const sidebar = document.querySelector('.sidebar');
@@ -175,10 +182,25 @@ function setupClassificationExamples() {
     });
 }
 
+function updateHypothesisTemplate(preset = 'sentiment') {
+    const templateInput = document.getElementById('hypothesis-template-input');
+    
+    if (!templateInput) {
+        console.warn('Hypothesis template input not found');
+        return;
+    }
+    
+    const template = hypothesisTemplates[preset];
+    if (template) {
+        templateInput.value = template;
+    }
+}
+
 function setupClassificationUI() {
     try {
         renderLabelChips();
         updateClassificationExamples('sentiment');
+        updateHypothesisTemplate('sentiment');
         
         const presetButtons = document.querySelectorAll('.preset-btn');
         
@@ -194,6 +216,7 @@ function setupClassificationUI() {
                     classificationLabels = [...labelPresets[preset]];
                     renderLabelChips();
                     updateClassificationExamples(preset);
+                    updateHypothesisTemplate(preset);
                 }
             });
         });
