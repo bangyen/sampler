@@ -4,8 +4,8 @@ let classificationLabels = ['positive', 'negative', 'neutral'];
 let classificationHistory = [];
 let currentClassification = null;
 let selectedModel = 'Qwen 2.5 7B';
-let selectedNERModel = 'BERT Base NER';
-let selectedOCRConfig = 'EasyOCR English';
+let selectedNERModel = 'BERT Base';
+let selectedOCRConfig = 'EasyOCR';
 let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
@@ -2409,7 +2409,7 @@ async function loadLayoutAnalysis(layoutId) {
         const response = await fetch(`/api/layout/history/${layoutId}`);
         const data = await response.json();
         
-        selectedOCRConfig = 'PaddleOCR English';
+        selectedOCRConfig = 'PaddleOCR';
         await loadOCRConfigs();
         
         displayOCRResults(data);

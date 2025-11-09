@@ -213,19 +213,19 @@ if BITNET_CPP_AVAILABLE:
     }
 
 NER_MODELS = {
-    "BERT Base NER": {
+    "BERT Base": {
         "id": "dslim/bert-base-NER",
         "params": "110M",
         "memory": "~420MB",
         "description": "Fast and accurate BERT-based NER (Person, Organization, Location, Misc)",
     },
-    "BERT Large NER": {
+    "BERT Large": {
         "id": "dslim/bert-large-NER",
         "params": "340M",
         "memory": "~1.3GB",
         "description": "More accurate large BERT model for entity recognition",
     },
-    "RoBERTa Large NER": {
+    "RoBERTa Large": {
         "id": "Jean-Baptiste/roberta-large-ner-english",
         "params": "355M",
         "memory": "~1.4GB",
@@ -234,17 +234,17 @@ NER_MODELS = {
 }
 
 OCR_CONFIGS = {
-    "EasyOCR English": {
+    "EasyOCR": {
         "engine": "easyocr",
         "languages": ["en"],
         "description": "Fast and accurate OCR with deep learning",
     },
-    "Tesseract English": {
+    "Tesseract": {
         "engine": "tesseract",
         "languages": ["eng"],
         "description": "Lightweight and fast traditional OCR engine",
     },
-    "PaddleOCR English": {
+    "PaddleOCR": {
         "engine": "paddleocr",
         "languages": ["en"],
         "description": "Advanced OCR with superior accuracy (CPU-optimized)",
@@ -268,7 +268,7 @@ ocr_readers = {}
 
 class NERRequest(BaseModel):
     text: str
-    model: str = "BERT Base NER"
+    model: str = "BERT Base"
 
 
 class ZeroShotRequest(BaseModel):
@@ -446,7 +446,7 @@ def load_bitnet_cpp_model(model_name: str):
         )
 
 
-def load_ner_model(model_name="BERT Base NER"):
+def load_ner_model(model_name="BERT Base"):
     """Load NER model using transformers pipeline"""
     global ner_pipelines
 
@@ -1556,7 +1556,7 @@ async def stream_ocr_extraction(
 
 @app.post("/api/ocr")
 async def extract_text_from_image(
-    file: UploadFile = File(...), config: str = "EasyOCR English"
+    file: UploadFile = File(...), config: str = "EasyOCR"
 ):
     """Extract text from uploaded image using OCR (streaming)"""
     contents = await file.read()
