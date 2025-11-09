@@ -657,8 +657,13 @@ async function loadModels() {
         
         const zeroShotModels = Object.entries(modelsData.models).filter(([name, info]) => {
             const supportedTasks = info.supported_tasks || [];
-            return supportedTasks.includes('zero-shot');
+            const supportsZeroShot = supportedTasks.includes('zero-shot');
+            console.log(`[Model Filter] ${name}: supported_tasks=${JSON.stringify(supportedTasks)}, supportsZeroShot=${supportsZeroShot}`);
+            return supportsZeroShot;
         });
+        
+        console.log(`[Model Filter] Total models: ${Object.keys(modelsData.models).length}, Zero-shot compatible: ${zeroShotModels.length}`);
+        console.log(`[Model Filter] Zero-shot models: ${zeroShotModels.map(([name]) => name).join(', ')}`);
         
         if (zeroShotModels.length === 0) {
             modelList.innerHTML = '<p class="error-message">No models available for zero-shot classification</p>';
@@ -667,6 +672,7 @@ async function loadModels() {
         
         const currentModelSupportsZeroShot = availableModelsData[selectedModel]?.supported_tasks?.includes('zero-shot');
         if (!currentModelSupportsZeroShot && zeroShotModels.length > 0) {
+            console.log(`[Model Filter] Current model "${selectedModel}" doesn't support zero-shot, auto-selecting "${zeroShotModels[0][0]}"`);
             selectedModel = zeroShotModels[0][0];
         }
         
