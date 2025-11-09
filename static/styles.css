@@ -1415,8 +1415,6 @@ body {
     }
     
     .example-prompt {
-        padding: var(--space-lg) var(--space-xl);
-        font-size: var(--font-size-md);
         min-height: 44px;
     }
     
