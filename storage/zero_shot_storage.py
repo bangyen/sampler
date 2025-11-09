@@ -1,12 +1,7 @@
-import json
 import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from pathlib import Path
-
-
-ZERO_SHOT_STORAGE_DIR = Path("conversations") / "zero_shot"
-ZERO_SHOT_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+from storage.database import get_session, ZeroShotAnalysis
 
 
 def save_zero_shot_analysis(
@@ -18,107 +13,167 @@ def save_zero_shot_analysis(
     use_logprobs: bool = True,
     abstain_threshold: Optional[float] = None
 ) -> Optional[str]:
-    timestamp = datetime.now().isoformat()
-    analysis_id = f"zs_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
-    
-    analysis_data = {
-        "id": analysis_id,
-        "timestamp": timestamp,
-        "text": text,
-        "candidate_labels": labels,
-        "results": results,
-        "model": model,
-        "processing_time": processing_time,
-        "use_logprobs": use_logprobs,
-        "abstain_threshold": abstain_threshold,
-        "text_length": len(text),
-    }
-    
-    file_path = ZERO_SHOT_STORAGE_DIR / f"{analysis_id}.json"
-    
+    """Save zero-shot analysis to database"""
+    db_session = None
     try:
-        with open(file_path, "w") as f:
-            json.dump(analysis_data, f, indent=2)
+        db_session = get_session()
+        if not db_session:
+            return None
+
+        timestamp = datetime.now()
+        analysis_id = f"zs_{timestamp.strftime('%Y%m%d_%H%M%S_%f')}"
+
+        analysis = ZeroShotAnalysis(
+            analysis_id=analysis_id,
+            text=text,
+            candidate_labels=labels,
+            results=results,
+            model=model,
+            processing_time=processing_time,
+            use_logprobs=use_logprobs,
+            abstain_threshold=abstain_threshold,
+        )
+        db_session.add(analysis)
+        db_session.commit()
+        db_session.close()
         return analysis_id
     except Exception as e:
         print(f"Error saving zero-shot analysis: {e}")
+        if db_session:
+            db_session.close()
         return None
 
 
 def load_zero_shot_analysis(analysis_id: str) -> Optional[Dict[str, Any]]:
-    file_path = ZERO_SHOT_STORAGE_DIR / f"{analysis_id}.json"
-    
-    if not file_path.exists():
-        return None
-    
+    """Load zero-shot analysis from database"""
+    db_session = None
     try:
-        with open(file_path, "r") as f:
-            return json.load(f)
+        db_session = get_session()
+        if not db_session:
+            return None
+
+        analysis = db_session.query(ZeroShotAnalysis).filter_by(analysis_id=analysis_id).first()
+
+        if not analysis:
+            db_session.close()
+            return None
+
+        result = {
+            "id": analysis.analysis_id,
+            "timestamp": analysis.created_at.isoformat(),
+            "text": analysis.text,
+            "candidate_labels": analysis.candidate_labels,
+            "results": analysis.results,
+            "model": analysis.model,
+            "processing_time": analysis.processing_time,
+            "use_logprobs": analysis.use_logprobs,
+            "abstain_threshold": analysis.abstain_threshold,
+            "text_length": len(analysis.text) if analysis.text else 0,
+        }
+
+        db_session.close()
+        return result
     except Exception as e:
         print(f"Error loading zero-shot analysis {analysis_id}: {e}")
+        if db_session:
+            db_session.close()
         return None
 
 
 def get_all_zero_shot_analyses(limit: Optional[int] = None, offset: int = 0) -> Dict[str, Any]:
-    analyses = []
-    
+    """Get all zero-shot analyses with optional pagination"""
+    db_session = None
     try:
-        all_files = sorted(ZERO_SHOT_STORAGE_DIR.glob("zs_*.json"), reverse=True)
-        total_count = len(all_files)
+        db_session = get_session()
+        if not db_session:
+            return {
+                "analyses": [],
+                "total": 0,
+                "offset": offset,
+                "limit": limit,
+                "has_more": False
+            }
+
+        total_count = db_session.query(ZeroShotAnalysis).count()
+
+        query = db_session.query(ZeroShotAnalysis).order_by(ZeroShotAnalysis.created_at.desc())
         
-        files_to_process = all_files[offset:offset + limit] if limit else all_files[offset:]
+        if offset > 0:
+            query = query.offset(offset)
         
-        for file_path in files_to_process:
-            try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
-                    analyses.append({
-                        "id": data["id"],
-                        "timestamp": data["timestamp"],
-                        "text_preview": data["text"][:100] + "..." if len(data["text"]) > 100 else data["text"],
-                        "top_label": data["results"].get("top_label"),
-                        "top_score": data["results"].get("top_score"),
-                        "model": data["model"],
-                        "candidate_labels": data["candidate_labels"],
-                    })
-            except Exception as e:
-                print(f"Error reading file {file_path}: {e}")
-                continue
+        if limit:
+            query = query.limit(limit)
+
+        analyses = query.all()
+
+        result = []
+        for analysis in analyses:
+            text_content = str(analysis.text) if analysis.text else ""
+            result.append({
+                "id": analysis.analysis_id,
+                "timestamp": analysis.created_at.isoformat(),
+                "text_preview": text_content[:100] + "..." if len(text_content) > 100 else text_content,
+                "top_label": analysis.results.get("top_label"),
+                "top_score": analysis.results.get("top_score"),
+                "model": analysis.model,
+                "candidate_labels": analysis.candidate_labels,
+            })
+
+        db_session.close()
+        
+        return {
+            "analyses": result,
+            "total": total_count,
+            "offset": offset,
+            "limit": limit,
+            "has_more": (offset + len(result)) < total_count
+        }
     except Exception as e:
         print(f"Error listing zero-shot analyses: {e}")
-        total_count = 0
-    
-    return {
-        "analyses": analyses,
-        "total": total_count,
-        "offset": offset,
-        "limit": limit,
-        "has_more": (offset + len(analyses)) < total_count
-    }
+        if db_session:
+            db_session.close()
+        return {
+            "analyses": [],
+            "total": 0,
+            "offset": offset,
+            "limit": limit,
+            "has_more": False
+        }
 
 
 def delete_zero_shot_analysis(analysis_id: str) -> bool:
-    file_path = ZERO_SHOT_STORAGE_DIR / f"{analysis_id}.json"
-    
-    if not file_path.exists():
-        return False
-    
+    """Delete a zero-shot analysis from database"""
+    db_session = None
     try:
-        os.remove(file_path)
+        db_session = get_session()
+        if not db_session:
+            return False
+
+        db_session.query(ZeroShotAnalysis).filter_by(analysis_id=analysis_id).delete()
+        db_session.commit()
+        db_session.close()
         return True
     except Exception as e:
         print(f"Error deleting zero-shot analysis {analysis_id}: {e}")
+        if db_session:
+            db_session.close()
         return False
 
 
 def clear_all_zero_shot_analyses() -> bool:
+    """Delete all zero-shot analyses from database"""
+    db_session = None
     try:
-        for file_path in ZERO_SHOT_STORAGE_DIR.glob("zs_*.json"):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                print(f"Error deleting file {file_path}: {e}")
+        db_session = get_session()
+        if not db_session:
+            return False
+
+        db_session.query(ZeroShotAnalysis).delete()
+        db_session.commit()
+        db_session.close()
         return True
     except Exception as e:
         print(f"Error clearing zero-shot analyses: {e}")
+        if db_session:
+            db_session.close()
         return False
