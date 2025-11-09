@@ -345,11 +345,6 @@ body {
     white-space: nowrap;
 }
 
-.model-option.selected .model-badge {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: var(--color-primary);
-}
-
 .model-option .model-description {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
