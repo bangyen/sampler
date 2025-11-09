@@ -715,7 +715,6 @@ async def get_models():
     """Get list of available LLM models"""
     return {
         "models": AVAILABLE_MODELS,
-        "persistence_type": PERSISTENCE_TYPE,
     }
 
 
