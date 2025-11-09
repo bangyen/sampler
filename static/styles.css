@@ -1822,7 +1822,6 @@ body {
 .model-status-section {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: var(--space-lg);
     background: var(--color-bg-light);
     border-radius: var(--radius-base);
