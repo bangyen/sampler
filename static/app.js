@@ -593,6 +593,11 @@ async function saveConversation() {
 
 function renderMessages() {
     const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) {
+        console.warn('chat-messages element not found - chat functionality not available');
+        return;
+    }
+    
     chatMessages.innerHTML = '';
     
     if (messages.length === 0) {
@@ -681,10 +686,20 @@ function escapeHtml(text) {
 async function sendMessage(userMessage) {
     if (!userMessage || !userMessage.trim() || isGenerating) return;
     
+    const sendBtn = document.getElementById('send-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    
+    if (!sendBtn || !stopBtn || !chatInput || !chatMessages) {
+        console.warn('Chat UI elements not found - chat functionality not available');
+        return;
+    }
+    
     isGenerating = true;
-    document.getElementById('send-btn').style.display = 'none';
-    document.getElementById('stop-btn').style.display = 'inline-block';
-    document.getElementById('chat-input').disabled = true;
+    sendBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    chatInput.disabled = true;
     
     messages.push({
         role: 'user',
@@ -693,7 +708,6 @@ async function sendMessage(userMessage) {
     
     renderMessages();
     
-    const chatMessages = document.getElementById('chat-messages');
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
     assistantDiv.innerHTML = `
@@ -914,10 +928,17 @@ async function sendMessage(userMessage) {
         currentReader = null;
         currentAbortController = null;
         isGenerating = false;
-        document.getElementById('send-btn').style.display = 'inline-block';
-        document.getElementById('stop-btn').style.display = 'none';
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('chat-input').value = '';
+        
+        const sendBtn = document.getElementById('send-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const chatInput = document.getElementById('chat-input');
+        
+        if (sendBtn) sendBtn.style.display = 'inline-block';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (chatInput) {
+            chatInput.disabled = false;
+            chatInput.value = '';
+        }
     }
 }
 
