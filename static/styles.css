@@ -169,13 +169,13 @@
 .error-box {
     padding: var(--space-md);
     background: #fee;
-    border: 2px solid var(--color-error);
-    border-radius: var(--border-radius);
-    color: var(--color-error);
+    border: var(--border-width-base) solid var(--color-danger);
+    border-radius: var(--radius-md);
+    color: var(--color-danger);
 }
 
 .text-muted {
-    color: #888;
+    color: var(--color-text-muted);
 }
 
 .text-small {
@@ -183,7 +183,7 @@
 }
 
 .text-error {
-    color: var(--color-error);
+    color: var(--color-danger);
 }
 
 /* ========================================
