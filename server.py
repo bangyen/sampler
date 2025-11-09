@@ -269,6 +269,8 @@ ocr_readers = {}
 class NERRequest(BaseModel):
     text: str
     model: str = "BERT Base"
+    confidence_threshold: float = 0.5
+    entity_types: List[str] = ["PER", "ORG", "LOC", "MISC"]
 
 
 class ZeroShotRequest(BaseModel):
@@ -1213,17 +1215,23 @@ async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None
         end_time = time.time()
         processing_time = end_time - start_time
 
+        # Filter entities by confidence threshold and entity types
         formatted_entities = []
         for entity in entities:
-            formatted_entities.append(
-                {
-                    "text": entity["word"],
-                    "label": entity["entity_group"],
-                    "score": float(entity["score"]),
-                    "start": entity["start"],
-                    "end": entity["end"],
-                }
-            )
+            score = float(entity["score"])
+            entity_type = entity["entity_group"]
+            
+            # Apply filters
+            if score >= request.confidence_threshold and entity_type in request.entity_types:
+                formatted_entities.append(
+                    {
+                        "text": entity["word"],
+                        "label": entity_type,
+                        "score": score,
+                        "start": entity["start"],
+                        "end": entity["end"],
+                    }
+                )
 
         # Save to history
         ner_id = save_ner_analysis(
@@ -1390,7 +1398,7 @@ async def classify_zero_shot(request: ZeroShotRequest):
 
 
 async def stream_ocr_extraction(
-    file_contents, filename, config
+    file_contents, filename, config, confidence_threshold=0.5, min_text_size=10
 ) -> AsyncGenerator[str, None]:
     """Stream OCR extraction with model loading events"""
     try:
@@ -1438,17 +1446,26 @@ async def stream_ocr_extraction(
             img_array = np.array(image)
             results = ocr_model.readtext(img_array)  # type: ignore
 
-            extracted_text = " ".join([text for (bbox, text, conf) in results])
-
+            # Filter and collect results
             bounding_boxes = []
+            filtered_texts = []
             for bbox, text, confidence in results:
-                bounding_boxes.append(
-                    {
-                        "text": text,
-                        "confidence": float(confidence),
-                        "bbox": [[int(point[0]), int(point[1])] for point in bbox],
-                    }
-                )
+                # Calculate text height from bounding box
+                y_coords = [point[1] for point in bbox]
+                text_height = max(y_coords) - min(y_coords)
+                
+                # Apply filters
+                if confidence >= confidence_threshold and text_height >= min_text_size:
+                    bounding_boxes.append(
+                        {
+                            "text": text,
+                            "confidence": float(confidence),
+                            "bbox": [[int(point[0]), int(point[1])] for point in bbox],
+                        }
+                    )
+                    filtered_texts.append(text)
+            
+            extracted_text = " ".join(filtered_texts)
 
         elif engine == "paddleocr":
             image = PILImage.open(io.BytesIO(file_contents))
@@ -1465,17 +1482,23 @@ async def stream_ocr_extraction(
                     text_info = line[1]
                     text = text_info[0]
                     confidence = text_info[1]
-
-                    extracted_text_parts.append(text)
-                    bounding_boxes.append(
-                        {
-                            "text": text,
-                            "confidence": float(confidence),
-                            "bbox": [
-                                [int(point[0]), int(point[1])] for point in bbox_coords
-                            ],
-                        }
-                    )
+                    
+                    # Calculate text height from bounding box
+                    y_coords = [point[1] for point in bbox_coords]
+                    text_height = max(y_coords) - min(y_coords)
+                    
+                    # Apply filters
+                    if confidence >= confidence_threshold and text_height >= min_text_size:
+                        extracted_text_parts.append(text)
+                        bounding_boxes.append(
+                            {
+                                "text": text,
+                                "confidence": float(confidence),
+                                "bbox": [
+                                    [int(point[0]), int(point[1])] for point in bbox_coords
+                                ],
+                            }
+                        )
 
             extracted_text = " ".join(extracted_text_parts)
 
@@ -1502,12 +1525,14 @@ async def stream_ocr_extraction(
                 text = data["text"][i].strip()
                 if text:  # Only include non-empty text
                     conf = float(data["conf"][i]) / 100.0  # Convert to 0-1 range
-                    if conf > 0:  # Only include confident detections
-                        x, y, w, h = (
+                    h = data["height"][i]
+                    
+                    # Apply filters
+                    if conf >= confidence_threshold and h >= min_text_size:
+                        x, y, w = (
                             data["left"][i],
                             data["top"][i],
                             data["width"][i],
-                            data["height"][i],
                         )
                         bounding_boxes.append(
                             {
@@ -1556,11 +1581,14 @@ async def stream_ocr_extraction(
 
 @app.post("/api/ocr")
 async def extract_text_from_image(
-    file: UploadFile = File(...), config: str = "EasyOCR"
+    file: UploadFile = File(...), 
+    config: str = "EasyOCR",
+    confidence_threshold: float = 0.5,
+    min_text_size: int = 10
 ):
     """Extract text from uploaded image using OCR (streaming)"""
     contents = await file.read()
-    return EventSourceResponse(stream_ocr_extraction(contents, file.filename, config))
+    return EventSourceResponse(stream_ocr_extraction(contents, file.filename, config, confidence_threshold, min_text_size))
 
 
 @app.post("/api/conversations/save")

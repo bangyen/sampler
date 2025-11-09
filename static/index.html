@@ -93,6 +93,45 @@
                     </div>
                 </div>
                 
+                <details class="sidebar-section settings-accordion">
+                    <summary>
+                        <h3>NER Settings</h3>
+                    </summary>
+                    <div class="settings-content">
+                        <div class="setting-item">
+                            <label for="ner-confidence-threshold">
+                                Confidence Threshold
+                                <span class="setting-value" id="ner-confidence-value">0.50</span>
+                            </label>
+                            <input type="range" id="ner-confidence-threshold" min="0" max="1" step="0.05" value="0.50">
+                            <p class="setting-description">Filter entities below this confidence score</p>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label>Entity Types</label>
+                            <div class="entity-type-filters">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" class="entity-type-checkbox" value="PER" checked>
+                                    <span>Person</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" class="entity-type-checkbox" value="ORG" checked>
+                                    <span>Organization</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" class="entity-type-checkbox" value="LOC" checked>
+                                    <span>Location</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" class="entity-type-checkbox" value="MISC" checked>
+                                    <span>Miscellaneous</span>
+                                </label>
+                            </div>
+                            <p class="setting-description">Select which entity types to display</p>
+                        </div>
+                    </div>
+                </details>
+                
                 <div class="sidebar-section">
                     <h3>Recent Analyses</h3>
                     <button id="clear-all-ner-btn" class="btn btn-secondary mb-md">Clear All History</button>
@@ -128,6 +167,31 @@
                         <div class="skeleton skeleton-description"></div>
                     </div>
                 </div>
+                
+                <details class="sidebar-section settings-accordion">
+                    <summary>
+                        <h3>OCR Settings</h3>
+                    </summary>
+                    <div class="settings-content">
+                        <div class="setting-item">
+                            <label for="ocr-confidence-threshold">
+                                Confidence Threshold
+                                <span class="setting-value" id="ocr-confidence-value">0.50</span>
+                            </label>
+                            <input type="range" id="ocr-confidence-threshold" min="0" max="1" step="0.05" value="0.50">
+                            <p class="setting-description">Filter text detections below this confidence score</p>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label for="ocr-min-text-size">
+                                Min Text Size (pixels)
+                                <span class="setting-value" id="ocr-min-text-size-value">10</span>
+                            </label>
+                            <input type="range" id="ocr-min-text-size" min="5" max="50" step="5" value="10">
+                            <p class="setting-description">Filter out text smaller than this height</p>
+                        </div>
+                    </div>
+                </details>
                 
                 <div class="sidebar-section">
                     <h3>Recent Extractions</h3>

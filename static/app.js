@@ -1658,6 +1658,32 @@ function setupEventListeners() {
         });
     }
     
+    // NER settings sliders
+    const nerConfidenceSlider = document.getElementById('ner-confidence-threshold');
+    const nerConfidenceValue = document.getElementById('ner-confidence-value');
+    if (nerConfidenceSlider && nerConfidenceValue) {
+        nerConfidenceSlider.addEventListener('input', (e) => {
+            nerConfidenceValue.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+    }
+    
+    // OCR settings sliders
+    const ocrConfidenceSlider = document.getElementById('ocr-confidence-threshold');
+    const ocrConfidenceValue = document.getElementById('ocr-confidence-value');
+    if (ocrConfidenceSlider && ocrConfidenceValue) {
+        ocrConfidenceSlider.addEventListener('input', (e) => {
+            ocrConfidenceValue.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+    }
+    
+    const ocrMinTextSizeSlider = document.getElementById('ocr-min-text-size');
+    const ocrMinTextSizeValue = document.getElementById('ocr-min-text-size-value');
+    if (ocrMinTextSizeSlider && ocrMinTextSizeValue) {
+        ocrMinTextSizeSlider.addEventListener('input', (e) => {
+            ocrMinTextSizeValue.textContent = e.target.value;
+        });
+    }
+    
     setupTabs();
     setupNER();
     setupOCR();
@@ -1735,12 +1761,24 @@ function setupNER() {
         let modelLoadStartTime = null;
         
         try {
+            // Get settings values
+            const confidenceThreshold = parseFloat(document.getElementById('ner-confidence-threshold')?.value || 0.5);
+            const entityTypeCheckboxes = document.querySelectorAll('.entity-type-checkbox');
+            const entityTypes = Array.from(entityTypeCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
             const response = await fetch('/api/ner', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ text, model: selectedNERModel })
+                body: JSON.stringify({ 
+                    text, 
+                    model: selectedNERModel,
+                    confidence_threshold: confidenceThreshold,
+                    entity_types: entityTypes
+                })
             });
             
             const reader = response.body.getReader();
@@ -1990,10 +2028,14 @@ function setupOCR() {
         let modelLoadStartTime = null;
         
         try {
+            // Get settings values
+            const confidenceThreshold = parseFloat(document.getElementById('ocr-confidence-threshold')?.value || 0.5);
+            const minTextSize = parseInt(document.getElementById('ocr-min-text-size')?.value || 10);
+            
             const formData = new FormData();
             formData.append('file', ocrSelectedFile);
             
-            const endpoint = `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}`;
+            const endpoint = `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}&confidence_threshold=${confidenceThreshold}&min_text_size=${minTextSize}`;
             const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
