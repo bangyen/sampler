@@ -26,11 +26,13 @@
     --color-danger-hover: #c82333;
     --color-danger-light: #ff5252;
     --color-danger-light-hover: #ff1744;
+    --color-danger-bg: #fee;
     
     /* Colors - Text */
     --color-text-primary: #333;
     --color-text-secondary: #666;
     --color-text-muted: #888;
+    --color-text-muted-light: #999;
     --color-text-white: white;
     
     /* Colors - Background */
@@ -168,7 +170,7 @@
 
 .error-box {
     padding: var(--space-md);
-    background: #fee;
+    background: var(--color-danger-bg);
     border: var(--border-width-base) solid var(--color-danger);
     border-radius: var(--radius-md);
     color: var(--color-danger);
@@ -180,7 +182,7 @@
     padding: var(--space-md);
     margin-bottom: var(--space-lg);
     border-radius: var(--radius-sm);
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-md);
 }
 
 .empty-state {
@@ -189,7 +191,7 @@
 }
 
 .empty-state-hint {
-    color: #999;
+    color: var(--color-text-muted-light);
 }
 
 .history-count {
@@ -214,11 +216,11 @@
 }
 
 .text-secondary {
-    color: #999;
+    color: var(--color-text-muted-light);
 }
 
 .text-small {
-    font-size: 0.9em;
+    font-size: var(--font-size-md);
 }
 
 .text-xs {
