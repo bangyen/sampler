@@ -269,10 +269,10 @@ class NERRequest(BaseModel):
 class ZeroShotRequest(BaseModel):
     text: str
     candidate_labels: List[str]
-    model: str = "BART Large MNLI"
+    model: str = "Qwen 2.5 7B"
     hypothesis_template: str = "This example is {}."
     multi_label: bool = False
-    use_logprobs: bool = True
+    use_logprobs: bool = False
     abstain_threshold: Optional[float] = None
 
 
