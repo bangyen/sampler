@@ -90,27 +90,32 @@ def build_zero_shot_prompt(
     
     labels_str = json.dumps(candidate_labels)
     
-    hypotheses_examples = []
-    for label in candidate_labels[:3]:
-        hypothesis = hypothesis_template.replace("{label}", label)
-        hypotheses_examples.append(f'  - For label "{label}": "{hypothesis}"')
-    hypotheses_str = "\n".join(hypotheses_examples)
+    # Build label placeholders without biased scores
+    label_examples = []
+    for label in candidate_labels:
+        label_examples.append(f'    {{"label": "{label}", "score": <number between 0-1>}}')
+    labels_format = ",\n".join(label_examples)
     
-    prompt = f"""Classify this text into one category. Reply with valid JSON only.
+    prompt = f"""You are a text classifier. Analyze the text and assign confidence scores to each category based on the content.
 
-Text: {text}
+Text to classify: {text}
 
-Categories: {labels_str}
+Available categories: {labels_str}
 
-Output format (JSON only):
+Instructions:
+1. Read the text carefully and evaluate which category fits best
+2. Assign a confidence score (0 to 1) to each category based on how well it matches
+3. Higher scores mean better match, lower scores mean poor match
+4. The category with the highest score is the top prediction
+5. Output ONLY valid JSON, no other text
+
+Required JSON format:
 {{
   "labels": [
-    {{"label": "{candidate_labels[0]}", "score": 0.7}},
-    {{"label": "{candidate_labels[1] if len(candidate_labels) > 1 else candidate_labels[0]}", "score": 0.2}},
-    {{"label": "{candidate_labels[2] if len(candidate_labels) > 2 else candidate_labels[0]}", "score": 0.1}}
+{labels_format}
   ],
-  "top_label": "{candidate_labels[0]}",
-  "top_score": 0.7
+  "top_label": "<category with highest score>",
+  "top_score": <highest score value>
 }}
 
 JSON:"""
@@ -379,6 +384,8 @@ class LLMZeroShotClassifier:
             outputs.sequences[0][inputs['input_ids'].shape[1]:],
             skip_special_tokens=True
         )
+        
+        print(f"[DEBUG] Model response: {response_text}")
         
         logprobs = None
         if use_logprobs:
