@@ -5,8 +5,6 @@ python-multipart>=0.0.6
 torch==2.5.1
 torchvision==0.20.1
 transformers @ git+https://github.com/shumingma/transformers.git
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
 easyocr
 Pillow>=10.0.0
 llama-cpp-python>=0.2.0
