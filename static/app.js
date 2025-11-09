@@ -455,9 +455,19 @@ async function saveClassification(classification) {
 async function loadClassificationHistory() {
     try {
         const response = await fetch('/api/zero-shot/history');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         const historyList = document.getElementById('classification-list');
+        if (!historyList) {
+            console.error('classification-list element not found in DOM');
+            return;
+        }
+        
         historyList.innerHTML = '';
         
         if (!data.analyses || data.analyses.length === 0) {
@@ -529,7 +539,17 @@ async function loadClassificationHistory() {
             historyList.appendChild(showMoreBtn);
         }
     } catch (error) {
-        console.error('Error loading classification history:', error);
+        console.error('Error loading classification history:', error.message || error, error.stack || '');
+        const historyList = document.getElementById('classification-list');
+        if (historyList) {
+            historyList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #dc3545;">Failed to load history</p>
+                    <small style="color: #888;">${error.message || 'Unknown error'}</small>
+                </div>
+            `;
+        }
+        showToast('Failed to load classification history', 'error');
     }
 }
 
@@ -1567,7 +1587,9 @@ function setupTabs() {
             document.getElementById(`${targetTab}-tab`).classList.add('active');
             document.getElementById(`${targetTab}-sidebar`).style.display = 'block';
             
-            if (targetTab === 'ner') {
+            if (targetTab === 'chat') {
+                loadClassificationHistory();
+            } else if (targetTab === 'ner') {
                 loadNERHistory();
             } else if (targetTab === 'ocr') {
                 loadOCRHistory();
@@ -2034,9 +2056,19 @@ function displayOCRResults(data) {
 async function loadNERHistory() {
     try {
         const response = await fetch('/api/ner/history');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         const historyList = document.getElementById('ner-history-list');
+        if (!historyList) {
+            console.error('ner-history-list element not found in DOM');
+            return;
+        }
+        
         historyList.innerHTML = '';
         
         if (!data.analyses || data.analyses.length === 0) {
@@ -2087,7 +2119,6 @@ async function loadNERHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${data.analyses.length - displayedNERCount} remaining)`;
             showMoreBtn.onclick = () => {
-                // Insert skeleton before the button
                 const skeleton = document.createElement('div');
                 skeleton.className = 'skeleton-conversation';
                 skeleton.innerHTML = `
@@ -2101,7 +2132,17 @@ async function loadNERHistory() {
             historyList.appendChild(showMoreBtn);
         }
     } catch (error) {
-        console.error('Error loading NER history:', error);
+        console.error('Error loading NER history:', error.message || error, error.stack || '');
+        const historyList = document.getElementById('ner-history-list');
+        if (historyList) {
+            historyList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #dc3545;">Failed to load history</p>
+                    <small style="color: #888;">${error.message || 'Unknown error'}</small>
+                </div>
+            `;
+        }
+        showToast('Failed to load NER history', 'error');
     }
 }
 
@@ -2141,10 +2182,22 @@ async function loadOCRHistory() {
             fetch('/api/layout/history')
         ]);
         
+        if (!ocrResponse.ok) {
+            throw new Error(`OCR History HTTP ${ocrResponse.status}: ${ocrResponse.statusText}`);
+        }
+        if (!layoutResponse.ok) {
+            throw new Error(`Layout History HTTP ${layoutResponse.status}: ${layoutResponse.statusText}`);
+        }
+        
         const ocrData = await ocrResponse.json();
         const layoutData = await layoutResponse.json();
         
         const historyList = document.getElementById('ocr-history-list');
+        if (!historyList) {
+            console.error('ocr-history-list element not found in DOM');
+            return;
+        }
+        
         historyList.innerHTML = '';
         
         const ocrAnalyses = ocrData.analyses || [];
@@ -2205,7 +2258,6 @@ async function loadOCRHistory() {
             showMoreBtn.className = 'btn btn-secondary show-more-btn';
             showMoreBtn.textContent = `Show More (${allAnalyses.length - displayedOCRCount} remaining)`;
             showMoreBtn.onclick = () => {
-                // Insert skeleton before the button
                 const skeleton = document.createElement('div');
                 skeleton.className = 'skeleton-conversation';
                 skeleton.innerHTML = `
@@ -2219,7 +2271,17 @@ async function loadOCRHistory() {
             historyList.appendChild(showMoreBtn);
         }
     } catch (error) {
-        console.error('Error loading OCR history:', error);
+        console.error('Error loading OCR history:', error.message || error, error.stack || '');
+        const historyList = document.getElementById('ocr-history-list');
+        if (historyList) {
+            historyList.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: #dc3545;">Failed to load history</p>
+                    <small style="color: #888;">${error.message || 'Unknown error'}</small>
+                </div>
+            `;
+        }
+        showToast('Failed to load OCR history', 'error');
     }
 }
 

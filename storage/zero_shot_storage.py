@@ -59,11 +59,16 @@ def load_zero_shot_analysis(analysis_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def get_all_zero_shot_analyses() -> List[Dict[str, Any]]:
+def get_all_zero_shot_analyses(limit: Optional[int] = None, offset: int = 0) -> Dict[str, Any]:
     analyses = []
     
     try:
-        for file_path in sorted(ZERO_SHOT_STORAGE_DIR.glob("zs_*.json"), reverse=True):
+        all_files = sorted(ZERO_SHOT_STORAGE_DIR.glob("zs_*.json"), reverse=True)
+        total_count = len(all_files)
+        
+        files_to_process = all_files[offset:offset + limit] if limit else all_files[offset:]
+        
+        for file_path in files_to_process:
             try:
                 with open(file_path, "r") as f:
                     data = json.load(f)
@@ -81,8 +86,15 @@ def get_all_zero_shot_analyses() -> List[Dict[str, Any]]:
                 continue
     except Exception as e:
         print(f"Error listing zero-shot analyses: {e}")
+        total_count = 0
     
-    return analyses
+    return {
+        "analyses": analyses,
+        "total": total_count,
+        "offset": offset,
+        "limit": limit,
+        "has_more": (offset + len(analyses)) < total_count
+    }
 
 
 def delete_zero_shot_analysis(analysis_id: str) -> bool:

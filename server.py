@@ -1698,10 +1698,14 @@ async def save_zero_shot_analysis_endpoint(analysis: Dict[str, Any]):
 
 
 @app.get("/api/zero-shot/history")
-async def list_zero_shot_analyses():
-    """List all zero-shot classification analyses"""
-    analyses = get_all_zero_shot_analyses()
-    return {"analyses": analyses}
+async def list_zero_shot_analyses(limit: Optional[int] = None, offset: int = 0):
+    """List zero-shot classification analyses with optional pagination"""
+    result = get_all_zero_shot_analyses(limit=limit, offset=offset)
+    
+    if limit is None:
+        return {"analyses": result["analyses"]}
+    
+    return result
 
 
 @app.get("/api/zero-shot/history/{zs_id}")
