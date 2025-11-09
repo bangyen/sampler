@@ -59,17 +59,18 @@ def load_zero_shot_analysis(analysis_id: str) -> Optional[Dict[str, Any]]:
             db_session.close()
             return None
 
+        text_value = str(analysis.text) if analysis.text is not None else ""
         result = {
             "id": analysis.analysis_id,
             "timestamp": analysis.created_at.isoformat(),
-            "text": analysis.text,
+            "text": text_value,
             "candidate_labels": analysis.candidate_labels,
             "results": analysis.results,
             "model": analysis.model,
             "processing_time": analysis.processing_time,
             "use_logprobs": analysis.use_logprobs,
             "abstain_threshold": analysis.abstain_threshold,
-            "text_length": len(analysis.text) if analysis.text else 0,
+            "text_length": len(text_value),
         }
 
         db_session.close()
@@ -109,11 +110,12 @@ def get_all_zero_shot_analyses(limit: Optional[int] = None, offset: int = 0) -> 
 
         result = []
         for analysis in analyses:
-            text_content = str(analysis.text) if analysis.text else ""
+            text_content = str(analysis.text) if analysis.text is not None else ""
+            text_preview = text_content[:100] + "..." if len(text_content) > 100 else text_content
             result.append({
                 "id": analysis.analysis_id,
                 "timestamp": analysis.created_at.isoformat(),
-                "text_preview": text_content[:100] + "..." if len(text_content) > 100 else text_content,
+                "text_preview": text_preview,
                 "top_label": analysis.results.get("top_label"),
                 "top_score": analysis.results.get("top_score"),
                 "model": analysis.model,
