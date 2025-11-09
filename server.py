@@ -41,73 +41,6 @@ try:
 except ImportError:
     PYTESSERACT_AVAILABLE = False
 
-# Import database storage functions
-from storage.database import (
-    save_conversation,
-    load_conversation,
-    get_all_conversations,
-    delete_conversation,
-    clear_all_conversations,
-    get_engine,
-)
-from sqlalchemy import text
-
-
-# Test database connection on startup
-def test_database_connection():
-    try:
-        engine = get_engine()
-        if engine is None:
-            return False
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return True
-    except Exception as e:
-        print(f"Database connection test failed: {e}")
-        return False
-
-
-if not test_database_connection():
-    raise RuntimeError(
-        "PostgreSQL database is not available. Please ensure DATABASE_URL is set correctly."
-    )
-
-DATABASE_AVAILABLE = True
-PERSISTENCE_TYPE = "PostgreSQL"
-
-
-from storage.ner_storage import (  # noqa: E402
-    save_ner_analysis,
-    load_ner_analysis,
-    get_all_ner_analyses,
-    delete_ner_analysis,
-    clear_all_ner_analyses,
-)
-
-from storage.ocr_storage import (  # noqa: E402
-    save_ocr_analysis,
-    load_ocr_analysis,
-    get_all_ocr_analyses,
-    delete_ocr_analysis,
-    clear_all_ocr_analyses,
-)
-
-from storage.layout_storage import (  # noqa: E402
-    save_layout_analysis,
-    load_layout_analysis,
-    get_all_layout_analyses,
-    delete_layout_analysis,
-    clear_all_layout_analyses,
-)
-
-from storage.zero_shot_storage import (  # noqa: E402
-    save_zero_shot_analysis,
-    load_zero_shot_analysis,
-    get_all_zero_shot_analyses,
-    delete_zero_shot_analysis,
-    clear_all_zero_shot_analyses,
-)
-
 # Import zero-shot classifier
 try:
     from inference.zero_shot_classifier import (
@@ -1238,11 +1171,6 @@ async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None
                     }
                 )
 
-        # Save to history
-        ner_id = save_ner_analysis(
-            request.text, formatted_entities, request.model, processing_time
-        )
-
         # Send the results
         yield json.dumps(
             {
@@ -1251,7 +1179,6 @@ async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None
                 "processing_time": processing_time,
                 "text_length": len(request.text),
                 "model": request.model,
-                "id": ner_id,
             }
         )
     except HTTPException as e:
@@ -1366,23 +1293,12 @@ async def stream_zero_shot_classification(
 
         result_dict = result.model_dump()
 
-        zs_id = save_zero_shot_analysis(
-            text=request.text,
-            labels=request.candidate_labels,
-            results=result_dict,
-            model=request.model,
-            processing_time=processing_time,
-            use_logprobs=request.use_logprobs,
-            abstain_threshold=request.abstain_threshold,
-        )
-
         yield json.dumps(
             {
                 "done": True,
                 "result": result_dict,
                 "processing_time": processing_time,
                 "model": request.model,
-                "id": zs_id,
             }
         )
 
@@ -1555,17 +1471,6 @@ async def stream_ocr_extraction(
         end_time = time.time()
         processing_time = end_time - start_time
 
-        # Save to history
-        ocr_id = save_ocr_analysis(
-            file_contents,
-            filename,
-            extracted_text,
-            bounding_boxes,
-            config,
-            processing_time,
-            len(bounding_boxes),
-        )
-
         # Send the results
         yield json.dumps(
             {
@@ -1575,7 +1480,6 @@ async def stream_ocr_extraction(
                 "processing_time": processing_time,
                 "num_detections": len(bounding_boxes),
                 "config": config,
-                "id": ocr_id,
             }
         )
     except HTTPException as e:
@@ -1594,158 +1498,6 @@ async def extract_text_from_image(
     """Extract text from uploaded image using OCR (streaming)"""
     contents = await file.read()
     return EventSourceResponse(stream_ocr_extraction(contents, file.filename, config, confidence_threshold, min_text_size))
-
-
-@app.post("/api/conversations/save")
-async def save_conv(request: ConversationRequest):
-    """Save a conversation"""
-    messages_dict = [
-        {
-            "role": msg.role,
-            "content": msg.content,
-            "metrics": msg.metrics,
-        }
-        for msg in request.messages
-    ]
-    success = save_conversation(request.session_id, messages_dict)
-    return {"success": success}
-
-
-@app.get("/api/conversations/{session_id}")
-async def get_conversation(session_id: str):
-    """Load a conversation"""
-    messages = load_conversation(session_id)
-    return {"messages": messages}
-
-
-@app.get("/api/conversations")
-async def list_conversations():
-    """List all conversations"""
-    conversations = get_all_conversations()
-    return {"conversations": conversations}
-
-
-@app.delete("/api/conversations/{session_id}")
-async def delete_conv(session_id: str):
-    """Delete a conversation"""
-    success = delete_conversation(session_id)
-    return {"success": success}
-
-
-@app.delete("/api/conversations")
-async def clear_all_convs():
-    """Delete all conversations"""
-    success = clear_all_conversations()
-    return {"success": success}
-
-
-@app.get("/api/ner/history")
-async def list_ner_analyses():
-    """List all NER analyses"""
-    analyses = get_all_ner_analyses()
-    return {"analyses": analyses}
-
-
-@app.get("/api/ner/history/{ner_id}")
-async def get_ner_analysis(ner_id: str):
-    """Load a specific NER analysis"""
-    analysis = load_ner_analysis(ner_id)
-    if analysis is None:
-        raise HTTPException(status_code=404, detail="NER analysis not found")
-    return analysis
-
-
-@app.delete("/api/ner/history/{ner_id}")
-async def delete_ner(ner_id: str):
-    """Delete a NER analysis"""
-    success = delete_ner_analysis(ner_id)
-    return {"success": success}
-
-
-@app.delete("/api/ner/history")
-async def clear_all_ner():
-    """Delete all NER analyses"""
-    success = clear_all_ner_analyses()
-    return {"success": success}
-
-
-@app.get("/api/ocr/history")
-async def list_ocr_analyses():
-    """List all OCR analyses"""
-    analyses = get_all_ocr_analyses()
-    return {"analyses": analyses}
-
-
-@app.get("/api/ocr/history/{ocr_id}")
-async def get_ocr_analysis(ocr_id: str):
-    """Load a specific OCR analysis"""
-    analysis = load_ocr_analysis(ocr_id)
-    if analysis is None:
-        raise HTTPException(status_code=404, detail="OCR analysis not found")
-    return analysis
-
-
-@app.delete("/api/ocr/history/{ocr_id}")
-async def delete_ocr(ocr_id: str):
-    """Delete an OCR analysis"""
-    success = delete_ocr_analysis(ocr_id)
-    return {"success": success}
-
-
-@app.delete("/api/ocr/history")
-async def clear_all_ocr():
-    """Delete all OCR analyses"""
-    success = clear_all_ocr_analyses()
-    return {"success": success}
-
-
-@app.post("/api/zero-shot/history")
-async def save_zero_shot_analysis_endpoint(analysis: Dict[str, Any]):
-    """Save a zero-shot classification analysis"""
-    analysis_id = save_zero_shot_analysis(
-        text=analysis.get("text", ""),
-        labels=analysis.get("labels", []),
-        results=analysis.get("result", {}),
-        model=analysis.get("model", ""),
-        processing_time=float(analysis.get("duration", 0)),
-        use_logprobs=True,
-        abstain_threshold=analysis.get("result", {}).get("abstain_threshold"),
-    )
-    return {"success": analysis_id is not None, "id": analysis_id}
-
-
-@app.get("/api/zero-shot/history")
-async def list_zero_shot_analyses(limit: Optional[int] = None, offset: int = 0):
-    """List zero-shot classification analyses with optional pagination"""
-    result = get_all_zero_shot_analyses(limit=limit, offset=offset)
-
-    if limit is None:
-        return {"analyses": result["analyses"]}
-
-    return result
-
-
-@app.get("/api/zero-shot/history/{zs_id}")
-async def get_zero_shot_analysis(zs_id: str):
-    """Load a specific zero-shot classification analysis"""
-    analysis = load_zero_shot_analysis(zs_id)
-    if analysis is None:
-        raise HTTPException(status_code=404, detail="Zero-shot analysis not found")
-    return analysis
-
-
-@app.delete("/api/zero-shot/history/{zs_id}")
-async def delete_zero_shot(zs_id: str):
-    """Delete a zero-shot classification analysis"""
-    success = delete_zero_shot_analysis(zs_id)
-    return {"success": success}
-
-
-@app.delete("/api/zero-shot/history")
-async def clear_all_zero_shot():
-    """Delete all zero-shot classification analyses"""
-    success = clear_all_zero_shot_analyses()
-    return {"success": success}
 
 
 @app.post("/api/layout")
@@ -1813,22 +1565,11 @@ async def analyze_layout(file: UploadFile = File(...)):
         end_time = time.time()
         processing_time = end_time - start_time
 
-        # Save to history
-        layout_id = save_layout_analysis(
-            contents,
-            file.filename,
-            extracted_text,
-            bounding_boxes,
-            processing_time,
-            len(bounding_boxes),
-        )
-
         return {
             "text": extracted_text,
             "bounding_boxes": bounding_boxes,
             "processing_time": processing_time,
             "num_detections": len(bounding_boxes),
-            "id": layout_id,
         }
     except HTTPException:
         raise
@@ -1836,36 +1577,6 @@ async def analyze_layout(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=500, detail=f"Error during layout analysis: {str(e)}"
         )
-
-
-@app.get("/api/layout/history")
-async def list_layout_analyses():
-    """List all layout analyses"""
-    analyses = get_all_layout_analyses()
-    return {"analyses": analyses}
-
-
-@app.get("/api/layout/history/{layout_id}")
-async def get_layout_analysis_by_id(layout_id: str):
-    """Load a specific layout analysis"""
-    analysis = load_layout_analysis(layout_id)
-    if analysis is None:
-        raise HTTPException(status_code=404, detail="Layout analysis not found")
-    return analysis
-
-
-@app.delete("/api/layout/history/{layout_id}")
-async def delete_layout_analysis_by_id(layout_id: str):
-    """Delete a layout analysis"""
-    success = delete_layout_analysis(layout_id)
-    return {"success": success}
-
-
-@app.delete("/api/layout/history")
-async def clear_all_layout():
-    """Delete all layout analyses"""
-    success = clear_all_layout_analyses()
-    return {"success": success}
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
