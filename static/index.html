@@ -47,7 +47,7 @@
                 </div>
             </div>
 
-            <div id="ner-sidebar" class="sidebar-content" data-sidebar="ner" style="display: none;">
+            <div id="ner-sidebar" class="sidebar-content hidden" data-sidebar="ner">
                 <div class="sidebar-header">
                     <h2>NER Model Selection</h2>
                 </div>
@@ -62,7 +62,7 @@
                 
                 <div class="sidebar-section">
                     <h3>Recent Analyses</h3>
-                    <button id="clear-all-ner-btn" class="btn btn-secondary" style="margin-bottom: 10px;">Clear All History</button>
+                    <button id="clear-all-ner-btn" class="btn btn-secondary mb-md">Clear All History</button>
                     <div id="ner-history-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <div id="ocr-sidebar" class="sidebar-content" data-sidebar="ocr" style="display: none;">
+            <div id="ocr-sidebar" class="sidebar-content hidden" data-sidebar="ocr">
                 <div class="sidebar-header">
                     <h2>OCR Model Selection</h2>
                 </div>
@@ -98,7 +98,7 @@
                 
                 <div class="sidebar-section">
                     <h3>Recent Extractions</h3>
-                    <button id="clear-all-ocr-btn" class="btn btn-secondary" style="margin-bottom: 10px;">Clear All History</button>
+                    <button id="clear-all-ocr-btn" class="btn btn-secondary mb-md">Clear All History</button>
                     <div id="ocr-history-list" class="conversation-list">
                         <div class="skeleton-conversation">
                             <div class="skeleton skeleton-conversation-title"></div>
@@ -140,7 +140,7 @@
                         <p>Classify text into custom categories using LLMs with confidence scoring</p>
                     </div>
                     
-                    <div class="example-prompts" style="margin-bottom: 20px;">
+                    <div class="example-prompts mb-lg">
                         <div class="info-message" id="classification-example-info">Try one of these example texts for sentiment analysis:</div>
                         <div class="example-grid" id="classification-example-grid">
                             <button class="example-prompt" data-classification-text="This product exceeded all my expectations! The quality is outstanding and delivery was incredibly fast.">Positive review</button>
@@ -189,12 +189,12 @@
                     
                     <div class="classification-actions">
                         <button id="classify-btn" class="btn btn-primary">Classify</button>
-                        <button id="stop-classification-btn" class="btn btn-danger" style="display: none;">Stop</button>
+                        <button id="stop-classification-btn" class="btn btn-danger hidden">Stop</button>
                     </div>
                     
-                    <div id="classification-results" class="classification-results" style="display: none;">
+                    <div id="classification-results" class="classification-results hidden">
                         <h3>Classification Results</h3>
-                        <div id="abstain-indicator" class="abstain-indicator" style="display: none;">
+                        <div id="abstain-indicator" class="abstain-indicator hidden">
                             <strong>⚠ Low Confidence Warning</strong>
                             <p>The model suggests abstaining from this classification. Top confidence is below the threshold.</p>
                         </div>
@@ -244,7 +244,7 @@
                             <p>Extract entities like people, organizations, and locations from text</p>
                         </div>
                         
-                        <div class="example-prompts" style="margin-bottom: 20px;">
+                        <div class="example-prompts mb-lg">
                             <div class="info-message">Try one of these example texts:</div>
                             <div class="example-grid">
                                 <button class="example-prompt" data-ner-text="Maersk Line announced the arrival of the MSC Gulsun at the Port of Rotterdam on Tuesday, carrying 19,000 containers from Shanghai.">Container ship arrival</button>
@@ -260,7 +260,7 @@
                             <button id="ner-submit-btn" class="btn btn-primary">Extract Entities</button>
                         </div>
                         
-                        <div id="ner-results" class="ner-results" style="display: none;">
+                        <div id="ner-results" class="ner-results hidden">
                             <h3>Detected Entities</h3>
                             <div id="ner-entities" class="entity-list"></div>
                             <div id="ner-metrics" class="metrics-display"></div>
@@ -275,7 +275,7 @@
                             <p>Extract text from images using EasyOCR or Tesseract</p>
                         </div>
                         
-                        <div class="example-prompts" style="margin-bottom: 20px;">
+                        <div class="example-prompts mb-lg">
                             <div class="info-message">Try one of these example images:</div>
                             <div class="example-grid">
                                 <button class="example-prompt" data-ocr-image="/static/sample_images/Bill_of_Lading_shipping_document_ef82f159.png">Bill of Lading</button>
@@ -288,10 +288,10 @@
                         <div class="ocr-upload-section">
                             <div id="ocr-drop-zone" class="drop-zone">
                                 <p>Drag and drop an image here, or click to select</p>
-                                <input type="file" id="ocr-file-input" accept="image/*" style="display: none;">
+                                <input type="file" id="ocr-file-input" accept="image/*" class="hidden">
                             </div>
                             
-                            <div id="ocr-preview" class="ocr-preview" style="display: none;">
+                            <div id="ocr-preview" class="ocr-preview hidden">
                                 <h3>Image Preview</h3>
                                 <img id="ocr-preview-img" alt="Preview">
                                 <div class="ocr-preview-actions">
@@ -301,7 +301,7 @@
                             </div>
                         </div>
                         
-                        <div id="ocr-results" class="ocr-results" style="display: none;">
+                        <div id="ocr-results" class="ocr-results hidden">
                             <h3>Extracted Text</h3>
                             <div id="ocr-text" class="extracted-text"></div>
                             <div id="ocr-metrics" class="metrics-display"></div>
