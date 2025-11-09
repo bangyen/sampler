@@ -827,6 +827,11 @@ body {
     font-weight: var(--font-weight-medium);
     cursor: pointer;
     transition: all var(--transition-fast);
+    font-family: inherit;
+    line-height: normal;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
 .btn-primary {
