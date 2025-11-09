@@ -410,6 +410,10 @@ body {
     min-height: 0;
 }
 
+.sidebar-section.settings-accordion {
+    flex: none;
+}
+
 .sidebar-section h3 {
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-semibold);
@@ -509,6 +513,7 @@ body {
     flex: 1;
     margin-top: var(--space-md);
     min-height: 0;
+    overflow-y: auto;
 }
 
 .conversation-item {
