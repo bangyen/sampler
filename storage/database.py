@@ -34,6 +34,46 @@ class Message(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class NERAnalysis(Base):
+    __tablename__ = "ner_analyses"
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(String(255), unique=True, nullable=False, index=True)
+    text = Column(Text, nullable=False)
+    entities = Column(JSON, nullable=False)
+    model = Column(String(255), nullable=False)
+    processing_time = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class OCRAnalysis(Base):
+    __tablename__ = "ocr_analyses"
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(String(255), unique=True, nullable=False, index=True)
+    filename = Column(String(500), nullable=False)
+    image_base64 = Column(Text, nullable=False)
+    results = Column(JSON, nullable=False)
+    config = Column(JSON, nullable=False)
+    processing_time = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ZeroShotAnalysis(Base):
+    __tablename__ = "zero_shot_analyses"
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(String(255), unique=True, nullable=False, index=True)
+    text = Column(Text, nullable=False)
+    candidate_labels = Column(JSON, nullable=False)
+    results = Column(JSON, nullable=False)
+    model = Column(String(255), nullable=False)
+    processing_time = Column(JSON, nullable=True)
+    use_logprobs = Column(JSON, nullable=True)
+    abstain_threshold = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 _engine_cache = None
 
 
@@ -88,7 +128,9 @@ def save_conversation(session_id, messages):
             )
             db_session.add(message)
 
-        conversation.updated_at = datetime.utcnow()
+        db_session.query(Conversation).filter_by(session_id=session_id).update(
+            {"updated_at": datetime.utcnow()}
+        )
         db_session.commit()
         db_session.close()
         return True
@@ -115,7 +157,7 @@ def load_conversation(session_id):
         result = []
         for msg in messages:
             message_dict = {"role": msg.role, "content": msg.content}
-            if msg.metrics:
+            if msg.metrics is not None:
                 message_dict["metrics"] = msg.metrics
             result.append(message_dict)
 
