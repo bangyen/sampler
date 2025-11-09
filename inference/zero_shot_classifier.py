@@ -527,16 +527,23 @@ class LLMZeroShotClassifier:
         
         print(f"[DEBUG] Model predicted label: {response_text}")
         
-        # ALWAYS compute logprobs for real confidence scores
-        # This is the ground truth - not hallucinated by the model
-        logprobs = extract_logprobs_from_sequences(
-            self.model,
-            self.tokenizer,
-            text,
-            candidate_labels,
-            hypothesis_template,
-            self.device
-        )
+        # Conditionally compute logprobs based on user preference
+        logprobs = None
+        if use_logprobs:
+            # Compute real confidence scores from model internal probabilities
+            # This is the ground truth - not hallucinated by the model
+            logprobs = extract_logprobs_from_sequences(
+                self.model,
+                self.tokenizer,
+                text,
+                candidate_labels,
+                hypothesis_template,
+                self.device
+            )
+            print(f"[DEBUG] Logprobs computed: {logprobs}")
+        else:
+            # Skip expensive logprob computation - use uniform scores
+            print(f"[DEBUG] Logprobs disabled - using uniform scores for speed")
         
         result = create_zero_shot_result(
             text=text,
