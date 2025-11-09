@@ -1,9 +1,92 @@
 import json
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Set
 from pydantic import BaseModel, Field
 import torch
 import torch.nn.functional as F
 from transformers.generation.stopping_criteria import StoppingCriteria
+from transformers.generation.logits_process import LogitsProcessor
+
+
+class LabelConstrainedLogitsProcessor(LogitsProcessor):
+    """
+    Constrain generation to only produce valid candidate labels using prefix trie.
+    Ensures model can only generate complete, valid labels - no mixing or truncation.
+    """
+    
+    def __init__(self, tokenizer, candidate_labels: List[str], eos_token_id: int, prompt_length: int):
+        self.tokenizer = tokenizer
+        self.candidate_labels = candidate_labels
+        self.eos_token_id = eos_token_id
+        self.prompt_length = prompt_length
+        
+        # Build prefix trie: maps token sequences to valid next tokens
+        self.label_token_sequences: Dict[str, List[int]] = {}
+        
+        for label in candidate_labels:
+            # Tokenize each label (without special tokens)
+            token_ids = tokenizer.encode(label, add_special_tokens=False)
+            self.label_token_sequences[label] = token_ids
+        
+        print(f"[DEBUG] Constrained generation initialized:")
+        print(f"  Candidate labels: {candidate_labels}")
+        print(f"  Label sequences: {self.label_token_sequences}")
+    
+    def get_valid_next_tokens(self, generated_ids: List[int]) -> Set[int]:
+        """
+        Given current generated token sequence, return set of valid next tokens.
+        Uses prefix matching against candidate label sequences.
+        """
+        valid_tokens = set()
+        
+        # For each candidate label, check if it's a valid continuation
+        for label, token_seq in self.label_token_sequences.items():
+            # Check if generated sequence is a prefix of this label
+            if len(generated_ids) < len(token_seq):
+                # Check if generated tokens match label prefix
+                if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
+                    # Next token from this label is valid
+                    next_token = token_seq[len(generated_ids)]
+                    valid_tokens.add(next_token)
+            
+            # Check if we've completed this exact label
+            if len(generated_ids) == len(token_seq):
+                if all(generated_ids[i] == token_seq[i] for i in range(len(generated_ids))):
+                    # Exact match - allow EOS to end generation
+                    valid_tokens.add(self.eos_token_id)
+        
+        return valid_tokens
+    
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        """
+        Mask out logits for tokens that don't form valid label prefixes.
+        Step-by-step prefix validation ensures only complete labels can be generated.
+        """
+        # Extract generated tokens (skip prompt)
+        generated_ids = input_ids[0][self.prompt_length:].tolist()
+        
+        # Get valid next tokens based on current prefix
+        valid_next_tokens = self.get_valid_next_tokens(generated_ids)
+        
+        if not valid_next_tokens:
+            # Safety: if no valid continuations, allow EOS to terminate
+            valid_next_tokens = {self.eos_token_id}
+        
+        # Create mask: -inf for invalid tokens, 0 for valid tokens
+        mask = torch.full_like(scores, float('-inf'))
+        
+        # Allow only valid next tokens
+        valid_token_list = sorted(list(valid_next_tokens))
+        mask[:, valid_token_list] = 0
+        
+        # Debug output
+        if len(generated_ids) == 0:
+            print(f"[DEBUG] First token: {len(valid_next_tokens)} valid options")
+        else:
+            decoded = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+            print(f"[DEBUG] Current prefix: '{decoded}' ({len(generated_ids)} tokens) → {len(valid_next_tokens)} valid next tokens")
+        
+        # Apply mask
+        return scores + mask
 
 
 class JSONCompletionStoppingCriteria(StoppingCriteria):
@@ -299,26 +382,16 @@ def create_zero_shot_result(
     """
     
     if label_only_mode:
-        # NEW ARCHITECTURE: Label-only mode with backend logprob scoring
-        # Normalize and validate model output against candidate labels
-        import re
+        # NEW ARCHITECTURE: Label-only mode with constrained generation + backend logprob scoring
+        # Constrained generation guarantees output is always a valid candidate label
         
-        # Normalize output: strip punctuation, lowercase
-        predicted_label_normalized = re.sub(r'[^\w\s]', '', model_response.strip().lower())
+        # Direct match - no fuzzy logic needed since constrained generation ensures valid output
+        matched_label = model_response.strip()
         
-        # Find matching candidate label with strict exact matching
-        matched_label = None
-        for label in candidate_labels:
-            label_normalized = re.sub(r'[^\w\s]', '', label.lower())
-            if label_normalized == predicted_label_normalized:
-                matched_label = label
-                break
-        
-        # If no exact match, trust the model output (don't silently default to first label)
-        if matched_label is None:
-            print(f"[WARNING] Model output '{model_response}' doesn't exactly match any candidate labels. Trusting model output.")
-            # Use the original model response as the predicted label
-            matched_label = model_response.strip()
+        # Verify it's in candidate labels (should always be true with constrained generation)
+        if matched_label not in candidate_labels:
+            print(f"[WARNING] Constrained generation failed: '{matched_label}' not in {candidate_labels}. Using first candidate.")
+            matched_label = candidate_labels[0]
         
         # Compute scores from logprobs (ground truth confidence)
         # Guard against missing logprob entries
@@ -509,7 +582,16 @@ class LLMZeroShotClassifier:
             max_length=2048
         ).to(self.device)
         
+        # Create constrained logits processor to guarantee valid label output
+        constrained_processor = LabelConstrainedLogitsProcessor(
+            tokenizer=self.tokenizer,
+            candidate_labels=candidate_labels,
+            eos_token_id=self.tokenizer.eos_token_id,
+            prompt_length=inputs['input_ids'].shape[1]
+        )
+        
         # Generate just the label (short output, ~1-10 tokens)
+        # Constrained generation guarantees output is a valid candidate label
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
@@ -517,7 +599,8 @@ class LLMZeroShotClassifier:
                 temperature=temperature,
                 do_sample=temperature > 0,
                 pad_token_id=self.tokenizer.eos_token_id,
-                return_dict_in_generate=True
+                return_dict_in_generate=True,
+                logits_processor=[constrained_processor]  # Enforce valid labels only
             )
         
         response_text = self.tokenizer.decode(
