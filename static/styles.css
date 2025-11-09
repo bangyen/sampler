@@ -432,7 +432,11 @@ body {
 .settings-accordion summary {
     cursor: pointer;
     list-style: none;
-    padding: 0;
+    padding: var(--space-md) var(--space-xl);
+    border: var(--border-width-thin) solid var(--color-border);
+    border-radius: var(--radius-base);
+    background: var(--color-bg-white);
+    transition: all var(--transition-fast);
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -462,7 +466,20 @@ body {
     transform: rotate(90deg);
 }
 
+.settings-accordion summary:hover {
+    border-color: var(--color-primary);
+}
+
 .settings-accordion summary:hover h3 {
+    color: var(--color-primary);
+}
+
+.settings-accordion[open] summary {
+    background: var(--color-bg-light);
+    border-color: var(--color-primary);
+}
+
+.settings-accordion[open] summary h3 {
     color: var(--color-primary);
 }
 
