@@ -451,15 +451,15 @@ body {
 }
 
 .settings-accordion summary::after {
-    content: '▼';
-    font-size: var(--font-size-sm);
+    content: '›';
+    font-size: var(--font-size-lg);
     transition: transform var(--transition-fast);
     display: inline-block;
     margin-left: auto;
 }
 
 .settings-accordion[open] summary::after {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
 }
 
 .settings-accordion summary:hover h3 {
@@ -870,14 +870,14 @@ body {
 }
 
 .label-customization-accordion summary::after {
-    content: '▼';
-    font-size: var(--font-size-sm);
+    content: '›';
+    font-size: var(--font-size-lg);
     transition: transform var(--transition-fast);
     display: inline-block;
 }
 
 .label-customization-accordion[open] summary::after {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
 }
 
 .label-customization-accordion[open] summary {
