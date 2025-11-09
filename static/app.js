@@ -372,7 +372,7 @@ async function classifyText() {
                         result = data.result;
                         renderClassificationResults(result);
                     } else if (data.error) {
-                        resultsDiv.innerHTML = `<p style="color: #dc3545;">Error: ${data.error}</p>`;
+                        resultsDiv.innerHTML = `<p class="text-error">Error: ${data.error}</p>`;
                     }
                 }
             }
@@ -401,7 +401,7 @@ async function classifyText() {
     } catch (error) {
         if (error.name !== 'AbortError') {
             console.error('Classification error:', error);
-            resultsDiv.innerHTML = `<p style="color: #dc3545;">Error: ${error.message}</p>`;
+            resultsDiv.innerHTML = `<p class="text-error">Error: ${error.message}</p>`;
             showToast('Classification failed', 'error');
         }
     } finally {
@@ -1766,12 +1766,12 @@ function displayNERError(message) {
     const entitiesDiv = document.getElementById('ner-entities');
     const metricsDiv = document.getElementById('ner-metrics');
     
-    resultsDiv.style.display = 'block';
+    show(resultsDiv);
     entitiesDiv.innerHTML = `
-        <div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;">
+        <div class="error-box">
             <strong>Error:</strong> ${message}
         </div>
-        <button id="ner-retry-btn" class="btn btn-primary" style="margin-top: 15px;">Try Again</button>
+        <button id="ner-retry-btn" class="btn btn-primary mb-md">Try Again</button>
     `;
     metricsDiv.innerHTML = '';
     
@@ -1793,13 +1793,12 @@ function displayNERResults(data) {
     const entitiesDiv = document.getElementById('ner-entities');
     const metricsDiv = document.getElementById('ner-metrics');
     
-    resultsDiv.style.display = 'block';
+    show(resultsDiv);
     
     if (data.entities && data.entities.length > 0) {
         const copyButton = document.createElement('button');
-        copyButton.className = 'copy-btn';
+        copyButton.className = 'copy-btn mb-base';
         copyButton.textContent = 'Copy Entities';
-        copyButton.style.marginBottom = '10px';
         
         entitiesDiv.innerHTML = '';
         entitiesDiv.appendChild(copyButton);
@@ -2024,12 +2023,12 @@ function displayOCRError(message) {
     const textDiv = document.getElementById('ocr-text');
     const metricsDiv = document.getElementById('ocr-metrics');
     
-    resultsDiv.style.display = 'block';
+    show(resultsDiv);
     textDiv.innerHTML = `
-        <div style="padding: 15px; background: #fee; border: 2px solid #c33; border-radius: 8px; color: #c33;">
+        <div class="error-box">
             <strong>Error:</strong> ${message}
         </div>
-        <button id="ocr-retry-btn" class="btn btn-primary" style="margin-top: 15px;">Try Again</button>
+        <button id="ocr-retry-btn" class="btn btn-primary mb-md">Try Again</button>
     `;
     metricsDiv.innerHTML = '';
     
@@ -2051,13 +2050,12 @@ function displayOCRResults(data) {
     const textDiv = document.getElementById('ocr-text');
     const metricsDiv = document.getElementById('ocr-metrics');
     
-    resultsDiv.style.display = 'block';
+    show(resultsDiv);
     
     if (data.text) {
         const copyButton = document.createElement('button');
-        copyButton.className = 'copy-btn';
+        copyButton.className = 'copy-btn mb-base';
         copyButton.textContent = 'Copy Text';
-        copyButton.style.marginBottom = '10px';
         
         textDiv.innerHTML = '';
         textDiv.appendChild(copyButton);

@@ -166,6 +166,26 @@
     margin-bottom: var(--space-lg) !important;
 }
 
+.error-box {
+    padding: var(--space-md);
+    background: #fee;
+    border: 2px solid var(--color-error);
+    border-radius: var(--border-radius);
+    color: var(--color-error);
+}
+
+.text-muted {
+    color: #888;
+}
+
+.text-small {
+    font-size: 0.9em;
+}
+
+.text-error {
+    color: var(--color-error);
+}
+
 /* ========================================
    Base Styles
    ======================================== */
