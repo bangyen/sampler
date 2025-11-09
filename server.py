@@ -41,69 +41,35 @@ try:
 except ImportError:
     PYTESSERACT_AVAILABLE = False
 
-# Type aliases for persistence functions
-SaveConversationFn = Callable[[str, List[Dict[str, Any]]], bool]
-LoadConversationFn = Callable[[str], List[Dict[str, Any]]]
-GetAllConversationsFn = Callable[[], List[Dict[str, Any]]]
-DeleteConversationFn = Callable[[str], bool]
+# Import database storage functions
+from storage.database import (
+    save_conversation,
+    load_conversation,
+    get_all_conversations,
+    delete_conversation,
+    clear_all_conversations,
+    get_engine,
+)
+from sqlalchemy import text
 
-try:
-    from storage.database import (
-        save_conversation,
-        load_conversation,
-        get_all_conversations,
-        delete_conversation,
-        clear_all_conversations,
-        get_engine,
-    )
-    from sqlalchemy import text
-
-    def test_database_connection():
-        try:
-            engine = get_engine()
-            if engine is None:
-                return False
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            return True
-        except Exception:
-            return False
-
-    if test_database_connection():
-        DATABASE_AVAILABLE = True
-        PERSISTENCE_TYPE = "PostgreSQL"
-    else:
-        raise ConnectionError("Database connection test failed")
-except (ImportError, ModuleNotFoundError, ConnectionError):
+# Test database connection on startup
+def test_database_connection():
     try:
-        from storage.json_storage import (
-            save_conversation,
-            load_conversation,
-            get_all_conversations,
-            delete_conversation,
-            clear_all_conversations,
-        )
-
-        DATABASE_AVAILABLE = True
-        PERSISTENCE_TYPE = "JSON"
-    except Exception:
-        DATABASE_AVAILABLE = False
-        PERSISTENCE_TYPE = "None"
-
-        def save_conversation(session_id: str, messages: List[Dict[str, Any]]) -> bool:
+        engine = get_engine()
+        if engine is None:
             return False
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        print(f"Database connection test failed: {e}")
+        return False
 
-        def load_conversation(session_id: str) -> List[Dict[str, Any]]:
-            return []
+if not test_database_connection():
+    raise RuntimeError("PostgreSQL database is not available. Please ensure DATABASE_URL is set correctly.")
 
-        def get_all_conversations() -> List[Dict[str, Any]]:
-            return []
-
-        def delete_conversation(session_id: str) -> bool:
-            return False
-
-        def clear_all_conversations() -> bool:
-            return False
+DATABASE_AVAILABLE = True
+PERSISTENCE_TYPE = "PostgreSQL"
 
 
 from storage.ner_storage import (  # noqa: E402

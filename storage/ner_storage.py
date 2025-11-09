@@ -62,7 +62,7 @@ def load_ner_analysis(ner_id):
             db_session.close()
             return None
 
-        text_content = str(analysis.text) if analysis.text else ""
+        text_content = str(analysis.text) if analysis.text is not None else ""
         result = {
             "id": analysis.analysis_id,
             "text": text_content,
@@ -99,8 +99,8 @@ def get_all_ner_analyses():
 
         result = []
         for analysis in analyses:
-            text_content = str(analysis.text) if analysis.text else ""
-            entities_list = analysis.entities if analysis.entities is not None else []
+            text_content = str(analysis.text) if analysis.text is not None else ""
+            entities_data = analysis.entities if analysis.entities is not None else []
             result.append(
                 {
                     "id": analysis.analysis_id,
@@ -109,7 +109,7 @@ def get_all_ner_analyses():
                         if len(text_content) > 100
                         else text_content
                     ),
-                    "entity_count": len(entities_list),
+                    "entity_count": len(entities_data) if isinstance(entities_data, list) else 0,
                     "model": analysis.model,
                     "created_at": analysis.created_at,
                 }
