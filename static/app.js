@@ -1,7 +1,6 @@
 let sessionId = generateUUID();
 let messages = [];
 let classificationLabels = ['positive', 'negative', 'neutral'];
-let classificationHistory = [];
 let currentClassification = null;
 let selectedModel = 'Qwen 2.5 7B';
 let selectedNERModel = 'BERT Base';
@@ -10,9 +9,6 @@ let isGenerating = false;
 let currentReader = null;
 let currentAbortController = null;
 let displayedConversationCount = 5;
-let displayedClassificationCount = 5;
-let displayedNERCount = 5;
-let displayedOCRCount = 5;
 let availableModelsData = {};
 
 const labelPresets = {
@@ -387,9 +383,6 @@ async function classifyText() {
                 use_logprobs: useLogprobs
             };
             
-            await saveClassification(currentClassification);
-            await loadClassificationHistory();
-            
             showToast('Classification complete');
         }
         
@@ -477,146 +470,6 @@ function renderClassificationResults(result, useLogprobs = false) {
     resultsDiv.innerHTML = html;
 }
 
-async function saveClassification(classification) {
-    try {
-        await fetch('/api/zero-shot/history', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(classification)
-        });
-    } catch (error) {
-        console.error('Error saving classification:', error);
-    }
-}
-
-async function loadClassificationHistory() {
-    try {
-        const response = await fetch('/api/zero-shot/history');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        const historyList = document.getElementById('classification-list');
-        if (!historyList) {
-            console.error('classification-list element not found in DOM');
-            return;
-        }
-        
-        historyList.innerHTML = '';
-        
-        if (!data.analyses || data.analyses.length === 0) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <p class="empty-state">No classifications yet</p>
-                    <small class="empty-state-hint">
-                        Try classifying some text!<br><br>
-                        Example uses:<br>
-                        • Sentiment analysis<br>
-                        • Intent detection<br>
-                        • Urgency classification
-                    </small>
-                </div>
-            `;
-            return;
-        }
-        
-        historyList.innerHTML = `<small class="history-count">Found ${data.analyses.length} classification(s)</small>`;
-        
-        const displayedAnalyses = data.analyses.slice(0, displayedClassificationCount);
-        
-        displayedAnalyses.forEach(analysis => {
-            const item = document.createElement('div');
-            item.className = 'conversation-item';
-            
-            const btn = document.createElement('button');
-            btn.className = 'conversation-btn';
-            
-            const previewText = analysis.text_preview || 'No text';
-            const topLabel = analysis.top_label || 'N/A';
-            
-            btn.innerHTML = `
-                <div class="history-item-preview">${previewText}</div>
-                <div class="history-item-meta">Top: ${topLabel}</div>
-            `;
-            
-            btn.onclick = () => loadClassificationAnalysis(analysis.id);
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = async () => {
-                try {
-                    await fetch(`/api/zero-shot/history/${analysis.id}`, {
-                        method: 'DELETE'
-                    });
-                    await loadClassificationHistory();
-                    showToast('Classification deleted');
-                } catch (error) {
-                    console.error('Error deleting classification:', error);
-                    showToast('Failed to delete classification', 'error');
-                }
-            };
-            
-            item.appendChild(btn);
-            item.appendChild(deleteBtn);
-            historyList.appendChild(item);
-        });
-        
-        if (data.analyses.length > displayedClassificationCount) {
-            const showMoreBtn = document.createElement('button');
-            showMoreBtn.className = 'btn btn-secondary show-more-btn';
-            showMoreBtn.textContent = `Show More (${data.analyses.length - displayedClassificationCount} remaining)`;
-            showMoreBtn.onclick = () => {
-                displayedClassificationCount += 5;
-                loadClassificationHistory();
-            };
-            historyList.appendChild(showMoreBtn);
-        }
-    } catch (error) {
-        console.error('Error loading classification history:', error.message || error, error.stack || '');
-        const historyList = document.getElementById('classification-list');
-        if (historyList) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <p class="text-error">Failed to load history</p>
-                    <small class="text-muted">${error.message || 'Unknown error'}</small>
-                </div>
-            `;
-        }
-        showToast('Failed to load classification history', 'error');
-    }
-}
-
-async function loadClassificationAnalysis(analysisId) {
-    try {
-        const response = await fetch(`/api/zero-shot/history/${analysisId}`);
-        const analysis = await response.json();
-        
-        document.getElementById('classification-text-input').value = analysis.text || '';
-        
-        if (analysis.candidate_labels && analysis.candidate_labels.length > 0) {
-            classificationLabels = [...analysis.candidate_labels];
-            renderLabelChips();
-        }
-        
-        if (analysis.results) {
-            const useLogprobs = analysis.use_logprobs !== undefined ? analysis.use_logprobs : false;
-            renderClassificationResults(analysis.results, useLogprobs);
-            show('classification-results');
-        }
-        
-        closeMobileMenuHelper();
-    } catch (error) {
-        console.error('Error loading classification analysis:', error);
-        showToast('Failed to load classification', 'error');
-    }
-}
-
 async function init() {
     try {
         setupEventListeners();
@@ -628,10 +481,7 @@ async function init() {
         Promise.all([
             loadModels(),
             loadNERModels(),
-            loadOCRConfigs(),
-            loadClassificationHistory(),
-            loadNERHistory(),
-            loadOCRHistory()
+            loadOCRConfigs()
         ]).catch(error => {
             console.error('Error during initialization:', error);
         });
@@ -1539,27 +1389,6 @@ function setupEventListeners() {
         });
     }
     
-    const clearAllClassificationsBtn = document.getElementById('clear-all-classifications-btn');
-    if (clearAllClassificationsBtn) {
-        clearAllClassificationsBtn.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to delete ALL classification history? This cannot be undone.')) {
-                try {
-                    await fetch('/api/zero-shot/history', {
-                        method: 'DELETE'
-                    });
-                    currentClassification = null;
-                    document.getElementById('classification-text-input').value = '';
-                    hide('classification-results');
-                    await loadClassificationHistory();
-                    showToast('Classification history cleared');
-                } catch (error) {
-                    console.error('Error clearing classification history:', error);
-                    showToast('Failed to clear history', 'error');
-                }
-            }
-        });
-    }
-    
     const mainLoadModelBtn = document.getElementById('main-load-model-btn');
     if (mainLoadModelBtn) {
         mainLoadModelBtn.addEventListener('click', async () => {
@@ -1572,24 +1401,6 @@ function setupEventListeners() {
     if (abstainThresholdSlider && abstainThresholdValue) {
         abstainThresholdSlider.addEventListener('input', (e) => {
             abstainThresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
-        });
-    }
-    
-    const clearAllNERBtn = document.getElementById('clear-all-ner-btn');
-    if (clearAllNERBtn) {
-        clearAllNERBtn.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to delete ALL NER analysis history? This cannot be undone.')) {
-                await clearAllNERHistory();
-            }
-        });
-    }
-    
-    const clearAllOCRBtn = document.getElementById('clear-all-ocr-btn');
-    if (clearAllOCRBtn) {
-        clearAllOCRBtn.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to delete ALL OCR extraction history? This cannot be undone.')) {
-                await clearAllOCRHistory();
-            }
         });
     }
     
@@ -1723,14 +1534,6 @@ function setupTabs() {
             btn.classList.add('active');
             document.getElementById(`${targetTab}-tab`).classList.add('active');
             show(`${targetTab}-sidebar`);
-            
-            if (targetTab === 'chat') {
-                loadClassificationHistory();
-            } else if (targetTab === 'ner') {
-                loadNERHistory();
-            } else if (targetTab === 'ocr') {
-                loadOCRHistory();
-            }
         });
     });
 }
@@ -2202,352 +2005,6 @@ function displayOCRResults(data) {
         `;
     }
     
-}
-
-async function loadNERHistory() {
-    try {
-        const response = await fetch('/api/ner/history');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        const historyList = document.getElementById('ner-history-list');
-        if (!historyList) {
-            console.error('ner-history-list element not found in DOM');
-            return;
-        }
-        
-        historyList.innerHTML = '';
-        
-        if (!data.analyses || data.analyses.length === 0) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <p class="empty-state">No analyses yet</p>
-                    <small class="empty-state-hint">
-                        Try analyzing some text to extract entities!<br><br>
-                        Example uses:<br>
-                        • Extract people, organizations, locations<br>
-                        • Analyze business documents<br>
-                        • Parse contact information
-                    </small>
-                </div>
-            `;
-            return;
-        }
-        
-        historyList.innerHTML = `<small class="history-count">Found ${data.analyses.length} analysis/analyses</small>`;
-        
-        data.analyses.slice(0, displayedNERCount).forEach(analysis => {
-            const item = document.createElement('div');
-            item.className = 'conversation-item';
-            
-            const btn = document.createElement('button');
-            btn.className = 'conversation-btn';
-            btn.innerHTML = `
-                <div class="history-item-preview">${analysis.text_preview}</div>
-                <div class="history-item-meta">${analysis.entity_count} entities | ${analysis.model}</div>
-            `;
-            btn.onclick = () => loadNERAnalysis(analysis.id);
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteNERAnalysis(analysis.id);
-            };
-            
-            item.appendChild(btn);
-            item.appendChild(deleteBtn);
-            historyList.appendChild(item);
-        });
-        
-        if (data.analyses.length > displayedNERCount) {
-            const showMoreBtn = document.createElement('button');
-            showMoreBtn.className = 'btn btn-secondary show-more-btn';
-            showMoreBtn.textContent = `Show More (${data.analyses.length - displayedNERCount} remaining)`;
-            showMoreBtn.onclick = () => {
-                const skeleton = document.createElement('div');
-                skeleton.className = 'skeleton-conversation';
-                skeleton.innerHTML = `
-                    <div class="skeleton skeleton-conversation-title"></div>
-                    <div class="skeleton skeleton-conversation-meta"></div>
-                `;
-                historyList.insertBefore(skeleton, showMoreBtn);
-                displayedNERCount += 5;
-                loadNERHistory();
-            };
-            historyList.appendChild(showMoreBtn);
-        }
-    } catch (error) {
-        console.error('Error loading NER history:', error.message || error, error.stack || '');
-        const historyList = document.getElementById('ner-history-list');
-        if (historyList) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <p class="text-error">Failed to load history</p>
-                    <small class="text-muted">${error.message || 'Unknown error'}</small>
-                </div>
-            `;
-        }
-        showToast('Failed to load NER history', 'error');
-    }
-}
-
-async function loadNERAnalysis(nerId) {
-    try {
-        const response = await fetch(`/api/ner/history/${nerId}`);
-        const data = await response.json();
-        
-        document.getElementById('ner-text-input').value = data.text;
-        selectedNERModel = data.model;
-        await loadNERModels();
-        
-        displayNERResults(data);
-        
-        closeMobileMenuHelper();
-    } catch (error) {
-        console.error('Error loading NER analysis:', error);
-    }
-}
-
-async function deleteNERAnalysis(nerId) {
-    try {
-        await fetch(`/api/ner/history/${nerId}`, {
-            method: 'DELETE'
-        });
-        
-        await loadNERHistory();
-    } catch (error) {
-        console.error('Error deleting NER analysis:', error);
-    }
-}
-
-async function loadOCRHistory() {
-    try {
-        const [ocrResponse, layoutResponse] = await Promise.all([
-            fetch('/api/ocr/history'),
-            fetch('/api/layout/history')
-        ]);
-        
-        if (!ocrResponse.ok) {
-            throw new Error(`OCR History HTTP ${ocrResponse.status}: ${ocrResponse.statusText}`);
-        }
-        if (!layoutResponse.ok) {
-            throw new Error(`Layout History HTTP ${layoutResponse.status}: ${layoutResponse.statusText}`);
-        }
-        
-        const ocrData = await ocrResponse.json();
-        const layoutData = await layoutResponse.json();
-        
-        const historyList = document.getElementById('ocr-history-list');
-        if (!historyList) {
-            console.error('ocr-history-list element not found in DOM');
-            return;
-        }
-        
-        historyList.innerHTML = '';
-        
-        const ocrAnalyses = ocrData.analyses || [];
-        const layoutAnalyses = layoutData.analyses || [];
-        const allAnalyses = [...ocrAnalyses, ...layoutAnalyses];
-        
-        if (allAnalyses.length === 0) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <p class="empty-state">No extractions yet</p>
-                    <small class="empty-state-hint">
-                        Try uploading an image to extract text!<br><br>
-                        Works great for:<br>
-                        • Scanned documents<br>
-                        • Business cards<br>
-                        • Forms and receipts
-                    </small>
-                </div>
-            `;
-            return;
-        }
-        
-        historyList.innerHTML = `<small class="history-count">Found ${allAnalyses.length} extraction(s)</small>`;
-        
-        const displayedAnalyses = allAnalyses.slice(0, displayedOCRCount);
-        
-        displayedAnalyses.forEach(analysis => {
-            const item = document.createElement('div');
-            item.className = 'conversation-item';
-            
-            const btn = document.createElement('button');
-            btn.className = 'conversation-btn';
-            
-            const isLayout = layoutAnalyses.includes(analysis);
-            const configText = isLayout ? 'PaddleOCR' : analysis.config;
-            
-            btn.innerHTML = `
-                <div class="history-item-preview">${analysis.filename}</div>
-                <div class="history-item-meta">${analysis.num_detections} detections | ${configText}</div>
-            `;
-            btn.onclick = () => isLayout ? loadLayoutAnalysis(analysis.id) : loadOCRAnalysis(analysis.id);
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                isLayout ? deleteLayoutAnalysis(analysis.id) : deleteOCRAnalysis(analysis.id);
-            };
-            
-            item.appendChild(btn);
-            item.appendChild(deleteBtn);
-            historyList.appendChild(item);
-        });
-        
-        if (allAnalyses.length > displayedOCRCount) {
-            const showMoreBtn = document.createElement('button');
-            showMoreBtn.className = 'btn btn-secondary show-more-btn';
-            showMoreBtn.textContent = `Show More (${allAnalyses.length - displayedOCRCount} remaining)`;
-            showMoreBtn.onclick = () => {
-                const skeleton = document.createElement('div');
-                skeleton.className = 'skeleton-conversation';
-                skeleton.innerHTML = `
-                    <div class="skeleton skeleton-conversation-title"></div>
-                    <div class="skeleton skeleton-conversation-meta"></div>
-                `;
-                historyList.insertBefore(skeleton, showMoreBtn);
-                displayedOCRCount += 5;
-                loadOCRHistory();
-            };
-            historyList.appendChild(showMoreBtn);
-        }
-    } catch (error) {
-        console.error('Error loading OCR history:', error.message || error, error.stack || '');
-        const historyList = document.getElementById('ocr-history-list');
-        if (historyList) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <p class="text-error">Failed to load history</p>
-                    <small class="text-muted">${error.message || 'Unknown error'}</small>
-                </div>
-            `;
-        }
-        showToast('Failed to load OCR history', 'error');
-    }
-}
-
-async function loadOCRAnalysis(ocrId) {
-    try {
-        const response = await fetch(`/api/ocr/history/${ocrId}`);
-        const data = await response.json();
-        
-        selectedOCRConfig = data.config;
-        await loadOCRConfigs();
-        
-        displayOCRResults(data);
-        
-        closeMobileMenuHelper();
-    } catch (error) {
-        console.error('Error loading OCR analysis:', error);
-    }
-}
-
-async function deleteOCRAnalysis(ocrId) {
-    try {
-        await fetch(`/api/ocr/history/${ocrId}`, {
-            method: 'DELETE'
-        });
-        
-        await loadOCRHistory();
-    } catch (error) {
-        console.error('Error deleting OCR analysis:', error);
-    }
-}
-
-async function loadLayoutAnalysis(layoutId) {
-    try {
-        const response = await fetch(`/api/layout/history/${layoutId}`);
-        const data = await response.json();
-        
-        selectedOCRConfig = 'PaddleOCR';
-        await loadOCRConfigs();
-        
-        displayOCRResults(data);
-        
-        closeMobileMenuHelper();
-    } catch (error) {
-        console.error('Error loading layout analysis:', error);
-    }
-}
-
-async function deleteLayoutAnalysis(layoutId) {
-    try {
-        await fetch(`/api/layout/history/${layoutId}`, {
-            method: 'DELETE'
-        });
-        
-        await loadOCRHistory();
-    } catch (error) {
-        console.error('Error deleting layout analysis:', error);
-    }
-}
-
-async function clearAllConversations() {
-    try {
-        const response = await fetch('/api/conversations', {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            sessionId = generateUUID();
-            messages = [];
-            displayedConversationCount = 5;
-            renderMessages();
-            await loadConversationList();
-            showToast('Conversation history cleared');
-            closeMobileMenuHelper();
-        }
-    } catch (error) {
-        console.error('Error clearing all conversations:', error);
-        showToast('Failed to clear conversation history', 'error');
-    }
-}
-
-async function clearAllNERHistory() {
-    try {
-        const response = await fetch('/api/ner/history', {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            displayedNERCount = 5;
-            await loadNERHistory();
-            showToast('NER history cleared');
-            closeMobileMenuHelper();
-        }
-    } catch (error) {
-        console.error('Error clearing all NER history:', error);
-        showToast('Failed to clear NER history', 'error');
-    }
-}
-
-async function clearAllOCRHistory() {
-    try {
-        const [ocrResponse, layoutResponse] = await Promise.all([
-            fetch('/api/ocr/history', { method: 'DELETE' }),
-            fetch('/api/layout/history', { method: 'DELETE' })
-        ]);
-        
-        if (ocrResponse.ok && layoutResponse.ok) {
-            displayedOCRCount = 5;
-            await loadOCRHistory();
-            showToast('OCR history cleared');
-            closeMobileMenuHelper();
-        }
-    } catch (error) {
-        console.error('Error clearing all OCR history:', error);
-        showToast('Failed to clear OCR history', 'error');
-    }
 }
 
 function setupNERExamples() {
