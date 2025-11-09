@@ -163,12 +163,13 @@
                                 <button class="btn btn-secondary preset-btn" data-preset="intent">Intent</button>
                                 <button class="btn btn-secondary preset-btn" data-preset="urgency">Urgency</button>
                                 <button class="btn btn-secondary preset-btn" data-preset="cargo">Cargo Type</button>
+                                <details class="label-customization-accordion">
+                                    <summary>Customize Labels</summary>
+                                </details>
                             </div>
                         </div>
                         
-                        <details class="label-customization-accordion">
-                            <summary>Customize Labels</summary>
-                            
+                        <div class="label-customization-content hidden" id="label-customization-content">
                             <div class="label-chips-container" id="label-chips-container">
                                 <div class="label-chip">
                                     <span>positive</span>
@@ -188,7 +189,7 @@
                                 <input type="text" id="new-label-input" placeholder="Add custom label..." />
                                 <button id="add-label-btn" class="btn btn-secondary">Add Label</button>
                             </div>
-                        </details>
+                        </div>
                     </div>
                     
                     <div class="model-status-section">

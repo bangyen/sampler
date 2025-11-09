@@ -1646,6 +1646,18 @@ function setupEventListeners() {
         });
     }
     
+    const labelCustomizationAccordion = document.querySelector('.label-customization-accordion');
+    const labelCustomizationContent = document.getElementById('label-customization-content');
+    if (labelCustomizationAccordion && labelCustomizationContent) {
+        labelCustomizationAccordion.addEventListener('toggle', (e) => {
+            if (e.target.open) {
+                labelCustomizationContent.classList.remove('hidden');
+            } else {
+                labelCustomizationContent.classList.add('hidden');
+            }
+        });
+    }
+    
     setupTabs();
     setupNER();
     setupOCR();
