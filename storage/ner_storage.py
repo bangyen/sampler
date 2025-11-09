@@ -3,8 +3,8 @@ from datetime import datetime
 from pathlib import Path
 import hashlib
 
-STORAGE_DIR = Path("ner_history")
-STORAGE_DIR.mkdir(exist_ok=True)
+STORAGE_DIR = Path("data/ner_history")
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def generate_ner_id(text):

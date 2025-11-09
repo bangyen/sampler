@@ -4,8 +4,8 @@ from pathlib import Path
 import hashlib
 import base64
 
-STORAGE_DIR = Path("layout_history")
-STORAGE_DIR.mkdir(exist_ok=True)
+STORAGE_DIR = Path("data/layout_history")
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def generate_layout_id(image_data):

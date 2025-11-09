@@ -1,5 +1,6 @@
-# Runtime conversation data
+# Runtime data (conversations, history, test results)
 conversations/
+data/
 
 # Downloaded model files (large GGUF files)
 models/
