@@ -657,10 +657,9 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-sm);
+    padding: var(--space-md);
     min-width: 44px;
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-bold);
+    line-height: 1;
 }
 
 .label-customization-accordion summary::-webkit-details-marker {
