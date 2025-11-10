@@ -1779,8 +1779,6 @@ function displayNERResults(data) {
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
         `;
     }
-    
-    loadNERHistory();
 }
 
 let ocrSelectedFile = null;
@@ -1946,7 +1944,6 @@ function setupOCR() {
             
             if (finalData) {
                 displayOCRResults(finalData);
-                await loadOCRHistory();
             }
         } catch (error) {
             console.error('OCR error:', error);
