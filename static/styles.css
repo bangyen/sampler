@@ -1428,7 +1428,7 @@ body {
 }
 
 .skeleton-example-btn {
-    height: 38px;
+    height: 50px;
     width: 100%;
     border-radius: var(--radius-sm);
 }
