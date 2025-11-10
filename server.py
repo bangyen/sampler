@@ -89,7 +89,7 @@ AVAILABLE_MODELS = {
         "id": "Qwen/Qwen2.5-0.5B-Instruct",
         "params": "0.5B",
         "quantization": "FP16",
-        "memory": "~1GB",
+        "memory": "1.0GB",
         "description": "Smallest model optimized for speed - ideal for quick, simple classifications",
         "backend": "transformers",
         "supported_tasks": ["chat", "zero-shot"],
@@ -104,7 +104,7 @@ if LLAMA_CPP_AVAILABLE:
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
         "params": "1.7B",
         "quantization": "Q4_K_M (GGUF)",
-        "memory": "~1.1GB",
+        "memory": "1.1GB",
         "description": "Efficient GGUF model with llama.cpp optimization - 2-3x faster inference",
         "backend": "llamacpp",
         "gguf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
@@ -115,9 +115,9 @@ if LLAMA_CPP_AVAILABLE:
     # Qwen 2.5 7B - Testing for improved accuracy
     AVAILABLE_MODELS["Qwen 2.5 7B"] = {
         "id": "bartowski/Qwen2.5-7B-Instruct-GGUF",
-        "params": "7B",
+        "params": "7.0B",
         "quantization": "Q4_K_M (GGUF)",
-        "memory": "~4.7GB",
+        "memory": "4.7GB",
         "description": "Larger model with enhanced reasoning capabilities - highest accuracy for complex tasks",
         "backend": "llamacpp",
         "gguf_repo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
@@ -130,7 +130,7 @@ else:
         "id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
         "params": "1.7B",
         "quantization": "FP16",
-        "memory": "~3.4GB",
+        "memory": "3.4GB",
         "description": "Efficient model with transformers backend - balanced performance and accuracy",
         "backend": "transformers",
         "supported_tasks": ["chat", "zero-shot"],
@@ -140,9 +140,9 @@ else:
 if BITNET_CPP_AVAILABLE:
     AVAILABLE_MODELS["BitNet b1.58 2B"] = {
         "id": "microsoft/bitnet-b1.58-2B-4T-gguf",
-        "params": "2B",
+        "params": "2.0B",
         "quantization": "i2_s (1.58-bit GGUF)",
-        "memory": "~1.2GB",
+        "memory": "1.2GB",
         "description": "Ultra-efficient 1.58-bit quantization - fastest inference with minimal memory",
         "backend": "bitnet_cpp",
         "gguf_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
@@ -154,19 +154,19 @@ NER_MODELS = {
     "BERT Base": {
         "id": "dslim/bert-base-NER",
         "params": "110M",
-        "memory": "~420MB",
+        "memory": "420MB",
         "description": "Lightweight BERT model optimized for entity recognition - fastest option",
     },
     "BERT Large": {
         "id": "dslim/bert-large-NER",
         "params": "340M",
-        "memory": "~1.3GB",
+        "memory": "1.3GB",
         "description": "Larger BERT variant with enhanced accuracy for complex entity extraction",
     },
     "RoBERTa Large": {
         "id": "Jean-Baptiste/roberta-large-ner-english",
         "params": "355M",
-        "memory": "~1.4GB",
+        "memory": "1.4GB",
         "description": "RoBERTa-based model with superior performance on English entity recognition",
     },
 }
