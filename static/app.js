@@ -380,11 +380,12 @@ async function classifyText() {
                         }
                     } else if (data.model_loading_end) {
                         // Keep skeleton visible during classification
-                        startTime = performance.now();
+                        if (!startTime) startTime = performance.now();
                         updateMainLoadButton(true);
                     } else if (data.result) {
                         result = data.result;
-                        // Don't render yet, wait for duration calculation
+                        // Start timing if not already started (cached model case)
+                        if (!startTime) startTime = performance.now();
                     } else if (data.error) {
                         displayClassificationError(data.error);
                     }
