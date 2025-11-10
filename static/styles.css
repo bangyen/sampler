@@ -1696,6 +1696,7 @@ body {
     display: flex;
     gap: var(--space-md);
     margin-top: var(--space-xl);
+    align-items: center;
 }
 
 .add-label-section input {
