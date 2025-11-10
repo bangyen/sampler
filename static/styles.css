@@ -456,7 +456,7 @@ body {
 
 .settings-accordion summary::after {
     content: '›';
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-2xl);
     transition: transform var(--transition-fast);
     display: inline-block;
     margin-left: auto;
