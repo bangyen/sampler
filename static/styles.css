@@ -1613,6 +1613,14 @@ body {
     border-color: var(--color-primary);
 }
 
+.info-message {
+    padding: var(--space-base);
+    background: var(--color-info-bg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    color: var(--color-info-text);
+}
+
 .example-grid {
     display: flex;
     flex-wrap: wrap;
