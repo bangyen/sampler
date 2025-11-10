@@ -1679,27 +1679,30 @@ body {
     border: var(--border-width-thin) solid var(--color-primary);
     border-radius: var(--radius-base);
     font-size: var(--font-size-md);
+    line-height: 1;
     color: var(--color-primary);
 }
 
 .label-chip span {
     font-weight: var(--font-weight-medium);
+    line-height: 1;
 }
 
 .label-chip .remove-label {
     background: none;
     border: none;
     color: var(--color-primary);
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-md);
     cursor: pointer;
     padding: 0;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-full);
     transition: background var(--transition-fast);
+    line-height: 1;
 }
 
 .label-chip .remove-label:hover {
