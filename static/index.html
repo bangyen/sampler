@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantized LLM Comparison Demo</title>
+    <title>Model Comparison Demo</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
             
             <div id="chat-sidebar" class="sidebar-content" data-sidebar="chat">
                 <div class="sidebar-header">
-                    <h2>LLM Model Selection</h2>
+                    <h2>Model Selection</h2>
                 </div>
                 
                 <div id="model-list" class="model-list">
@@ -171,13 +171,13 @@
                     <span></span>
                 </button>
                 <div class="header-content">
-                    <h1><span class="full-title">Quantized LLM Comparison</span><span class="short-title">LLM Comparison</span></h1>
-                    <p>Compare different quantized and efficient LLM models to see how they perform.</p>
+                    <h1><span class="full-title">Model Comparison</span><span class="short-title">Model Comparison</span></h1>
+                    <p>Compare different models for zero-shot classification, entity recognition, and text extraction.</p>
                 </div>
             </div>
 
             <div class="tabs">
-                <button class="tab-btn active" data-tab="chat">LLM</button>
+                <button class="tab-btn active" data-tab="chat">Zero-Shot</button>
                 <button class="tab-btn" data-tab="ner">NER</button>
                 <button class="tab-btn" data-tab="ocr">OCR</button>
             </div>
@@ -187,7 +187,7 @@
                 <div class="classification-container">
                     <div class="classification-header">
                         <h2>Zero-Shot Classification</h2>
-                        <p>Classify text into custom categories using LLMs with confidence scoring</p>
+                        <p>Classify text into custom categories using zero-shot classification with confidence scoring</p>
                     </div>
                     
                     <div class="example-prompts mb-lg">
