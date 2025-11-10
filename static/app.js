@@ -323,6 +323,13 @@ async function classifyText() {
     const useLogprobs = document.getElementById('use-logprobs-checkbox').checked;
     const hypothesisTemplate = document.getElementById('hypothesis-template-input').value;
     
+    // Show loading on Load Model button if model not loaded
+    const mainLoadBtn = document.getElementById('main-load-model-btn');
+    if (mainLoadBtn && mainLoadBtn.textContent !== 'Model Loaded') {
+        mainLoadBtn.textContent = 'Loading...';
+        mainLoadBtn.disabled = true;
+    }
+    
     try {
         currentAbortController = new AbortController();
         
@@ -414,6 +421,17 @@ async function classifyText() {
         // Re-check if text is present to enable/disable button
         const hasText = textInput && textInput.value.trim().length > 0;
         classifyBtn.disabled = !hasText;
+        
+        // Ensure load button is in correct state after classification
+        try {
+            const statusResponse = await fetch('/api/models/status');
+            const statusData = await statusResponse.json();
+            const isLoaded = statusData.status[selectedModel]?.loaded || false;
+            updateMainLoadButton(isLoaded);
+        } catch (error) {
+            console.error('Error updating load button state:', error);
+            updateMainLoadButton(false);
+        }
     }
 }
 
@@ -1535,6 +1553,13 @@ function setupOCR() {
         setTimeout(() => {
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
+        
+        // Show loading on Load Model button if model not loaded
+        const ocrLoadBtn = document.getElementById('ocr-load-model-btn');
+        if (ocrLoadBtn && ocrLoadBtn.textContent !== 'Model Loaded') {
+            ocrLoadBtn.textContent = 'Loading...';
+            ocrLoadBtn.disabled = true;
+        }
         
         try {
             // Get settings values
