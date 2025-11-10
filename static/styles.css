@@ -685,6 +685,7 @@ body {
 }
 
 .label-customization-accordion summary:hover {
+    background: var(--color-primary-light);
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
