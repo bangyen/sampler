@@ -992,7 +992,7 @@ body {
 }
 
 .ner-input-section {
-    margin-bottom: var(--space-3xl);
+    margin-bottom: var(--space-xl);
 }
 
 .ner-input-section label {
