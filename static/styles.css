@@ -1615,7 +1615,7 @@ body {
 }
 
 .example-prompts {
-    text-align: center;
+    text-align: left;
     padding: var(--space-lg);
     background: var(--color-info-bg);
     border-radius: var(--radius-md);
@@ -1624,7 +1624,7 @@ body {
 
 .info-message {
     margin-bottom: var(--space-md);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-normal);
 }
 
 .example-grid {
