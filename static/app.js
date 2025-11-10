@@ -590,6 +590,11 @@ async function loadNERModels() {
             
             modelList.appendChild(modelDiv);
         });
+        
+        const nerModelDisplay = document.getElementById('selected-ner-model-display');
+        if (nerModelDisplay) {
+            nerModelDisplay.textContent = selectedNERModel;
+        }
     } catch (error) {
         console.error('Error loading NER models:', error);
     }
@@ -626,6 +631,11 @@ async function loadOCRConfigs() {
             
             modelList.appendChild(modelDiv);
         });
+        
+        const ocrModelDisplay = document.getElementById('selected-ocr-model-display');
+        if (ocrModelDisplay) {
+            ocrModelDisplay.textContent = selectedOCRConfig;
+        }
     } catch (error) {
         console.error('Error loading OCR configs:', error);
     }
@@ -669,6 +679,11 @@ function selectNERModel(name, evt) {
     
     evt.target.closest('.model-option').classList.add('selected');
     
+    const modelNameDisplay = document.getElementById('selected-ner-model-display');
+    if (modelNameDisplay) {
+        modelNameDisplay.textContent = name;
+    }
+    
     setTimeout(() => {
         closeMobileMenuHelper();
     }, 100);
@@ -682,6 +697,11 @@ function selectOCRConfig(name, evt) {
     });
     
     evt.target.closest('.model-option').classList.add('selected');
+    
+    const modelNameDisplay = document.getElementById('selected-ocr-model-display');
+    if (modelNameDisplay) {
+        modelNameDisplay.textContent = name;
+    }
     
     setTimeout(() => {
         closeMobileMenuHelper();
@@ -1394,6 +1414,20 @@ function setupEventListeners() {
         mainLoadModelBtn.addEventListener('click', async () => {
             await loadSelectedModel();
         });
+    }
+    
+    const nerLoadModelBtn = document.getElementById('ner-load-model-btn');
+    if (nerLoadModelBtn) {
+        nerLoadModelBtn.textContent = 'Auto-loads on use';
+        nerLoadModelBtn.disabled = true;
+        nerLoadModelBtn.title = 'NER models are automatically loaded when you extract entities';
+    }
+    
+    const ocrLoadModelBtn = document.getElementById('ocr-load-model-btn');
+    if (ocrLoadModelBtn) {
+        ocrLoadModelBtn.textContent = 'Auto-loads on use';
+        ocrLoadModelBtn.disabled = true;
+        ocrLoadModelBtn.title = 'OCR engines are automatically loaded when you extract text';
     }
     
     const abstainThresholdSlider = document.getElementById('abstain-threshold-slider');
