@@ -467,7 +467,7 @@ def load_ocr_model(config_name="English Only"):
             from paddleocr import PaddleOCR as PaddleOCREngine
 
             start_time = time.time()
-            ocr_readers["paddleocr"] = PaddleOCREngine(lang="en")
+            ocr_readers["paddleocr"] = PaddleOCREngine(lang="en", use_angle_cls=True, show_log=False)
             load_time = time.time() - start_time
             return ocr_readers["paddleocr"], load_time
         except Exception as e:
@@ -1391,7 +1391,7 @@ async def stream_ocr_extraction(
             image = PILImage.open(io.BytesIO(file_contents))
             img_array = np.array(image)
 
-            results = ocr_model.ocr(img_array, cls=True)  # type: ignore
+            results = ocr_model.ocr(img_array)  # type: ignore
 
             extracted_text_parts = []
             bounding_boxes = []
@@ -1518,7 +1518,7 @@ async def analyze_layout(file: UploadFile = File(...)):
 
         if "paddleocr" not in ocr_readers:
             try:
-                ocr_readers["paddleocr"] = PaddleOCREngine(lang="en")
+                ocr_readers["paddleocr"] = PaddleOCREngine(lang="en", use_angle_cls=True, show_log=False)
             except Exception as e:
                 raise HTTPException(
                     status_code=503,
@@ -1536,7 +1536,7 @@ async def analyze_layout(file: UploadFile = File(...)):
         image = PILImage.open(io.BytesIO(contents))
         img_array = np.array(image)
 
-        results = ocr_model.ocr(img_array, cls=True)
+        results = ocr_model.ocr(img_array)
 
         extracted_text_parts = []
         bounding_boxes = []
