@@ -743,7 +743,7 @@ function updateMainLoadButton(isLoaded) {
         mainLoadBtn.disabled = true;
         mainLoadBtn.classList.add('loaded');
     } else {
-        mainLoadBtn.textContent = 'Load Model';
+        mainLoadBtn.textContent = 'Preload Model';
         mainLoadBtn.disabled = false;
         mainLoadBtn.classList.remove('loaded');
     }
@@ -758,7 +758,7 @@ function updateNERLoadButton(isLoaded) {
         nerLoadBtn.disabled = true;
         nerLoadBtn.classList.add('loaded');
     } else {
-        nerLoadBtn.textContent = 'Load Model';
+        nerLoadBtn.textContent = 'Preload Model';
         nerLoadBtn.disabled = false;
         nerLoadBtn.classList.remove('loaded');
     }
@@ -773,7 +773,7 @@ function updateOCRLoadButton(isLoaded) {
         ocrLoadBtn.disabled = true;
         ocrLoadBtn.classList.add('loaded');
     } else {
-        ocrLoadBtn.textContent = 'Load Model';
+        ocrLoadBtn.textContent = 'Preload Model';
         ocrLoadBtn.disabled = false;
         ocrLoadBtn.classList.remove('loaded');
     }
@@ -806,7 +806,7 @@ async function loadSelectedModel() {
         }
     } catch (error) {
         console.error('Error loading model:', error);
-        mainLoadBtn.textContent = 'Load Model';
+        mainLoadBtn.textContent = 'Preload Model';
         mainLoadBtn.disabled = false;
         showToast(`Failed to load ${selectedModel}`, 'error');
     }
@@ -839,7 +839,7 @@ async function loadNERModel() {
         }
     } catch (error) {
         console.error('Error loading NER model:', error);
-        nerLoadBtn.textContent = 'Load Model';
+        nerLoadBtn.textContent = 'Preload Model';
         nerLoadBtn.disabled = false;
         showToast(`Failed to load ${selectedNERModel}`, 'error');
     }
@@ -872,7 +872,7 @@ async function loadOCRModel() {
         }
     } catch (error) {
         console.error('Error loading OCR model:', error);
-        ocrLoadBtn.textContent = 'Load Model';
+        ocrLoadBtn.textContent = 'Preload Model';
         ocrLoadBtn.disabled = false;
         showToast(`Failed to load ${selectedOCRConfig}`, 'error');
     }
