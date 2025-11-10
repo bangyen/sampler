@@ -1811,6 +1811,8 @@ function setupOCR() {
         }
     });
     
+    const clearBtn = document.getElementById('ocr-clear-btn');
+    
     function handleFileSelect(file) {
         ocrSelectedFile = file;
         const reader = new FileReader();
@@ -1819,6 +1821,7 @@ function setupOCR() {
             show(previewDiv);
             hide(dropZone);
             submitBtn.disabled = false;
+            show(clearBtn);
         };
         reader.readAsDataURL(file);
     }
@@ -1830,12 +1833,12 @@ function setupOCR() {
         show(dropZone);
         fileInput.value = '';
         submitBtn.disabled = true;
+        hide(clearBtn);
         
         const resultsDiv = document.getElementById('ocr-results');
         hide(resultsDiv);
     }
     
-    const clearBtn = document.getElementById('ocr-clear-btn');
     clearBtn.addEventListener('click', clearOCRImage);
     
     submitBtn.addEventListener('click', async () => {
@@ -2065,10 +2068,20 @@ async function setupOCRExamples() {
                 ocrSelectedFile = file;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    document.getElementById('ocr-preview-img').src = e.target.result;
+                    const previewImg = document.getElementById('ocr-preview-img');
+                    const submitBtn = document.getElementById('ocr-submit-btn');
+                    const clearBtn = document.getElementById('ocr-clear-btn');
+                    
+                    previewImg.src = e.target.result;
                     show('ocr-preview');
                     hide('ocr-drop-zone');
-                    document.getElementById('ocr-submit-btn').click();
+                    submitBtn.disabled = false;
+                    show(clearBtn);
+                    
+                    // Auto-run the extraction
+                    setTimeout(() => {
+                        submitBtn.click();
+                    }, 100);
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
