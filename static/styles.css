@@ -1616,14 +1616,15 @@ body {
 
 .example-prompts {
     text-align: center;
+    padding: var(--space-lg);
+    background: var(--color-info-bg);
+    border-radius: var(--radius-md);
+    color: var(--color-info-text);
 }
 
 .info-message {
-    padding: var(--space-base);
-    background: var(--color-info-bg);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-lg);
-    color: var(--color-info-text);
+    margin-bottom: var(--space-md);
+    font-weight: var(--font-weight-medium);
 }
 
 .example-grid {
