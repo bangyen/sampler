@@ -513,6 +513,7 @@ body {
 
 .checkbox-label.checkbox-label-right {
     justify-content: space-between;
+    width: 100%;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -533,8 +534,8 @@ body {
     color: var(--color-primary);
 }
 
-.setting-group-last {
-    margin-bottom: var(--space-lg) !important;
+.setting-group-last input[type="text"] {
+    margin-bottom: var(--space-lg);
 }
 
 .show-more-btn {
