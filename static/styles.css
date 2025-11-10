@@ -1367,6 +1367,21 @@ body {
     border: var(--border-width-thin) solid var(--color-border);
 }
 
+.results-footer {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-lg);
+    margin-top: var(--space-lg);
+}
+
+.results-footer .metrics-display {
+    flex: 1;
+}
+
+.results-footer .copy-btn {
+    flex-shrink: 0;
+}
+
 .metrics-display {
     display: flex;
     gap: var(--space-xl);
@@ -1568,6 +1583,10 @@ body {
     .ner-input-section textarea {
         padding: var(--space-lg);
         font-size: var(--font-size-lg);
+    }
+    
+    .results-footer {
+        flex-direction: column;
     }
     
     .metrics-display {
