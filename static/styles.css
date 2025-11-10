@@ -656,9 +656,8 @@ body {
     list-style: none;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    line-height: 1;
+    justify-content: space-between;
+    gap: var(--space-sm);
 }
 
 .label-customization-accordion summary::-webkit-details-marker {
