@@ -1589,6 +1589,15 @@ function setupNER() {
                 .filter(cb => cb.checked)
                 .map(cb => cb.value);
             
+            if (entityTypes.length === 0) {
+                displayNERError('Please select at least one entity type to extract.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Extract Entities';
+                return;
+            }
+            
+            console.log('Sending NER request:', { text: text.substring(0, 50) + '...', model: selectedNERModel, confidenceThreshold, entityTypes });
+            
             const response = await fetch('/api/ner', {
                 method: 'POST',
                 headers: {
@@ -1601,6 +1610,12 @@ function setupNER() {
                     entity_types: entityTypes
                 })
             });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('NER API error:', response.status, errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
             
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -1664,7 +1679,17 @@ function setupNER() {
             }
         } catch (error) {
             console.error('NER error:', error);
-            displayNERError('Network error. Please try again.');
+            let errorMessage = 'Network error. Please try again.';
+            
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request was cancelled.';
+            } else if (error.message) {
+                errorMessage = `Error: ${error.message}`;
+            } else if (!navigator.onLine) {
+                errorMessage = 'No internet connection. Please check your network.';
+            }
+            
+            displayNERError(errorMessage);
         } finally {
             if (loadingTimerInterval) {
                 clearInterval(loadingTimerInterval);
@@ -2012,8 +2037,30 @@ function setupNERExamples() {
     exampleBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const text = btn.dataset.nerText;
-            document.getElementById('ner-text-input').value = text;
-            document.getElementById('ner-submit-btn').click();
+            const textInput = document.getElementById('ner-text-input');
+            const submitBtn = document.getElementById('ner-submit-btn');
+            
+            if (!textInput || !submitBtn) {
+                console.error('NER input or submit button not found');
+                return;
+            }
+            
+            if (submitBtn.disabled) {
+                console.warn('Submit button is disabled, waiting...');
+                showToast('Please wait for the current operation to complete', 'warning');
+                return;
+            }
+            
+            textInput.value = text;
+            
+            setTimeout(() => {
+                if (!submitBtn.disabled) {
+                    submitBtn.click();
+                } else {
+                    console.warn('Submit button became disabled');
+                    showToast('Unable to submit, please try again', 'error');
+                }
+            }, 100);
         });
     });
 }
