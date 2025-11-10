@@ -456,8 +456,8 @@ body {
 
 .settings-accordion summary::after {
     content: '›';
-    font-size: 30px;
-    align-items: center;
+    font-size: var(--font-size-2xl);
+    line-height: 1;
     transition: transform var(--transition-fast);
     display: inline-block;
     margin-left: auto;
@@ -484,8 +484,7 @@ body {
 }
 
 .settings-content {
-    padding-top: var(--space-lg);
-    padding-bottom: var(--space-lg);
+    padding: var(--space-lg) var(--space-xl) var(--space-lg) var(--space-xl);
 }
 
 .settings-content .setting-group {
