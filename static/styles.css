@@ -600,6 +600,10 @@ body {
     font-size: var(--font-size-regular);
 }
 
+.setting-group label.checkbox-label-right {
+    width: 100%;
+}
+
 .setting-group input[type="range"] {
     width: 100%;
     margin-bottom: 5px;
