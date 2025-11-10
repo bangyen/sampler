@@ -1473,14 +1473,14 @@ body {
 .toast {
     background: var(--color-bg-white);
     color: var(--color-text-primary);
-    padding: var(--space-lg) var(--space-2xl);
+    padding: var(--space-lg) var(--space-lg);
     border-radius: var(--radius-md);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
     min-width: 300px;
     max-width: 450px;
     display: flex;
     align-items: center;
-    gap: var(--space-lg);
+    gap: var(--space-md);
     pointer-events: auto;
     animation: toastSlideIn 0.3s ease-out;
 }
