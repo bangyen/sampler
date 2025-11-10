@@ -1341,6 +1341,7 @@ body {
     
     /* Better spacing for mobile */
     .example-grid {
+        grid-template-columns: repeat(2, 1fr);
         gap: var(--space-lg);
     }
     
@@ -1626,8 +1627,8 @@ body {
 }
 
 .example-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-md);
 }
 
