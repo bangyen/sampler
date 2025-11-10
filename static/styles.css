@@ -1375,11 +1375,12 @@ body {
 }
 
 .results-footer .metrics-display {
-    flex: 1;
+    flex: 0 1 auto;
 }
 
 .results-footer .copy-btn {
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .metrics-display {
