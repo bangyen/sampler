@@ -971,6 +971,9 @@ body {
     max-width: 100% !important;
     margin: 0 auto !important;
     padding: var(--space-3xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
 }
 
 .ner-header,
@@ -992,7 +995,9 @@ body {
 }
 
 .ner-input-section {
-    margin-bottom: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
 }
 
 .ner-input-section label {
