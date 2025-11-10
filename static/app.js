@@ -6,8 +6,12 @@ let selectedModel = 'Qwen 2.5 7B';
 let selectedNERModel = 'BERT Base';
 let selectedOCRConfig = 'EasyOCR';
 let isGenerating = false;
+let isNERExtracting = false;
+let isOCRExtracting = false;
 let currentReader = null;
 let currentAbortController = null;
+let currentNERAbortController = null;
+let currentOCRAbortController = null;
 let availableModelsData = {};
 
 const labelPresets = {
@@ -1238,14 +1242,25 @@ function setupNER() {
     });
     
     submitBtn.addEventListener('click', async () => {
+        // Handle stop if already extracting
+        if (isNERExtracting) {
+            if (currentNERAbortController) {
+                currentNERAbortController.abort();
+                currentNERAbortController = null;
+            }
+            return;
+        }
+        
         const text = textInput.value.trim();
         if (!text) {
             alert('Please enter some text to analyze');
             return;
         }
         
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Extracting...';
+        isNERExtracting = true;
+        submitBtn.textContent = 'Stop Extracting';
+        submitBtn.classList.add('btn-danger');
+        submitBtn.classList.remove('btn-primary');
         
         // Show loading skeleton
         const resultsDiv = document.getElementById('ner-results');
@@ -1283,6 +1298,8 @@ function setupNER() {
             
             console.log('Sending NER request:', { text: text.substring(0, 50) + '...', model: selectedNERModel, confidenceThreshold, entityTypes });
             
+            currentNERAbortController = new AbortController();
+            
             const response = await fetch('/api/ner', {
                 method: 'POST',
                 headers: {
@@ -1293,7 +1310,8 @@ function setupNER() {
                     model: selectedNERModel,
                     confidence_threshold: confidenceThreshold,
                     entity_types: entityTypes
-                })
+                }),
+                signal: currentNERAbortController.signal
             });
             
             if (!response.ok) {
@@ -1370,8 +1388,10 @@ function setupNER() {
             
             displayNERError(errorMessage);
         } finally {
-            submitBtn.disabled = false;
+            isNERExtracting = false;
             submitBtn.textContent = 'Extract Entities';
+            submitBtn.classList.remove('btn-danger');
+            submitBtn.classList.add('btn-primary');
             
             // Ensure load button is in correct state after extraction
             try {
@@ -1530,13 +1550,24 @@ function setupOCR() {
     clearBtn.addEventListener('click', clearOCRImage);
     
     submitBtn.addEventListener('click', async () => {
+        // Handle stop if already extracting
+        if (isOCRExtracting) {
+            if (currentOCRAbortController) {
+                currentOCRAbortController.abort();
+                currentOCRAbortController = null;
+            }
+            return;
+        }
+        
         if (!ocrSelectedFile) {
             alert('Please select an image first');
             return;
         }
         
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Extracting...';
+        isOCRExtracting = true;
+        submitBtn.textContent = 'Stop Extracting';
+        submitBtn.classList.add('btn-danger');
+        submitBtn.classList.remove('btn-primary');
         
         // Show loading skeleton
         const resultsDiv = document.getElementById('ocr-results');
@@ -1563,10 +1594,13 @@ function setupOCR() {
             const formData = new FormData();
             formData.append('file', ocrSelectedFile);
             
+            currentOCRAbortController = new AbortController();
+            
             const endpoint = `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}&confidence_threshold=${confidenceThreshold}&min_text_size=${minTextSize}`;
             const response = await fetch(endpoint, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: currentOCRAbortController.signal
             });
             
             const reader = response.body.getReader();
@@ -1625,10 +1659,14 @@ function setupOCR() {
             }
         } catch (error) {
             console.error('OCR error:', error);
-            displayOCRError('Network error. Please try again.');
+            if (error.name !== 'AbortError') {
+                displayOCRError('Network error. Please try again.');
+            }
         } finally {
-            submitBtn.disabled = false;
+            isOCRExtracting = false;
             submitBtn.textContent = 'Extract Text';
+            submitBtn.classList.remove('btn-danger');
+            submitBtn.classList.add('btn-primary');
             
             // Ensure load button is in correct state after extraction
             try {
