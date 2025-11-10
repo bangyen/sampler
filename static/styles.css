@@ -1087,7 +1087,7 @@ body {
 .drop-zone {
     border: var(--border-width-thick) dashed var(--color-border);
     border-radius: var(--radius-lg);
-    padding: var(--space-4xl) var(--space-3xl);
+    padding: var(--space-2xl) var(--space-3xl);
     text-align: center;
     cursor: pointer;
     transition: all var(--transition-base);
