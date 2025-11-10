@@ -657,7 +657,6 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-md);
     min-width: 44px;
     line-height: 1;
 }
