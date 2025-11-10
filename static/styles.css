@@ -1613,6 +1613,10 @@ body {
     border-color: var(--color-primary);
 }
 
+.example-prompts {
+    text-align: center;
+}
+
 .info-message {
     padding: var(--space-base);
     background: var(--color-info-bg);
