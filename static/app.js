@@ -739,7 +739,7 @@ function updateMainLoadButton(isLoaded) {
     if (!mainLoadBtn) return;
     
     if (isLoaded) {
-        mainLoadBtn.textContent = 'Model Loaded ✓';
+        mainLoadBtn.textContent = 'Model Loaded';
         mainLoadBtn.disabled = true;
         mainLoadBtn.classList.add('loaded');
     } else {
@@ -754,7 +754,7 @@ function updateNERLoadButton(isLoaded) {
     if (!nerLoadBtn) return;
     
     if (isLoaded) {
-        nerLoadBtn.textContent = 'Model Loaded ✓';
+        nerLoadBtn.textContent = 'Model Loaded';
         nerLoadBtn.disabled = true;
         nerLoadBtn.classList.add('loaded');
     } else {
@@ -769,7 +769,7 @@ function updateOCRLoadButton(isLoaded) {
     if (!ocrLoadBtn) return;
     
     if (isLoaded) {
-        ocrLoadBtn.textContent = 'Model Loaded ✓';
+        ocrLoadBtn.textContent = 'Model Loaded';
         ocrLoadBtn.disabled = true;
         ocrLoadBtn.classList.add('loaded');
     } else {
