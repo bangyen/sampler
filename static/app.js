@@ -1401,8 +1401,6 @@ function setupOCR() {
         }
     });
     
-    const clearBtn = document.getElementById('ocr-clear-btn');
-    
     function handleFileSelect(file) {
         ocrSelectedFile = file;
         const reader = new FileReader();
@@ -1411,25 +1409,12 @@ function setupOCR() {
             show(previewDiv);
             hide(dropZone);
             submitBtn.disabled = false;
-            show(clearBtn);
         };
         reader.readAsDataURL(file);
     }
     
-    function clearOCRImage() {
-        ocrSelectedFile = null;
-        previewImg.src = '';
-        hide(previewDiv);
-        show(dropZone);
-        fileInput.value = '';
-        submitBtn.disabled = true;
-        hide(clearBtn);
-        
-        const resultsDiv = document.getElementById('ocr-results');
-        hide(resultsDiv);
-    }
-    
-    clearBtn.addEventListener('click', clearOCRImage);
+    // Make preview clickable to change image
+    previewDiv.addEventListener('click', () => fileInput.click());
     
     submitBtn.addEventListener('click', async () => {
         // Handle stop if already extracting
@@ -1679,13 +1664,11 @@ async function setupOCRExamples() {
                 reader.onload = (e) => {
                     const previewImg = document.getElementById('ocr-preview-img');
                     const submitBtn = document.getElementById('ocr-submit-btn');
-                    const clearBtn = document.getElementById('ocr-clear-btn');
                     
                     previewImg.src = e.target.result;
                     show('ocr-preview');
                     hide('ocr-drop-zone');
                     submitBtn.disabled = false;
-                    show(clearBtn);
                     
                     // Auto-run the extraction
                     setTimeout(() => {

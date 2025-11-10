@@ -1128,10 +1128,13 @@ body {
 .ocr-preview {
     margin: var(--space-xl) 0;
     text-align: center;
+    cursor: pointer;
+    position: relative;
 }
 
 .ocr-preview h3 {
     margin-bottom: var(--space-lg);
+    pointer-events: none;
 }
 
 .ocr-preview img {
@@ -1140,6 +1143,33 @@ body {
     border-radius: var(--radius-md);
     border: var(--border-width-base) solid var(--color-border);
     margin-bottom: var(--space-lg);
+    transition: all var(--transition-fast);
+}
+
+.ocr-preview:hover img {
+    transform: scale(0.98);
+    opacity: 0.8;
+    border-color: var(--color-primary);
+}
+
+.ocr-preview::after {
+    content: 'Click to change image';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--color-text-white);
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-base);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    pointer-events: none;
+    font-weight: var(--font-weight-medium);
+}
+
+.ocr-preview:hover::after {
+    opacity: 1;
 }
 
 .ocr-preview-actions {
