@@ -1421,6 +1421,18 @@ body {
     width: 95%;
 }
 
+.skeleton-info-text {
+    height: 16px;
+    width: 80%;
+    margin-bottom: var(--space-sm);
+}
+
+.skeleton-example-btn {
+    height: 36px;
+    width: 100%;
+    border-radius: var(--radius-sm);
+}
+
 .skeleton-results {
     padding: var(--space-xl);
     border: var(--border-width-base) solid var(--color-border);
