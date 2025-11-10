@@ -365,7 +365,12 @@ async function classifyText() {
                     const data = JSON.parse(line.slice(6));
                     
                     if (data.model_loading_start) {
-                        // Keep skeleton visible during model loading
+                        // Keep skeleton visible, update load button
+                        const mainLoadBtn = document.getElementById('main-load-model-btn');
+                        if (mainLoadBtn) {
+                            mainLoadBtn.textContent = 'Loading...';
+                            mainLoadBtn.disabled = true;
+                        }
                     } else if (data.model_loading_end) {
                         // Keep skeleton visible during classification
                         startTime = performance.now();
