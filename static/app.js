@@ -1743,36 +1743,33 @@ function displayNERResults(data) {
     show(resultsDiv);
     
     if (data.entities && data.entities.length > 0) {
-        const copyButton = document.createElement('button');
-        copyButton.className = 'copy-btn mb-base';
-        copyButton.textContent = 'Copy Entities';
-        
-        entitiesDiv.innerHTML = '';
-        entitiesDiv.appendChild(copyButton);
-        
-        const entitiesContainer = document.createElement('div');
-        entitiesContainer.innerHTML = data.entities.map(entity => `
+        entitiesDiv.innerHTML = data.entities.map(entity => `
             <div class="entity-tag ${entity.label}">
                 <span>${entity.text}</span>
                 <span class="entity-label">${entity.label}</span>
             </div>
         `).join('');
-        entitiesDiv.appendChild(entitiesContainer);
         
         // Format entities for copying
         const entitiesText = data.entities.map(entity => 
             `${entity.text} (${entity.label})`
         ).join('\n');
         
+        metricsDiv.innerHTML = `
+            <div class="metrics-stats">
+                <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+                <div><strong>Entities Found:</strong> ${data.entities.length}</div>
+                <div><strong>Text Length:</strong> ${data.text_length} characters</div>
+            </div>
+        `;
+        
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-btn';
+        copyButton.textContent = 'Copy Entities';
         copyButton.addEventListener('click', () => {
             copyToClipboard(entitiesText, copyButton);
         });
-        
-        metricsDiv.innerHTML = `
-            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-            <div><strong>Entities Found:</strong> ${data.entities.length}</div>
-            <div><strong>Text Length:</strong> ${data.text_length} characters</div>
-        `;
+        metricsDiv.appendChild(copyButton);
     } else {
         entitiesDiv.innerHTML = '<p>No entities detected in the text.</p>';
         metricsDiv.innerHTML = `
@@ -2001,25 +1998,22 @@ function displayOCRResults(data) {
     show(resultsDiv);
     
     if (data.text) {
+        textDiv.textContent = data.text;
+        
+        metricsDiv.innerHTML = `
+            <div class="metrics-stats">
+                <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+                <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+            </div>
+        `;
+        
         const copyButton = document.createElement('button');
-        copyButton.className = 'copy-btn mb-base';
+        copyButton.className = 'copy-btn';
         copyButton.textContent = 'Copy Text';
-        
-        textDiv.innerHTML = '';
-        textDiv.appendChild(copyButton);
-        
-        const textContent = document.createElement('div');
-        textContent.textContent = data.text;
-        textDiv.appendChild(textContent);
-        
         copyButton.addEventListener('click', () => {
             copyToClipboard(data.text, copyButton);
         });
-        
-        metricsDiv.innerHTML = `
-            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-            <div><strong>Text Detections:</strong> ${data.num_detections}</div>
-        `;
+        metricsDiv.appendChild(copyButton);
     } else {
         textDiv.textContent = 'No text detected in the image.';
         metricsDiv.innerHTML = `
