@@ -988,17 +988,19 @@ body {
     display: block;
     margin-bottom: var(--space-sm);
     font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-regular);
 }
 
 .ner-input-section textarea {
     width: 100%;
     padding: var(--space-base);
-    border: var(--border-width-base) solid var(--color-border);
-    border-radius: var(--radius-md);
+    border: var(--border-width-thin) solid var(--color-border);
+    border-radius: var(--radius-base);
     font-family: inherit;
     font-size: var(--font-size-regular);
     resize: vertical;
-    margin-bottom: var(--space-lg);
+    min-height: 100px;
 }
 
 .ner-input-section textarea:focus {
@@ -1597,12 +1599,15 @@ body {
 }
 
 .classification-input-section label {
+    display: block;
+    margin-bottom: var(--space-sm);
     font-weight: var(--font-weight-medium);
     color: var(--color-text-primary);
     font-size: var(--font-size-regular);
 }
 
 .classification-input-section textarea {
+    width: 100%;
     padding: var(--space-base);
     border: var(--border-width-thin) solid var(--color-border);
     border-radius: var(--radius-base);
