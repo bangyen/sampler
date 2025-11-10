@@ -1734,10 +1734,7 @@ function displayNERResults(data) {
     resultsDiv.innerHTML = `
         <h3>Detected Entities</h3>
         <div id="ner-entities" class="entity-list"></div>
-        <div class="results-footer">
-            <div id="ner-metrics" class="metrics-display"></div>
-            <button class="copy-btn" id="ner-copy-btn">Copy Entities</button>
-        </div>
+        <div id="ner-metrics" class="metrics-display"></div>
     `;
     
     const entitiesDiv = document.getElementById('ner-entities');
@@ -1759,9 +1756,12 @@ function displayNERResults(data) {
         ).join('\n');
         
         metricsDiv.innerHTML = `
-            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-            <div><strong>Entities Found:</strong> ${data.entities.length}</div>
-            <div><strong>Text Length:</strong> ${data.text_length} characters</div>
+            <div class="metrics-stats">
+                <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+                <div><strong>Entities Found:</strong> ${data.entities.length}</div>
+                <div><strong>Text Length:</strong> ${data.text_length} characters</div>
+            </div>
+            <button class="copy-btn" id="ner-copy-btn">Copy Entities</button>
         `;
         
         document.getElementById('ner-copy-btn').addEventListener('click', function() {
@@ -1772,7 +1772,6 @@ function displayNERResults(data) {
         metricsDiv.innerHTML = `
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
         `;
-        document.getElementById('ner-copy-btn').style.display = 'none';
     }
 }
 
@@ -1987,10 +1986,7 @@ function displayOCRResults(data) {
     resultsDiv.innerHTML = `
         <h3>Extracted Text</h3>
         <div id="ocr-text" class="extracted-text"></div>
-        <div class="results-footer">
-            <div id="ocr-metrics" class="metrics-display"></div>
-            <button class="copy-btn" id="ocr-copy-btn">Copy Text</button>
-        </div>
+        <div id="ocr-metrics" class="metrics-display"></div>
     `;
     
     const textDiv = document.getElementById('ocr-text');
@@ -2002,8 +1998,11 @@ function displayOCRResults(data) {
         textDiv.textContent = data.text;
         
         metricsDiv.innerHTML = `
-            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-            <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+            <div class="metrics-stats">
+                <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+                <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+            </div>
+            <button class="copy-btn" id="ocr-copy-btn">Copy Text</button>
         `;
         
         document.getElementById('ocr-copy-btn').addEventListener('click', function() {
@@ -2014,7 +2013,6 @@ function displayOCRResults(data) {
         metricsDiv.innerHTML = `
             <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
         `;
-        document.getElementById('ocr-copy-btn').style.display = 'none';
     }
     
 }
