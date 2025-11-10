@@ -1761,6 +1761,11 @@ async function setupOCRExamples() {
     const exampleBtns = document.querySelectorAll('[data-ocr-image]');
     exampleBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
+            if (isOCRExtracting) {
+                showToast('Please wait for the current extraction to complete', 'warning');
+                return;
+            }
+            
             const imageUrl = btn.dataset.ocrImage;
             try {
                 const response = await fetch(imageUrl);
@@ -1780,7 +1785,9 @@ async function setupOCRExamples() {
                     
                     // Auto-run the extraction
                     setTimeout(() => {
-                        submitBtn.click();
+                        if (!isOCRExtracting) {
+                            submitBtn.click();
+                        }
                     }, 100);
                 };
                 reader.readAsDataURL(file);
