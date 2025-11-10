@@ -656,8 +656,11 @@ body {
     list-style: none;
     display: inline-flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: var(--space-sm);
+    min-width: 44px;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
 }
 
 .label-customization-accordion summary::-webkit-details-marker {
