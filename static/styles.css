@@ -1449,6 +1449,13 @@ body {
     margin-bottom: var(--space-xs);
 }
 
+.skeleton-prediction {
+    height: 40px;
+    width: 100%;
+    margin-bottom: var(--space-md);
+    border-radius: var(--radius-sm);
+}
+
 /* ========================================
    Toast Notifications
    ======================================== */

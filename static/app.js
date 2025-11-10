@@ -304,7 +304,15 @@ async function classifyText() {
     
     const resultsDiv = document.getElementById('classification-results');
     show(resultsDiv);
-    resultsDiv.innerHTML = '<p>Classifying...</p>';
+    resultsDiv.innerHTML = `
+        <div class="skeleton-results">
+            <div class="skeleton skeleton-results-title"></div>
+            <div class="skeleton skeleton-prediction"></div>
+            <div class="skeleton skeleton-prediction"></div>
+            <div class="skeleton skeleton-prediction"></div>
+            <div class="skeleton skeleton-metrics"></div>
+        </div>
+    `;
     
     const abstainThreshold = parseFloat(document.getElementById('abstain-threshold-slider').value);
     const useLogprobs = document.getElementById('use-logprobs-checkbox').checked;
