@@ -595,6 +595,9 @@ async function loadNERModels() {
         if (nerModelDisplay) {
             nerModelDisplay.textContent = selectedNERModel;
         }
+        
+        const isLoaded = statusData.status[selectedNERModel]?.loaded || false;
+        updateNERLoadButton(isLoaded);
     } catch (error) {
         console.error('Error loading NER models:', error);
     }
@@ -636,6 +639,9 @@ async function loadOCRConfigs() {
         if (ocrModelDisplay) {
             ocrModelDisplay.textContent = selectedOCRConfig;
         }
+        
+        const isLoaded = statusData.status[selectedOCRConfig]?.loaded || false;
+        updateOCRLoadButton(isLoaded);
     } catch (error) {
         console.error('Error loading OCR configs:', error);
     }
@@ -670,7 +676,7 @@ async function selectModel(name, evt) {
     }, 100);
 }
 
-function selectNERModel(name, evt) {
+async function selectNERModel(name, evt) {
     selectedNERModel = name;
     
     document.querySelectorAll('#ner-model-list .model-option').forEach(el => {
@@ -684,12 +690,22 @@ function selectNERModel(name, evt) {
         modelNameDisplay.textContent = name;
     }
     
+    try {
+        const statusResponse = await fetch('/api/ner/models/status');
+        const statusData = await statusResponse.json();
+        const isLoaded = statusData.status[name]?.loaded || false;
+        updateNERLoadButton(isLoaded);
+    } catch (error) {
+        console.error('Error fetching NER model status:', error);
+        updateNERLoadButton(false);
+    }
+    
     setTimeout(() => {
         closeMobileMenuHelper();
     }, 100);
 }
 
-function selectOCRConfig(name, evt) {
+async function selectOCRConfig(name, evt) {
     selectedOCRConfig = name;
     
     document.querySelectorAll('#ocr-model-list .model-option').forEach(el => {
@@ -701,6 +717,16 @@ function selectOCRConfig(name, evt) {
     const modelNameDisplay = document.getElementById('selected-ocr-model-display');
     if (modelNameDisplay) {
         modelNameDisplay.textContent = name;
+    }
+    
+    try {
+        const statusResponse = await fetch('/api/ocr/configs/status');
+        const statusData = await statusResponse.json();
+        const isLoaded = statusData.status[name]?.loaded || false;
+        updateOCRLoadButton(isLoaded);
+    } catch (error) {
+        console.error('Error fetching OCR config status:', error);
+        updateOCRLoadButton(false);
     }
     
     setTimeout(() => {
@@ -720,6 +746,36 @@ function updateMainLoadButton(isLoaded) {
         mainLoadBtn.textContent = 'Load Model';
         mainLoadBtn.disabled = false;
         mainLoadBtn.classList.remove('loaded');
+    }
+}
+
+function updateNERLoadButton(isLoaded) {
+    const nerLoadBtn = document.getElementById('ner-load-model-btn');
+    if (!nerLoadBtn) return;
+    
+    if (isLoaded) {
+        nerLoadBtn.textContent = 'Model Loaded ✓';
+        nerLoadBtn.disabled = true;
+        nerLoadBtn.classList.add('loaded');
+    } else {
+        nerLoadBtn.textContent = 'Load Model';
+        nerLoadBtn.disabled = false;
+        nerLoadBtn.classList.remove('loaded');
+    }
+}
+
+function updateOCRLoadButton(isLoaded) {
+    const ocrLoadBtn = document.getElementById('ocr-load-model-btn');
+    if (!ocrLoadBtn) return;
+    
+    if (isLoaded) {
+        ocrLoadBtn.textContent = 'Model Loaded ✓';
+        ocrLoadBtn.disabled = true;
+        ocrLoadBtn.classList.add('loaded');
+    } else {
+        ocrLoadBtn.textContent = 'Load Model';
+        ocrLoadBtn.disabled = false;
+        ocrLoadBtn.classList.remove('loaded');
     }
 }
 
@@ -753,6 +809,72 @@ async function loadSelectedModel() {
         mainLoadBtn.textContent = 'Load Model';
         mainLoadBtn.disabled = false;
         showToast(`Failed to load ${selectedModel}`, 'error');
+    }
+}
+
+async function loadNERModel() {
+    const nerLoadBtn = document.getElementById('ner-load-model-btn');
+    if (!nerLoadBtn) return;
+    
+    try {
+        nerLoadBtn.textContent = 'Loading...';
+        nerLoadBtn.disabled = true;
+        
+        const response = await fetch('/api/ner/models/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model_name: selectedNERModel })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            updateNERLoadButton(true);
+            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
+            showToast(`${selectedNERModel} loaded${loadTime}`);
+        } else {
+            throw new Error('Failed to load NER model');
+        }
+    } catch (error) {
+        console.error('Error loading NER model:', error);
+        nerLoadBtn.textContent = 'Load Model';
+        nerLoadBtn.disabled = false;
+        showToast(`Failed to load ${selectedNERModel}`, 'error');
+    }
+}
+
+async function loadOCRModel() {
+    const ocrLoadBtn = document.getElementById('ocr-load-model-btn');
+    if (!ocrLoadBtn) return;
+    
+    try {
+        ocrLoadBtn.textContent = 'Loading...';
+        ocrLoadBtn.disabled = true;
+        
+        const response = await fetch('/api/ocr/configs/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ config_name: selectedOCRConfig })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            updateOCRLoadButton(true);
+            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
+            showToast(`${selectedOCRConfig} loaded${loadTime}`);
+        } else {
+            throw new Error('Failed to load OCR model');
+        }
+    } catch (error) {
+        console.error('Error loading OCR model:', error);
+        ocrLoadBtn.textContent = 'Load Model';
+        ocrLoadBtn.disabled = false;
+        showToast(`Failed to load ${selectedOCRConfig}`, 'error');
     }
 }
 
@@ -1418,16 +1540,16 @@ function setupEventListeners() {
     
     const nerLoadModelBtn = document.getElementById('ner-load-model-btn');
     if (nerLoadModelBtn) {
-        nerLoadModelBtn.textContent = 'Auto-loads on use';
-        nerLoadModelBtn.disabled = true;
-        nerLoadModelBtn.title = 'NER models are automatically loaded when you extract entities';
+        nerLoadModelBtn.addEventListener('click', async () => {
+            await loadNERModel();
+        });
     }
     
     const ocrLoadModelBtn = document.getElementById('ocr-load-model-btn');
     if (ocrLoadModelBtn) {
-        ocrLoadModelBtn.textContent = 'Auto-loads on use';
-        ocrLoadModelBtn.disabled = true;
-        ocrLoadModelBtn.title = 'OCR engines are automatically loaded when you extract text';
+        ocrLoadModelBtn.addEventListener('click', async () => {
+            await loadOCRModel();
+        });
     }
     
     const abstainThresholdSlider = document.getElementById('abstain-threshold-slider');
