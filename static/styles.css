@@ -654,9 +654,10 @@ body {
 
 .label-customization-accordion summary {
     list-style: none;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: var(--space-sm);
+    line-height: 1;
 }
 
 .label-customization-accordion summary::after {
