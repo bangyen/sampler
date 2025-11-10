@@ -383,6 +383,10 @@ async function classifyText() {
             console.error('Classification error:', error);
             displayClassificationError(error.message || 'Network error. Please try again.');
             showToast('Classification failed', 'error');
+        } else {
+            // Hide skeleton when stopped
+            const resultsDiv = document.getElementById('classification-results');
+            hide(resultsDiv);
         }
     } finally {
         isGenerating = false;
@@ -1130,6 +1134,17 @@ function setupNER() {
                 currentNERAbortController.abort();
                 currentNERAbortController = null;
             }
+            
+            // Reset UI state
+            isNERExtracting = false;
+            submitBtn.textContent = 'Extract Entities';
+            submitBtn.classList.remove('btn-danger');
+            submitBtn.classList.add('btn-primary');
+            
+            // Hide skeleton
+            const resultsDiv = document.getElementById('ner-results');
+            hide(resultsDiv);
+            
             return;
         }
         
@@ -1423,6 +1438,17 @@ function setupOCR() {
                 currentOCRAbortController.abort();
                 currentOCRAbortController = null;
             }
+            
+            // Reset UI state
+            isOCRExtracting = false;
+            submitBtn.textContent = 'Extract Text';
+            submitBtn.classList.remove('btn-danger');
+            submitBtn.classList.add('btn-primary');
+            
+            // Hide skeleton
+            const resultsDiv = document.getElementById('ocr-results');
+            hide(resultsDiv);
+            
             return;
         }
         
