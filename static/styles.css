@@ -522,7 +522,7 @@ body {
 .checkbox-label span {
     font-size: var(--font-size-md);
     color: var(--color-text-primary);
-    line-height: 1;
+    line-height: 18px;
 }
 
 .checkbox-label:hover span {
