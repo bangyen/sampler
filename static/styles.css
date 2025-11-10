@@ -660,19 +660,6 @@ body {
     gap: var(--space-sm);
 }
 
-.label-customization-accordion summary::after {
-    content: '›';
-    font-size: var(--font-size-lg);
-    transition: transform var(--transition-fast);
-    display: inline-flex;
-    align-items: center;
-    line-height: 1;
-}
-
-.label-customization-accordion[open] summary::after {
-    transform: rotate(90deg);
-}
-
 .label-customization-accordion summary::-webkit-details-marker {
     display: none;
 }
