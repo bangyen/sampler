@@ -663,6 +663,9 @@ body {
     background: var(--color-bg-white);
     color: var(--color-text-primary);
     transition: all var(--transition-fast);
+    font-family: inherit;
+    line-height: normal;
+    appearance: none;
     display: flex;
     align-items: center;
     gap: var(--space-sm);
