@@ -1804,6 +1804,13 @@ function setupNER() {
                                     modelLoadStartTime = Date.now();
                                     submitBtn.textContent = 'Loading model...';
                                     
+                                    // Update load button to show loading state
+                                    const nerLoadBtn = document.getElementById('ner-load-model-btn');
+                                    if (nerLoadBtn) {
+                                        nerLoadBtn.textContent = 'Loading...';
+                                        nerLoadBtn.disabled = true;
+                                    }
+                                    
                                     loadingTimerInterval = setInterval(() => {
                                         const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
                                         submitBtn.textContent = `Loading model... ${elapsed}s`;
@@ -1817,6 +1824,9 @@ function setupNER() {
                                         loadingTimerInterval = null;
                                     }
                                     submitBtn.textContent = 'Extracting...';
+                                    
+                                    // Update load button to show loaded state
+                                    updateNERLoadButton(true);
                                 }
                                 
                                 if (data.done) {
@@ -1852,6 +1862,18 @@ function setupNER() {
             }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Extract Entities';
+            
+            // Ensure load button is in correct state after extraction
+            try {
+                const statusResponse = await fetch('/api/ner/models/status');
+                const statusData = await statusResponse.json();
+                const isLoaded = statusData.status[selectedNERModel]?.loaded || false;
+                updateNERLoadButton(isLoaded);
+            } catch (error) {
+                console.error('Error updating NER load button state:', error);
+                // On error, assume not loaded and enable the button
+                updateNERLoadButton(false);
+            }
         }
     });
 }
@@ -2071,6 +2093,13 @@ function setupOCR() {
                                     modelLoadStartTime = Date.now();
                                     submitBtn.textContent = 'Loading model...';
                                     
+                                    // Update load button to show loading state
+                                    const ocrLoadBtn = document.getElementById('ocr-load-model-btn');
+                                    if (ocrLoadBtn) {
+                                        ocrLoadBtn.textContent = 'Loading...';
+                                        ocrLoadBtn.disabled = true;
+                                    }
+                                    
                                     loadingTimerInterval = setInterval(() => {
                                         const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
                                         submitBtn.textContent = `Loading model... ${elapsed}s`;
@@ -2084,6 +2113,9 @@ function setupOCR() {
                                         loadingTimerInterval = null;
                                     }
                                     submitBtn.textContent = 'Extracting...';
+                                    
+                                    // Update load button to show loaded state
+                                    updateOCRLoadButton(true);
                                 }
                                 
                                 if (data.done) {
@@ -2109,6 +2141,18 @@ function setupOCR() {
             }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Extract Text';
+            
+            // Ensure load button is in correct state after extraction
+            try {
+                const statusResponse = await fetch('/api/ocr/configs/status');
+                const statusData = await statusResponse.json();
+                const isLoaded = statusData.status[selectedOCRConfig]?.loaded || false;
+                updateOCRLoadButton(isLoaded);
+            } catch (error) {
+                console.error('Error updating OCR load button state:', error);
+                // On error, assume not loaded and enable the button
+                updateOCRLoadButton(false);
+            }
         }
     });
 }
