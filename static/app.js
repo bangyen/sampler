@@ -360,9 +360,9 @@ async function classifyText() {
                     const data = JSON.parse(line.slice(6));
                     
                     if (data.model_loading_start) {
-                        resultsDiv.innerHTML = '<p>Loading model...</p>';
+                        // Keep skeleton visible during model loading
                     } else if (data.model_loading_end) {
-                        resultsDiv.innerHTML = '<p>Model loaded. Classifying...</p>';
+                        // Keep skeleton visible during classification
                         startTime = performance.now();
                         updateMainLoadButton(true);
                     } else if (data.result) {
@@ -1265,9 +1265,6 @@ function setupNER() {
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
         
-        let loadingTimerInterval = null;
-        let modelLoadStartTime = null;
-        
         try {
             // Get settings values
             const confidenceThreshold = parseFloat(document.getElementById('ner-confidence-threshold')?.value || 0.5);
@@ -1331,32 +1328,18 @@ function setupNER() {
                                 }
                                 
                                 if (data.model_loading_start) {
-                                    // Show loading indicator
-                                    modelLoadStartTime = Date.now();
+                                    // Keep skeleton visible, update button text for feedback
                                     submitBtn.textContent = 'Loading model...';
-                                    
-                                    // Update load button to show loading state
                                     const nerLoadBtn = document.getElementById('ner-load-model-btn');
                                     if (nerLoadBtn) {
                                         nerLoadBtn.textContent = 'Loading...';
                                         nerLoadBtn.disabled = true;
                                     }
-                                    
-                                    loadingTimerInterval = setInterval(() => {
-                                        const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
-                                        submitBtn.textContent = `Loading model... ${elapsed}s`;
-                                    }, 100);
                                 }
                                 
                                 if (data.model_loading_end) {
-                                    // Stop loading timer
-                                    if (loadingTimerInterval) {
-                                        clearInterval(loadingTimerInterval);
-                                        loadingTimerInterval = null;
-                                    }
+                                    // Keep skeleton visible, update button text
                                     submitBtn.textContent = 'Extracting...';
-                                    
-                                    // Update load button to show loaded state
                                     updateNERLoadButton(true);
                                 }
                                 
@@ -1388,9 +1371,6 @@ function setupNER() {
             
             displayNERError(errorMessage);
         } finally {
-            if (loadingTimerInterval) {
-                clearInterval(loadingTimerInterval);
-            }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Extract Entities';
             
@@ -1576,9 +1556,6 @@ function setupOCR() {
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
         
-        let loadingTimerInterval = null;
-        let modelLoadStartTime = null;
-        
         try {
             // Get settings values
             const confidenceThreshold = parseFloat(document.getElementById('ocr-confidence-threshold')?.value || 0.5);
@@ -1620,32 +1597,18 @@ function setupOCR() {
                                 }
                                 
                                 if (data.model_loading_start) {
-                                    // Show loading indicator
-                                    modelLoadStartTime = Date.now();
+                                    // Keep skeleton visible, update button text for feedback
                                     submitBtn.textContent = 'Loading model...';
-                                    
-                                    // Update load button to show loading state
                                     const ocrLoadBtn = document.getElementById('ocr-load-model-btn');
                                     if (ocrLoadBtn) {
                                         ocrLoadBtn.textContent = 'Loading...';
                                         ocrLoadBtn.disabled = true;
                                     }
-                                    
-                                    loadingTimerInterval = setInterval(() => {
-                                        const elapsed = ((Date.now() - modelLoadStartTime) / 1000).toFixed(1);
-                                        submitBtn.textContent = `Loading model... ${elapsed}s`;
-                                    }, 100);
                                 }
                                 
                                 if (data.model_loading_end) {
-                                    // Stop loading timer
-                                    if (loadingTimerInterval) {
-                                        clearInterval(loadingTimerInterval);
-                                        loadingTimerInterval = null;
-                                    }
+                                    // Keep skeleton visible, update button text
                                     submitBtn.textContent = 'Extracting...';
-                                    
-                                    // Update load button to show loaded state
                                     updateOCRLoadButton(true);
                                 }
                                 
@@ -1667,9 +1630,6 @@ function setupOCR() {
             console.error('OCR error:', error);
             displayOCRError('Network error. Please try again.');
         } finally {
-            if (loadingTimerInterval) {
-                clearInterval(loadingTimerInterval);
-            }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Extract Text';
             
