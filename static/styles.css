@@ -1674,11 +1674,11 @@ body {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-base);
+    padding: 6px 10px;
     background: var(--color-primary-light);
     border: var(--border-width-thin) solid var(--color-primary);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-regular);
+    border-radius: var(--radius-base);
+    font-size: var(--font-size-md);
     color: var(--color-primary);
 }
 
