@@ -183,11 +183,21 @@ function setupClassificationExamples() {
         btn.parentNode.replaceChild(newBtn, btn);
         
         newBtn.addEventListener('click', () => {
-            const text = newBtn.dataset.classificationText;
-            document.getElementById('classification-text-input').value = text;
+            if (isGenerating) {
+                showToast('Please wait for the current classification to complete', 'warning');
+                return;
+            }
             
+            const text = newBtn.dataset.classificationText;
+            const textInput = document.getElementById('classification-text-input');
+            const classifyBtn = document.getElementById('classify-btn');
+            
+            textInput.value = text;
+            classifyBtn.disabled = false;
+            
+            // Directly call classifyText instead of clicking button
             setTimeout(() => {
-                document.getElementById('classify-btn').click();
+                classifyText();
             }, 100);
         });
     });
@@ -391,9 +401,14 @@ async function classifyText() {
     } finally {
         isGenerating = false;
         const classifyBtn = document.getElementById('classify-btn');
+        const textInput = document.getElementById('classification-text-input');
         classifyBtn.textContent = 'Classify Text';
         classifyBtn.classList.remove('btn-danger');
         classifyBtn.classList.add('btn-primary');
+        
+        // Re-check if text is present to enable/disable button
+        const hasText = textInput && textInput.value.trim().length > 0;
+        classifyBtn.disabled = !hasText;
     }
 }
 
@@ -945,12 +960,24 @@ function setupEventListeners() {
     
     const classificationTextInput = document.getElementById('classification-text-input');
     if (classificationTextInput) {
+        // Enable/disable classify button based on text content
+        const updateClassifyButtonState = () => {
+            const hasText = classificationTextInput.value.trim().length > 0;
+            if (classifyBtn && !isGenerating) {
+                classifyBtn.disabled = !hasText;
+            }
+        };
+        
+        classificationTextInput.addEventListener('input', updateClassifyButtonState);
         classificationTextInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
                 e.preventDefault();
                 classifyText();
             }
         });
+        
+        // Initialize button state
+        updateClassifyButtonState();
     }
     
     const mainLoadModelBtn = document.getElementById('main-load-model-btn');
@@ -1120,12 +1147,25 @@ function setupNER() {
     const submitBtn = document.getElementById('ner-submit-btn');
     const textInput = document.getElementById('ner-text-input');
     
+    // Enable/disable submit button based on text content
+    const updateSubmitButtonState = () => {
+        const hasText = textInput.value.trim().length > 0;
+        if (!isNERExtracting) {
+            submitBtn.disabled = !hasText;
+        }
+    };
+    
+    textInput.addEventListener('input', updateSubmitButtonState);
+    
     // Add Enter key support
     textInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !submitBtn.disabled) {
             submitBtn.click();
         }
     });
+    
+    // Initialize button state
+    updateSubmitButtonState();
     
     submitBtn.addEventListener('click', async () => {
         // Handle stop if already extracting
@@ -1293,6 +1333,10 @@ function setupNER() {
             submitBtn.textContent = 'Extract Entities';
             submitBtn.classList.remove('btn-danger');
             submitBtn.classList.add('btn-primary');
+            
+            // Re-check if text is present to enable/disable button
+            const hasText = textInput.value.trim().length > 0;
+            submitBtn.disabled = !hasText;
             
             // Ensure load button is in correct state after extraction
             try {
@@ -1663,20 +1707,18 @@ function setupNERExamples() {
                 return;
             }
             
-            if (submitBtn.disabled) {
-                console.warn('Submit button is disabled, waiting...');
-                showToast('Please wait for the current operation to complete', 'warning');
+            if (isNERExtracting) {
+                showToast('Please wait for the current extraction to complete', 'warning');
                 return;
             }
             
             textInput.value = text;
+            submitBtn.disabled = false;
             
+            // Click button after brief delay
             setTimeout(() => {
-                if (!submitBtn.disabled) {
+                if (!isNERExtracting) {
                     submitBtn.click();
-                } else {
-                    console.warn('Submit button became disabled');
-                    showToast('Unable to submit, please try again', 'error');
                 }
             }, 100);
         });
