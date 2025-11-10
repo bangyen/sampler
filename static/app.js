@@ -268,6 +268,8 @@ function renderLabelChips() {
         return;
     }
     
+    const addLabelSection = container.querySelector('.add-label-section');
+    
     container.innerHTML = '';
     
     classificationLabels.forEach(label => {
@@ -285,6 +287,10 @@ function renderLabelChips() {
         
         container.appendChild(chip);
     });
+    
+    if (addLabelSection) {
+        container.appendChild(addLabelSection);
+    }
 }
 
 async function classifyText() {
