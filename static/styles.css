@@ -485,6 +485,7 @@ body {
 
 .settings-content {
     padding-top: var(--space-lg);
+    padding-bottom: var(--space-lg);
 }
 
 .settings-content .setting-group {
