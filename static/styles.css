@@ -1572,7 +1572,7 @@ body {
 }
 
 .classification-header {
-    padding-bottom: var(--space-lg);
+    margin-bottom: var(--space-3xl);
 }
 
 .classification-header h2 {
