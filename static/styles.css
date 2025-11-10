@@ -1711,9 +1711,7 @@ body {
     display: flex;
     gap: var(--space-md);
     width: 100%;
-    padding-top: var(--space-base);
     margin-top: var(--space-base);
-    border-top: var(--border-width-thin) solid var(--color-border-light);
 }
 
 .add-label-section input {
