@@ -1223,6 +1223,13 @@ function setupNER() {
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
         
+        // Show loading on Load Model button if model not loaded
+        const nerLoadBtn = document.getElementById('ner-load-model-btn');
+        if (nerLoadBtn && nerLoadBtn.textContent !== 'Model Loaded') {
+            nerLoadBtn.textContent = 'Loading...';
+            nerLoadBtn.disabled = true;
+        }
+        
         try {
             // Get settings values
             const confidenceThreshold = parseFloat(document.getElementById('ner-confidence-threshold')?.value || 0.5);
