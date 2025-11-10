@@ -373,7 +373,7 @@ async function classifyText() {
                         updateMainLoadButton(true);
                     } else if (data.result) {
                         result = data.result;
-                        renderClassificationResults(result, useLogprobs);
+                        // Don't render yet, wait for duration calculation
                     } else if (data.error) {
                         displayClassificationError(data.error);
                     }
@@ -396,6 +396,7 @@ async function classifyText() {
                 use_logprobs: useLogprobs
             };
             
+            renderClassificationResults(result, useLogprobs, duration, text);
             showToast('Classification complete');
         }
         
@@ -434,7 +435,7 @@ function displayClassificationError(message) {
     `;
 }
 
-function renderClassificationResults(result, useLogprobs = false) {
+function renderClassificationResults(result, useLogprobs = false, duration = null, inputText = '') {
     const resultsDiv = document.getElementById('classification-results');
     
     let html = '<h3>Classification Results</h3>';
@@ -502,8 +503,18 @@ function renderClassificationResults(result, useLogprobs = false) {
         html += '</div>';
     }
     
+    const labelsCount = result.labels ? result.labels.length : 0;
+    const textLength = inputText.length;
+    
     html += `
         <div id="classification-metrics" class="metrics-display">
+            ${duration ? `
+            <div class="metrics-stats">
+                <div><strong>Processing Time:</strong> ${duration}s</div>
+                <div><strong>Labels Evaluated:</strong> ${labelsCount}</div>
+                <div><strong>Text Length:</strong> ${textLength} characters</div>
+            </div>
+            ` : ''}
             <button class="copy-btn" id="classification-copy-btn">Copy Result</button>
         </div>
     `;
