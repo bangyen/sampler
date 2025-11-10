@@ -375,7 +375,7 @@ async function classifyText() {
                         result = data.result;
                         renderClassificationResults(result, useLogprobs);
                     } else if (data.error) {
-                        resultsDiv.innerHTML = `<p class="text-error">Error: ${data.error}</p>`;
+                        displayClassificationError(data.error);
                     }
                 }
             }
@@ -402,7 +402,7 @@ async function classifyText() {
     } catch (error) {
         if (error.name !== 'AbortError') {
             console.error('Classification error:', error);
-            resultsDiv.innerHTML = `<p class="text-error">Error: ${error.message}</p>`;
+            displayClassificationError(error.message || 'Network error. Please try again.');
             showToast('Classification failed', 'error');
         }
     } finally {
@@ -412,6 +412,26 @@ async function classifyText() {
         classifyBtn.classList.remove('btn-danger');
         classifyBtn.classList.add('btn-primary');
     }
+}
+
+function displayClassificationError(message) {
+    const resultsDiv = document.getElementById('classification-results');
+    
+    resultsDiv.innerHTML = `
+        <h3>Classification Results</h3>
+        <div id="top-prediction" class="top-prediction"></div>
+        <div id="all-predictions" class="all-predictions"></div>
+        <div id="classification-metrics" class="metrics-display"></div>
+    `;
+    
+    const topPrediction = document.getElementById('top-prediction');
+    
+    show(resultsDiv);
+    topPrediction.innerHTML = `
+        <div class="error-box">
+            <strong>Error:</strong> ${message}
+        </div>
+    `;
 }
 
 function renderClassificationResults(result, useLogprobs = false) {
@@ -482,7 +502,18 @@ function renderClassificationResults(result, useLogprobs = false) {
         html += '</div>';
     }
     
+    html += `
+        <div id="classification-metrics" class="metrics-display">
+            <button class="copy-btn" id="classification-copy-btn">Copy Result</button>
+        </div>
+    `;
+    
     resultsDiv.innerHTML = html;
+    
+    document.getElementById('classification-copy-btn').addEventListener('click', function() {
+        const copyText = `Classification Result: ${result.top_label}`;
+        copyToClipboard(copyText, this);
+    });
 }
 
 async function init() {
