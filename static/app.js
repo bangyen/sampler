@@ -165,10 +165,7 @@ function updateClassificationExamples(preset = 'sentiment') {
         const button = document.createElement('button');
         button.className = 'btn btn-secondary example-prompt';
         button.setAttribute('data-classification-text', example.text);
-        
-        button.innerHTML = `
-            <span class="expected-label">${example.label}</span>
-        `;
+        button.textContent = example.label;
         
         gridElement.appendChild(button);
     });
