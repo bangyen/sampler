@@ -1818,6 +1818,7 @@ function setupOCR() {
             previewImg.src = e.target.result;
             show(previewDiv);
             hide(dropZone);
+            submitBtn.disabled = false;
         };
         reader.readAsDataURL(file);
     }
@@ -1828,6 +1829,7 @@ function setupOCR() {
         hide(previewDiv);
         show(dropZone);
         fileInput.value = '';
+        submitBtn.disabled = true;
         
         const resultsDiv = document.getElementById('ocr-results');
         hide(resultsDiv);

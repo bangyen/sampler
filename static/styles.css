@@ -1356,6 +1356,12 @@ body {
     margin-top: var(--space-lg);
 }
 
+.ocr-action-section {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--space-xl);
+}
+
 .extracted-text {
     background: var(--color-bg-light);
     padding: var(--space-lg);
