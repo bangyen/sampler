@@ -1879,19 +1879,11 @@ function setupOCR() {
             const formData = new FormData();
             formData.append('file', ocrSelectedFile);
             
-            console.log('Sending OCR request:', { config: selectedOCRConfig, confidenceThreshold, minTextSize, fileName: ocrSelectedFile.name });
-            
             const endpoint = `/api/ocr?config=${encodeURIComponent(selectedOCRConfig)}&confidence_threshold=${confidenceThreshold}&min_text_size=${minTextSize}`;
             const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
             });
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('OCR API error:', response.status, errorText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
             
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -1955,17 +1947,7 @@ function setupOCR() {
             }
         } catch (error) {
             console.error('OCR error:', error);
-            let errorMessage = 'Network error. Please try again.';
-            
-            if (error.name === 'AbortError') {
-                errorMessage = 'Request was cancelled.';
-            } else if (error.message) {
-                errorMessage = `Error: ${error.message}`;
-            } else if (!navigator.onLine) {
-                errorMessage = 'No internet connection. Please check your network.';
-            }
-            
-            displayOCRError(errorMessage);
+            displayOCRError('Network error. Please try again.');
         } finally {
             if (loadingTimerInterval) {
                 clearInterval(loadingTimerInterval);
@@ -2085,50 +2067,22 @@ async function setupOCRExamples() {
     exampleBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
             const imageUrl = btn.dataset.ocrImage;
-            const submitBtn = document.getElementById('ocr-submit-btn');
-            const previewImg = document.getElementById('ocr-preview-img');
-            const dropZone = document.getElementById('ocr-drop-zone');
-            const previewDiv = document.getElementById('ocr-preview');
-            
-            if (!submitBtn || !previewImg || !dropZone || !previewDiv) {
-                console.error('OCR required elements not found');
-                return;
-            }
-            
-            if (submitBtn.disabled) {
-                console.warn('OCR submit button is disabled, waiting...');
-                showToast('Please wait for the current operation to complete', 'warning');
-                return;
-            }
-            
             try {
                 const response = await fetch(imageUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to load image: ${response.status}`);
-                }
                 const blob = await response.blob();
                 const file = new File([blob], imageUrl.split('/').pop(), { type: blob.type });
                 
                 ocrSelectedFile = file;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    previewImg.src = e.target.result;
-                    show(previewDiv);
-                    hide(dropZone);
-                    
-                    setTimeout(() => {
-                        if (!submitBtn.disabled) {
-                            submitBtn.click();
-                        } else {
-                            console.warn('OCR submit button became disabled');
-                            showToast('Unable to submit, please try again', 'error');
-                        }
-                    }, 100);
+                    document.getElementById('ocr-preview-img').src = e.target.result;
+                    show('ocr-preview');
+                    hide('ocr-drop-zone');
+                    document.getElementById('ocr-submit-btn').click();
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
                 console.error('Error loading sample image:', error);
-                showToast(`Failed to load example image: ${error.message}`, 'error');
             }
         });
     });
