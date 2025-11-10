@@ -1696,7 +1696,6 @@ body {
     display: flex;
     gap: var(--space-md);
     margin-top: var(--space-xl);
-    align-items: center;
 }
 
 .add-label-section input {
@@ -1705,10 +1704,6 @@ body {
     border: var(--border-width-thin) solid var(--color-border);
     border-radius: var(--radius-base);
     font-size: var(--font-size-md);
-}
-
-.add-label-section .btn {
-    padding: var(--space-sm) var(--space-xl);
 }
 
 .add-label-section input:focus {
