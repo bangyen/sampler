@@ -1359,7 +1359,7 @@ body {
 .ocr-action-section {
     display: flex;
     gap: var(--space-md);
-    justify-content: center;
+    justify-content: flex-start;
     margin-top: var(--space-xl);
 }
 
