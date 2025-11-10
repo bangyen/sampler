@@ -475,7 +475,6 @@ body {
 }
 
 .settings-accordion[open] summary {
-    background: var(--color-bg-light);
     border-color: var(--color-primary);
 }
 
@@ -683,7 +682,6 @@ body {
 }
 
 .label-customization-accordion[open] summary {
-    background: var(--color-bg-light);
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
