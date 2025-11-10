@@ -1675,10 +1675,10 @@ body {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    padding: var(--space-md) var(--space-xl);
+    padding: var(--space-sm) var(--space-base);
     background: var(--color-primary-light);
     border: var(--border-width-thin) solid var(--color-primary);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     font-size: var(--font-size-regular);
     color: var(--color-primary);
 }
