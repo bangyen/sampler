@@ -1665,8 +1665,7 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
-    min-height: 40px;
-    padding: var(--space-sm);
+    padding: var(--space-base);
     background: var(--color-bg-white);
     border-radius: var(--radius-base);
 }
@@ -1711,7 +1710,10 @@ body {
 .add-label-section {
     display: flex;
     gap: var(--space-md);
-    margin-top: var(--space-xl);
+    width: 100%;
+    padding-top: var(--space-base);
+    margin-top: var(--space-base);
+    border-top: var(--border-width-thin) solid var(--color-border-light);
 }
 
 .add-label-section input {
