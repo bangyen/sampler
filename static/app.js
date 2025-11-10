@@ -26,7 +26,7 @@ const examplePrompts = {
         info: 'Try one of these example texts for sentiment analysis:',
         examples: [
             { text: 'Major shipping alliance announces new ultra-large container vessels with 50% reduction in emissions per container. Industry leaders praise breakthrough in sustainable maritime transport.', label: 'Positive news', predicted: 'positive' },
-            { text: "Port strike enters third week as dockworkers reject latest offer. Container backlog grows to record levels, threatening supply chain collapse across major retail sectors.", label: 'Negative news', predicted: 'negative' },
+            { text: 'Port strike enters third week as dockworkers reject latest offer. Container backlog grows to record levels, threatening supply chain collapse across major retail sectors.', label: 'Negative news', predicted: 'negative' },
             { text: 'Global container shipping rates remain stable in Q3 according to latest freight index. Trans-Pacific routes show minimal fluctuation from previous quarter.', label: 'Neutral news', predicted: 'neutral' },
             { text: 'New Panama Canal expansion opens to fanfare, but analysts warn increased capacity may not offset rising fuel costs. Mixed reactions from shipping executives.', label: 'Mixed sentiment', predicted: 'neutral' }
         ]
@@ -35,7 +35,7 @@ const examplePrompts = {
         info: 'Try one of these example texts for intent classification:',
         examples: [
             { text: 'How will the new IMO 2025 sulfur regulations impact freight rates for Asia-Europe routes? Shipping economists weigh in on compliance costs.', label: 'Question', predicted: 'question' },
-            { text: "Cargo owners slam terminal operators for chronic delays at Los Angeles port. Shipper coalition demands immediate infrastructure improvements to prevent further disruptions.", label: 'Complaint', predicted: 'complaint' },
+            { text: 'Cargo owners slam terminal operators for chronic delays at Los Angeles port. Shipper coalition demands immediate infrastructure improvements to prevent further disruptions.', label: 'Complaint', predicted: 'complaint' },
             { text: 'Port of Rotterdam achieves record throughput while maintaining industry-leading sustainability metrics. Officials credit advanced automation and green initiatives.', label: 'Praise', predicted: 'praise' },
             { text: 'Maritime authority seeks public comment on proposed amendments to dangerous goods handling regulations for container terminals. Submissions due by month end.', label: 'Request', predicted: 'request' }
         ]

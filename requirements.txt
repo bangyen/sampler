@@ -22,3 +22,4 @@ httpx
 paddleocr
 paddlepaddle
 pytesseract
+black

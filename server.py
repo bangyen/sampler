@@ -467,7 +467,9 @@ def load_ocr_model(config_name="English Only"):
             from paddleocr import PaddleOCR as PaddleOCREngine
 
             start_time = time.time()
-            ocr_readers["paddleocr"] = PaddleOCREngine(lang="en", use_angle_cls=True, show_log=False)
+            ocr_readers["paddleocr"] = PaddleOCREngine(
+                lang="en", use_angle_cls=True, show_log=False
+            )
             load_time = time.time() - start_time
             return ocr_readers["paddleocr"], load_time
         except Exception as e:
@@ -1157,9 +1159,12 @@ async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None
         for entity in entities:
             score = float(entity["score"])
             entity_type = entity["entity_group"]
-            
+
             # Apply filters
-            if score >= request.confidence_threshold and entity_type in request.entity_types:
+            if (
+                score >= request.confidence_threshold
+                and entity_type in request.entity_types
+            ):
                 formatted_entities.append(
                     {
                         "text": entity["word"],
@@ -1376,7 +1381,7 @@ async def stream_ocr_extraction(
                 # Calculate text height from bounding box
                 y_coords = [point[1] for point in bbox]
                 text_height = max(y_coords) - min(y_coords)
-                
+
                 # Apply filters
                 if confidence >= confidence_threshold and text_height >= min_text_size:
                     bounding_boxes.append(
@@ -1387,7 +1392,7 @@ async def stream_ocr_extraction(
                         }
                     )
                     filtered_texts.append(text)
-            
+
             extracted_text = " ".join(filtered_texts)
 
         elif engine == "paddleocr":
@@ -1406,20 +1411,24 @@ async def stream_ocr_extraction(
                     text_info = line[1]
                     text = text_info[0]
                     confidence = text_info[1]
-                    
+
                     # Calculate text height from bounding box
                     y_coords = [point[1] for point in bbox_coords]
                     text_height = max(y_coords) - min(y_coords)
-                    
+
                     # Apply filters
-                    if confidence >= confidence_threshold and text_height >= min_text_size:
+                    if (
+                        confidence >= confidence_threshold
+                        and text_height >= min_text_size
+                    ):
                         extracted_text_parts.append(text)
                         bounding_boxes.append(
                             {
                                 "text": text,
                                 "confidence": float(confidence),
                                 "bbox": [
-                                    [int(point[0]), int(point[1])] for point in bbox_coords
+                                    [int(point[0]), int(point[1])]
+                                    for point in bbox_coords
                                 ],
                             }
                         )
@@ -1451,7 +1460,7 @@ async def stream_ocr_extraction(
                 if text:  # Only include non-empty text
                     conf = float(data["conf"][i]) / 100.0  # Convert to 0-1 range
                     h = data["height"][i]
-                    
+
                     # Apply filters
                     if conf >= confidence_threshold and h >= min_text_size:
                         x, y, w = (
@@ -1496,14 +1505,18 @@ async def stream_ocr_extraction(
 
 @app.post("/api/ocr")
 async def extract_text_from_image(
-    file: UploadFile = File(...), 
+    file: UploadFile = File(...),
     config: str = "EasyOCR",
     confidence_threshold: float = 0.5,
-    min_text_size: int = 10
+    min_text_size: int = 10,
 ):
     """Extract text from uploaded image using OCR (streaming)"""
     contents = await file.read()
-    return EventSourceResponse(stream_ocr_extraction(contents, file.filename, config, confidence_threshold, min_text_size))
+    return EventSourceResponse(
+        stream_ocr_extraction(
+            contents, file.filename, config, confidence_threshold, min_text_size
+        )
+    )
 
 
 @app.post("/api/layout")
@@ -1525,7 +1538,9 @@ async def analyze_layout(file: UploadFile = File(...)):
 
         if "paddleocr" not in ocr_readers:
             try:
-                ocr_readers["paddleocr"] = PaddleOCREngine(lang="en", use_angle_cls=True, show_log=False)
+                ocr_readers["paddleocr"] = PaddleOCREngine(
+                    lang="en", use_angle_cls=True, show_log=False
+                )
             except Exception as e:
                 raise HTTPException(
                     status_code=503,

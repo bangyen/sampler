@@ -23,6 +23,8 @@ all: lint test
 lint:
     @{{PYTHON}} -m ruff check *.py || echo "ruff not installed, skipping..."
     @{{PYTHON}} -m black --check *.py || echo "black not installed, skipping..."
+    @npx eslint static/app.js || echo "ESLint check failed or not installed"
+    @npx stylelint static/styles.css || echo "Stylelint check failed or not installed"
 
 # Run tests
 test:
@@ -32,6 +34,8 @@ test:
 format:
     @{{PYTHON}} -m ruff format *.py || echo "ruff not installed, skipping..."
     @{{PYTHON}} -m black *.py || echo "black not installed, skipping..."
+    @npx eslint --fix static/app.js || echo "ESLint format failed or not installed"
+    @npx stylelint --fix static/styles.css || echo "Stylelint format failed or not installed"
 
 # Run FastAPI server
 server:
