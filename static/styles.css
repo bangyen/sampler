@@ -663,7 +663,7 @@ body {
     background: var(--color-bg-white);
     color: var(--color-text-primary);
     transition: all var(--transition-fast);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: var(--space-sm);
 }
@@ -680,11 +680,13 @@ body {
 }
 
 .label-customization-accordion[open] summary {
+    background: var(--color-primary-light);
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
 
 .label-customization-accordion summary:hover {
+    background: var(--color-primary-light);
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
