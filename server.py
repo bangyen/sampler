@@ -155,19 +155,19 @@ NER_MODELS = {
         "id": "dslim/bert-base-NER",
         "params": "110M",
         "memory": "~420MB",
-        "description": "Fast and accurate BERT-based NER (Person, Organization, Location, Misc)",
+        "description": "Lightweight BERT model optimized for entity recognition - fastest option",
     },
     "BERT Large": {
         "id": "dslim/bert-large-NER",
         "params": "340M",
         "memory": "~1.3GB",
-        "description": "More accurate large BERT model for entity recognition",
+        "description": "Larger BERT variant with enhanced accuracy for complex entity extraction",
     },
     "RoBERTa Large": {
         "id": "Jean-Baptiste/roberta-large-ner-english",
         "params": "355M",
         "memory": "~1.4GB",
-        "description": "RoBERTa-based NER with high accuracy on English text",
+        "description": "RoBERTa-based model with superior performance on English entity recognition",
     },
 }
 
@@ -175,17 +175,17 @@ OCR_CONFIGS = {
     "EasyOCR": {
         "engine": "easyocr",
         "languages": ["en"],
-        "description": "Fast and accurate OCR with deep learning",
+        "description": "Deep learning OCR with balanced speed and accuracy - good for general text extraction",
     },
     "Tesseract": {
         "engine": "tesseract",
         "languages": ["eng"],
-        "description": "Lightweight and fast traditional OCR engine",
+        "description": "Traditional OCR engine optimized for speed - best for clean, high-quality scans",
     },
     "PaddleOCR": {
         "engine": "paddleocr",
         "languages": ["en"],
-        "description": "Advanced OCR with superior accuracy (CPU-optimized)",
+        "description": "State-of-the-art OCR with CPU optimization - highest accuracy for complex layouts",
     },
 }
 
