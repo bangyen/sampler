@@ -1093,72 +1093,67 @@ body {
     transition: all var(--transition-base);
     margin-bottom: var(--space-xl);
     position: relative;
-}
-
-.drop-zone::before {
-    content: '';
-    display: none;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .drop-zone:hover {
     border-color: var(--color-primary);
     background: var(--color-bg-light);
-    transform: scale(1.02);
 }
 
 .drop-zone.drag-over {
     border-color: var(--color-primary);
     background: var(--color-primary-light);
     border-style: solid;
-    transform: scale(1.05);
+    transform: scale(1.02);
     box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
 }
 
-.drop-zone.drag-over p {
+#ocr-upload-prompt {
+    width: 100%;
+}
+
+#ocr-upload-prompt p {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-base);
+    margin: 0;
+}
+
+.drop-zone.drag-over #ocr-upload-prompt p {
     color: var(--color-primary);
     font-weight: var(--font-weight-semibold);
 }
 
-.drop-zone p {
-    font-size: var(--font-size-lg);
-    color: var(--color-text-secondary);
-    transition: all var(--transition-base);
-}
-
 .ocr-preview {
-    margin: var(--space-xl) 0;
-    text-align: center;
-    cursor: pointer;
+    width: 100%;
     position: relative;
-}
-
-.ocr-preview h3 {
-    margin-bottom: var(--space-lg);
-    pointer-events: none;
 }
 
 .ocr-preview img {
     max-width: 100%;
     max-height: var(--ocr-preview-max-height);
-    border-radius: var(--radius-md);
-    border: var(--border-width-base) solid var(--color-border);
-    margin-bottom: var(--space-lg);
+    border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
+    display: block;
+    margin: 0 auto;
 }
 
-.ocr-preview:hover img {
+.drop-zone:hover .ocr-preview img {
     transform: scale(0.98);
-    opacity: 0.8;
-    border-color: var(--color-primary);
+    opacity: 0.7;
 }
 
-.ocr-preview::after {
+.drop-zone .ocr-preview::after {
     content: 'Click to change image';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     color: var(--color-text-white);
     padding: var(--space-md) var(--space-xl);
     border-radius: var(--radius-base);
@@ -1166,9 +1161,10 @@ body {
     transition: opacity var(--transition-fast);
     pointer-events: none;
     font-weight: var(--font-weight-medium);
+    white-space: nowrap;
 }
 
-.ocr-preview:hover::after {
+.drop-zone:hover .ocr-preview::after {
     opacity: 1;
 }
 

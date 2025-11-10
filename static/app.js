@@ -1470,14 +1470,11 @@ function setupOCR() {
         reader.onload = (e) => {
             previewImg.src = e.target.result;
             show(previewDiv);
-            hide(dropZone);
+            hide('ocr-upload-prompt');
             submitBtn.disabled = false;
         };
         reader.readAsDataURL(file);
     }
-    
-    // Make preview clickable to change image
-    previewDiv.addEventListener('click', () => fileInput.click());
     
     submitBtn.addEventListener('click', async () => {
         // Handle stop if already extracting
@@ -1743,7 +1740,7 @@ async function setupOCRExamples() {
                     
                     previewImg.src = e.target.result;
                     show('ocr-preview');
-                    hide('ocr-drop-zone');
+                    hide('ocr-upload-prompt');
                     submitBtn.disabled = false;
                     
                     // Auto-run the extraction

@@ -326,13 +326,13 @@
                         
                         <div class="ocr-upload-section">
                             <div id="ocr-drop-zone" class="drop-zone">
-                                <p>Drag and drop an image here, or click to select</p>
+                                <div id="ocr-upload-prompt">
+                                    <p>Drag and drop an image here, or click to select</p>
+                                </div>
+                                <div id="ocr-preview" class="ocr-preview hidden">
+                                    <img id="ocr-preview-img" alt="Preview">
+                                </div>
                                 <input type="file" id="ocr-file-input" accept="image/*" class="hidden">
-                            </div>
-                            
-                            <div id="ocr-preview" class="ocr-preview hidden">
-                                <h3>Image Preview</h3>
-                                <img id="ocr-preview-img" alt="Preview">
                             </div>
                         </div>
                         
