@@ -1756,20 +1756,15 @@ function displayNERResults(data) {
         ).join('\n');
         
         metricsDiv.innerHTML = `
-            <div class="metrics-stats">
-                <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-                <div><strong>Entities Found:</strong> ${data.entities.length}</div>
-                <div><strong>Text Length:</strong> ${data.text_length} characters</div>
-            </div>
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+            <div><strong>Entities Found:</strong> ${data.entities.length}</div>
+            <div><strong>Text Length:</strong> ${data.text_length} characters</div>
+            <button class="copy-btn" id="ner-copy-btn">Copy Entities</button>
         `;
         
-        const copyButton = document.createElement('button');
-        copyButton.className = 'copy-btn';
-        copyButton.textContent = 'Copy Entities';
-        copyButton.addEventListener('click', () => {
-            copyToClipboard(entitiesText, copyButton);
+        document.getElementById('ner-copy-btn').addEventListener('click', function() {
+            copyToClipboard(entitiesText, this);
         });
-        metricsDiv.appendChild(copyButton);
     } else {
         entitiesDiv.innerHTML = '<p>No entities detected in the text.</p>';
         metricsDiv.innerHTML = `
@@ -2001,19 +1996,14 @@ function displayOCRResults(data) {
         textDiv.textContent = data.text;
         
         metricsDiv.innerHTML = `
-            <div class="metrics-stats">
-                <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
-                <div><strong>Text Detections:</strong> ${data.num_detections}</div>
-            </div>
+            <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
+            <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+            <button class="copy-btn" id="ocr-copy-btn">Copy Text</button>
         `;
         
-        const copyButton = document.createElement('button');
-        copyButton.className = 'copy-btn';
-        copyButton.textContent = 'Copy Text';
-        copyButton.addEventListener('click', () => {
-            copyToClipboard(data.text, copyButton);
+        document.getElementById('ocr-copy-btn').addEventListener('click', function() {
+            copyToClipboard(data.text, this);
         });
-        metricsDiv.appendChild(copyButton);
     } else {
         textDiv.textContent = 'No text detected in the image.';
         metricsDiv.innerHTML = `
