@@ -1360,9 +1360,12 @@ async def stream_ocr_extraction(
 
         extracted_text = ""
         bounding_boxes = []
+        image_width = 0
+        image_height = 0
 
         if engine == "easyocr":
             image = PILImage.open(io.BytesIO(file_contents))
+            image_width, image_height = image.size
             img_array = np.array(image)
             results = ocr_model.readtext(img_array)  # type: ignore
 
@@ -1389,6 +1392,7 @@ async def stream_ocr_extraction(
 
         elif engine == "paddleocr":
             image = PILImage.open(io.BytesIO(file_contents))
+            image_width, image_height = image.size
             img_array = np.array(image)
 
             results = ocr_model.ocr(img_array)  # type: ignore
@@ -1427,6 +1431,7 @@ async def stream_ocr_extraction(
             from PIL import Image as PILImage
 
             image = PILImage.open(io.BytesIO(file_contents))
+            image_width, image_height = image.size
 
             # Get language code (tesseract uses different codes than easyocr)
             lang = "+".join(ocr_config["languages"])
@@ -1478,6 +1483,8 @@ async def stream_ocr_extraction(
                 "bounding_boxes": bounding_boxes,
                 "processing_time": processing_time,
                 "num_detections": len(bounding_boxes),
+                "image_width": image_width,
+                "image_height": image_height,
                 "config": config,
             }
         )

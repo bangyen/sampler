@@ -383,7 +383,7 @@ async function classifyText() {
         
         if (result && startTime) {
             const endTime = performance.now();
-            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            const duration = ((endTime - startTime) / 1000).toFixed(3);
             
             currentClassification = {
                 id: generateUUID(),
@@ -1774,6 +1774,7 @@ function displayOCRResults(data) {
             <div class="metrics-stats">
                 <div><strong>Processing Time:</strong> ${data.processing_time.toFixed(3)}s</div>
                 <div><strong>Text Detections:</strong> ${data.num_detections}</div>
+                <div><strong>Image Dimensions:</strong> ${data.image_width} × ${data.image_height} pixels</div>
             </div>
             <button class="copy-btn" id="ocr-copy-btn">Copy Text</button>
         `;
