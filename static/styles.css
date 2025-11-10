@@ -1713,7 +1713,7 @@ body {
     background: none;
     border: none;
     color: var(--color-primary);
-    font-size: var(--font-size-md);
+    font-size: var(--font-size-sm);
     cursor: pointer;
     padding: 0;
     width: 16px;
@@ -1723,7 +1723,8 @@ body {
     justify-content: center;
     border-radius: var(--radius-full);
     transition: background var(--transition-fast);
-    line-height: 1;
+    line-height: 0;
+    font-family: Arial, sans-serif;
 }
 
 .label-chip .remove-label:hover {
