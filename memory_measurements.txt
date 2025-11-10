@@ -1,0 +1,76 @@
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+llama_context: n_ctx_per_seq (2048) < n_ctx_train (8192) -- the full capacity of the model will not be utilized
+llama_context: n_ctx_per_seq (2048) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/huggingface_hub/file_download.py:942: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+Some weights of the model checkpoint at dslim/bert-base-NER were not used when initializing BertForTokenClassification: ['bert.pooler.dense.bias', 'bert.pooler.dense.weight']
+- This IS expected if you are initializing BertForTokenClassification from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing BertForTokenClassification from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Device set to use cpu
+Some weights of the model checkpoint at dslim/bert-large-NER were not used when initializing BertForTokenClassification: ['bert.pooler.dense.bias', 'bert.pooler.dense.weight']
+- This IS expected if you are initializing BertForTokenClassification from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing BertForTokenClassification from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Device set to use cpu
+Device set to use cpu
+============================================================
+MODEL MEMORY MEASUREMENT
+============================================================
+
+### CLASSIFICATION MODELS ###
+
+Qwen 0.5B (FP16):
+  Baseline: 14.5 MB
+  Loading...
+  After load: 1296.1 MB
+  Memory used: 1281.6 MB (1.25 GB)
+
+SmolLM2 1.7B (GGUF):
+  Baseline: 1036.4 MB
+  Loading...
+  After load: 3158.9 MB
+  Memory used: 2122.4 MB (2.07 GB)
+
+Qwen 7B (GGUF):
+  Baseline: 1040.8 MB
+  Loading...
+  After load: 8478.2 MB
+  Memory used: 7437.3 MB (7.26 GB)
+
+BitNet 2B:
+  Baseline: 1040.9 MB
+  Loading...
+Downloading BitNet GGUF model from microsoft/bitnet-b1.58-2B-4T-gguf...
+Model downloaded to: /home/runner/workspace/.cache/huggingface/hub/models--microsoft--bitnet-b1.58-2B-4T-gguf/snapshots/de6ce176e062a4c6ba0162824474c4f07490b59c/ggml-model-i2_s.gguf
+  After load: 1041.0 MB
+  Memory used: 0.1 MB (0.00 GB)
+
+### NER MODELS ###
+
+BERT Base NER:
+  Baseline: 1041.0 MB
+  Loading...
+  After load: 1112.4 MB
+  Memory used: 71.4 MB (0.07 GB)
+
+BERT Large NER:
+  Baseline: 1106.2 MB
+  Loading...
+  After load: 1117.1 MB
+  Memory used: 10.8 MB (0.01 GB)
+
+RoBERTa Large NER:
+  Baseline: 1105.8 MB
+  Loading...
+  After load: 1122.6 MB
+  Memory used: 16.8 MB (0.02 GB)
+
+============================================================
+SUMMARY
+============================================================
+Qwen 0.5B FP16                : 1.25 GB
+SmolLM2 1.7B GGUF             : 2.07 GB
+Qwen 7B GGUF                  : 7.26 GB
+BitNet 2B                     : 0.00 GB
+BERT Base NER                 : 0.07 GB
+BERT Large NER                : 0.01 GB
+RoBERTa Large NER             : 0.02 GB
