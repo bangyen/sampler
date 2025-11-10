@@ -699,9 +699,6 @@ body {
 
 .label-customization-content {
     margin-top: var(--space-lg);
-    padding: var(--space-lg);
-    background: var(--color-bg-light);
-    border-radius: var(--radius-md);
 }
 
 /* ========================================
