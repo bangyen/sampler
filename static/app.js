@@ -1,7 +1,4 @@
-let sessionId = generateUUID();
-let messages = [];
 let classificationLabels = ['positive', 'negative', 'neutral'];
-let currentClassification = null;
 let selectedModel = 'Qwen 2.5 7B';
 let selectedNERModel = 'BERT Base';
 let selectedOCRConfig = 'EasyOCR';
@@ -85,14 +82,6 @@ const settings = {
     topP: 0.9,
     topK: 50
 };
-
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
 
 function hide(element) {
     if (typeof element === 'string') {
@@ -385,17 +374,6 @@ async function classifyText() {
             const endTime = performance.now();
             const duration = ((endTime - startTime) / 1000).toFixed(3);
             
-            currentClassification = {
-                id: generateUUID(),
-                text,
-                labels: classificationLabels,
-                result,
-                timestamp: new Date().toISOString(),
-                model: selectedModel,
-                duration,
-                use_logprobs: useLogprobs
-            };
-            
             renderClassificationResults(result, useLogprobs, duration, text);
             showToast('Classification complete');
         }
@@ -562,7 +540,7 @@ async function loadModels() {
         const modelList = document.getElementById('model-list');
         modelList.innerHTML = '';
         
-        const zeroShotModels = Object.entries(modelsData.models).filter(([name, info]) => {
+        const zeroShotModels = Object.entries(modelsData.models).filter(([, info]) => {
             const supportedTasks = info.supported_tasks || [];
             return supportedTasks.includes('zero-shot');
         });
@@ -932,144 +910,6 @@ async function loadOCRModel() {
         ocrLoadBtn.textContent = 'Preload Model';
         ocrLoadBtn.disabled = false;
         showToast(`Failed to load ${selectedOCRConfig}`, 'error');
-    }
-}
-
-async function preloadModel(modelName) {
-    const modelDiv = document.querySelector(`[data-model-name="${modelName}"]`);
-    const loadBtn = modelDiv?.querySelector('.model-load-btn');
-    
-    if (!loadBtn) return;
-    
-    try {
-        loadBtn.textContent = 'Loading...';
-        loadBtn.disabled = true;
-        loadBtn.classList.add('loading');
-        
-        const response = await fetch('/api/models/load', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ model_name: modelName })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            loadBtn.textContent = 'Loaded';
-            loadBtn.classList.remove('loading');
-            loadBtn.classList.add('loaded');
-            
-            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
-            showToast(`${modelName} loaded${loadTime}`);
-        } else {
-            throw new Error('Failed to load model');
-        }
-    } catch (error) {
-        console.error('Error preloading model:', error);
-        loadBtn.textContent = 'Load';
-        loadBtn.disabled = false;
-        loadBtn.classList.remove('loading');
-        showToast(`Failed to load ${modelName}`, 'error');
-    }
-}
-
-function updateModelLoadButton(modelName, isLoaded) {
-    const modelDiv = document.querySelector(`[data-model-name="${modelName}"]`);
-    const loadBtn = modelDiv?.querySelector('.model-load-btn');
-    
-    if (!loadBtn) return;
-    
-    if (isLoaded) {
-        loadBtn.textContent = 'Loaded';
-        loadBtn.disabled = true;
-        loadBtn.classList.remove('loading');
-        loadBtn.classList.add('loaded');
-    } else {
-        loadBtn.textContent = 'Load';
-        loadBtn.disabled = false;
-        loadBtn.classList.remove('loading', 'loaded');
-    }
-}
-
-async function preloadNERModel(modelName) {
-    const modelDiv = document.querySelector(`[data-model-name="${modelName}"]`);
-    const loadBtn = modelDiv?.querySelector('.model-load-btn');
-    
-    if (!loadBtn) return;
-    
-    try {
-        loadBtn.textContent = 'Loading...';
-        loadBtn.disabled = true;
-        loadBtn.classList.add('loading');
-        
-        const response = await fetch('/api/ner/models/load', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ model_name: modelName })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            loadBtn.textContent = 'Loaded';
-            loadBtn.classList.remove('loading');
-            loadBtn.classList.add('loaded');
-            
-            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
-            showToast(`${modelName} loaded${loadTime}`);
-        } else {
-            throw new Error('Failed to load NER model');
-        }
-    } catch (error) {
-        console.error('Error preloading NER model:', error);
-        loadBtn.textContent = 'Load';
-        loadBtn.disabled = false;
-        loadBtn.classList.remove('loading');
-        showToast(`Failed to load ${modelName}`, 'error');
-    }
-}
-
-async function preloadOCRConfig(configName) {
-    const modelDiv = document.querySelector(`[data-config-name="${configName}"]`);
-    const loadBtn = modelDiv?.querySelector('.model-load-btn');
-    
-    if (!loadBtn) return;
-    
-    try {
-        loadBtn.textContent = 'Loading...';
-        loadBtn.disabled = true;
-        loadBtn.classList.add('loading');
-        
-        const response = await fetch('/api/ocr/configs/load', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ config_name: configName })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            loadBtn.textContent = 'Loaded';
-            loadBtn.classList.remove('loading');
-            loadBtn.classList.add('loaded');
-            
-            const loadTime = data.load_time ? ` (${data.load_time.toFixed(1)}s)` : '';
-            showToast(`${configName} loaded${loadTime}`);
-        } else {
-            throw new Error('Failed to load OCR config');
-        }
-    } catch (error) {
-        console.error('Error preloading OCR config:', error);
-        loadBtn.textContent = 'Load';
-        loadBtn.disabled = false;
-        loadBtn.classList.remove('loading');
-        showToast(`Failed to load ${configName}`, 'error');
     }
 }
 
