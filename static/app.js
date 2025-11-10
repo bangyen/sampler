@@ -1273,17 +1273,21 @@ function setupNER() {
             }
         } catch (error) {
             console.error('NER error:', error);
-            let errorMessage = 'Network error. Please try again.';
-            
-            if (error.name === 'AbortError') {
-                errorMessage = 'Request was cancelled.';
-            } else if (error.message) {
-                errorMessage = `Error: ${error.message}`;
-            } else if (!navigator.onLine) {
-                errorMessage = 'No internet connection. Please check your network.';
+            if (error.name !== 'AbortError') {
+                let errorMessage = 'Network error. Please try again.';
+                
+                if (error.message) {
+                    errorMessage = `Error: ${error.message}`;
+                } else if (!navigator.onLine) {
+                    errorMessage = 'No internet connection. Please check your network.';
+                }
+                
+                displayNERError(errorMessage);
+            } else {
+                // Hide skeleton when stopped
+                const resultsDiv = document.getElementById('ner-results');
+                hide(resultsDiv);
             }
-            
-            displayNERError(errorMessage);
         } finally {
             isNERExtracting = false;
             submitBtn.textContent = 'Extract Entities';
@@ -1554,6 +1558,10 @@ function setupOCR() {
             console.error('OCR error:', error);
             if (error.name !== 'AbortError') {
                 displayOCRError('Network error. Please try again.');
+            } else {
+                // Hide skeleton when stopped
+                const resultsDiv = document.getElementById('ocr-results');
+                hide(resultsDiv);
             }
         } finally {
             isOCRExtracting = false;
