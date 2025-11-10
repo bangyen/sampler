@@ -657,14 +657,15 @@ body {
     display: inline-flex;
     align-items: center;
     gap: var(--space-sm);
-    line-height: 1;
 }
 
 .label-customization-accordion summary::after {
     content: '›';
     font-size: var(--font-size-lg);
     transition: transform var(--transition-fast);
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
 }
 
 .label-customization-accordion[open] summary::after {
