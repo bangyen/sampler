@@ -191,13 +191,8 @@
                     </div>
                     
                     <div class="example-prompts mb-lg">
-                        <div class="info-message" id="classification-example-info">Try one of these example texts for sentiment analysis:</div>
-                        <div class="example-grid" id="classification-example-grid">
-                            <button class="btn btn-secondary example-prompt" data-classification-text="Major shipping alliance announces new ultra-large container vessels with 50% reduction in emissions per container. Industry leaders praise breakthrough in sustainable maritime transport.">Positive news</button>
-                            <button class="btn btn-secondary example-prompt" data-classification-text="Port strike enters third week as dockworkers reject latest offer. Container backlog grows to record levels, threatening supply chain collapse across major retail sectors.">Negative news</button>
-                            <button class="btn btn-secondary example-prompt" data-classification-text="Global container shipping rates remain stable in Q3 according to latest freight index. Trans-Pacific routes show minimal fluctuation from previous quarter.">Neutral news</button>
-                            <button class="btn btn-secondary example-prompt" data-classification-text="New Panama Canal expansion opens to fanfare, but analysts warn increased capacity may not offset rising fuel costs. Mixed reactions from shipping executives.">Mixed sentiment</button>
-                        </div>
+                        <div class="info-message" id="classification-example-info"></div>
+                        <div class="example-grid" id="classification-example-grid"></div>
                     </div>
                     
                     <div class="classification-input-section">
@@ -221,19 +216,6 @@
                         
                         <div class="label-customization-content hidden" id="label-customization-content">
                             <div class="label-chips-container" id="label-chips-container">
-                                <div class="label-chip">
-                                    <span>positive</span>
-                                    <button class="remove-label" data-label="positive">&times;</button>
-                                </div>
-                                <div class="label-chip">
-                                    <span>negative</span>
-                                    <button class="remove-label" data-label="negative">&times;</button>
-                                </div>
-                                <div class="label-chip">
-                                    <span>neutral</span>
-                                    <button class="remove-label" data-label="neutral">&times;</button>
-                                </div>
-                                
                                 <div class="add-label-section">
                                     <input type="text" id="new-label-input" placeholder="Add custom label..." />
                                     <button id="add-label-btn" class="btn btn-secondary">Add Label</button>
@@ -245,7 +227,7 @@
                     <div class="model-status-section">
                         <div class="model-status-info">
                             <span class="model-status-label">Selected Model:</span>
-                            <span id="selected-model-display" class="model-status-name">BitNet b1.58 2B GGUF</span>
+                            <span id="selected-model-display" class="model-status-name"></span>
                         </div>
                         <div class="classification-actions">
                             <button id="main-load-model-btn" class="btn btn-secondary">Load Model</button>
@@ -291,7 +273,7 @@
                         <div class="model-status-section">
                             <div class="model-status-info">
                                 <span class="model-status-label">Selected Model:</span>
-                                <span id="selected-ner-model-display" class="model-status-name">No model selected</span>
+                                <span id="selected-ner-model-display" class="model-status-name"></span>
                             </div>
                             <div class="ner-actions">
                                 <button id="ner-load-model-btn" class="btn btn-secondary">Load Model</button>
@@ -339,7 +321,7 @@
                         <div class="model-status-section">
                             <div class="model-status-info">
                                 <span class="model-status-label">Selected Model:</span>
-                                <span id="selected-ocr-model-display" class="model-status-name">No model selected</span>
+                                <span id="selected-ocr-model-display" class="model-status-name"></span>
                             </div>
                             <div class="ocr-actions">
                                 <button id="ocr-load-model-btn" class="btn btn-secondary">Load Model</button>
