@@ -38,7 +38,7 @@
 
                 <details class="sidebar-section settings-accordion">
                     <summary>
-                        <h3>Classification Settings</h3>
+                        <h3>Zero-Shot Settings</h3>
                     </summary>
                     <div class="settings-content">
                         <div class="setting-group">
@@ -50,16 +50,16 @@
                         </div>
 
                         <div class="setting-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="use-logprobs-checkbox" />
+                            <label class="checkbox-label checkbox-label-right">
                                 <span>Use Logprob Scoring</span>
+                                <input type="checkbox" id="use-logprobs-checkbox" />
                             </label>
                             <small>Compute sequence probabilities for confidence calibration (slower, provides detailed probability scores)</small>
                         </div>
 
-                        <div class="setting-group">
+                        <div class="setting-group setting-group-last">
                             <label for="hypothesis-template-input">
-                                Hypothesis Template:
+                                Hypothesis Template
                             </label>
                             <input type="text" id="hypothesis-template-input" value="The sentiment of this text is {label}." />
                             <small>Template for generating hypotheses. Use {label} as placeholder. Auto-updates when you select a preset.</small>

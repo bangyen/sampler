@@ -511,6 +511,10 @@ body {
     user-select: none;
 }
 
+.checkbox-label.checkbox-label-right {
+    justify-content: space-between;
+}
+
 .checkbox-label input[type="checkbox"] {
     width: 18px;
     height: 18px;
@@ -527,6 +531,10 @@ body {
 
 .checkbox-label:hover span {
     color: var(--color-primary);
+}
+
+.setting-group-last {
+    margin-bottom: var(--space-lg) !important;
 }
 
 .show-more-btn {
