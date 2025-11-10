@@ -196,9 +196,7 @@
                     </div>
                     
                     <div class="example-prompts mb-lg">
-                        <div class="info-message" id="classification-example-info">
-                            <div class="skeleton skeleton-info-text"></div>
-                        </div>
+                        <div class="info-message">Try one of these examples:</div>
                         <div class="example-grid" id="classification-example-grid">
                             <div class="skeleton skeleton-example-btn"></div>
                             <div class="skeleton skeleton-example-btn"></div>
@@ -209,7 +207,7 @@
                     
                     <div class="classification-input-section">
                         <label for="classification-text-input">Input Text:</label>
-                        <textarea id="classification-text-input" placeholder="Enter the text you want to classify..." rows="8"></textarea>
+                        <textarea id="classification-text-input" placeholder="Enter text to classify..." rows="8"></textarea>
                     </div>
                     
                     <div class="label-management-section">
@@ -268,7 +266,7 @@
                         </div>
                         
                         <div class="example-prompts mb-lg">
-                            <div class="info-message">Try one of these example texts:</div>
+                            <div class="info-message">Try one of these examples:</div>
                             <div class="example-grid">
                                 <button class="btn btn-secondary example-prompt" data-ner-text="Maersk Line announced the arrival of the MSC Gulsun at the Port of Rotterdam on Tuesday, carrying 19,000 containers from Shanghai.">Container ship arrival</button>
                                 <button class="btn btn-secondary example-prompt" data-ner-text="The Ever Given, operated by Evergreen Marine, blocked the Suez Canal for six days in March 2021, disrupting global trade routes between Asia and Europe.">Canal blockage incident</button>
@@ -279,7 +277,7 @@
                         
                         <div class="ner-input-section">
                             <label for="ner-text-input">Input Text:</label>
-                            <textarea id="ner-text-input" placeholder="Enter or paste text here to extract entities..." rows="8"></textarea>
+                            <textarea id="ner-text-input" placeholder="Enter text to analyze..." rows="8"></textarea>
                         </div>
                         
                         <div class="model-status-section">
@@ -294,7 +292,7 @@
                         </div>
                         
                         <div id="ner-results" class="ner-results hidden">
-                            <h3>Detected Entities</h3>
+                            <h3>Recognition Results</h3>
                             <div id="ner-entities" class="entity-list"></div>
                             <div id="ner-metrics" class="metrics-display"></div>
                         </div>
@@ -309,7 +307,7 @@
                         </div>
                         
                         <div class="example-prompts mb-lg">
-                            <div class="info-message">Try one of these example images:</div>
+                            <div class="info-message">Try one of these examples:</div>
                             <div class="example-grid">
                                 <button class="btn btn-secondary example-prompt" data-ocr-image="/static/sample_images/Bill_of_Lading_shipping_document_ef82f159.png">Bill of Lading</button>
                                 <button class="btn btn-secondary example-prompt" data-ocr-image="/static/sample_images/Container_cargo_manifest_033c63f0.png">Cargo Manifest</button>
@@ -342,7 +340,7 @@
                         </div>
                         
                         <div id="ocr-results" class="ocr-results hidden">
-                            <h3>Extracted Text</h3>
+                            <h3>Extraction Results</h3>
                             <div id="ocr-text" class="extracted-text"></div>
                             <div id="ocr-metrics" class="metrics-display"></div>
                         </div>
