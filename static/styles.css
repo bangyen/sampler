@@ -1642,6 +1642,7 @@ body {
     display: flex;
     gap: var(--space-sm);
     flex-wrap: wrap;
+    align-items: flex-start;
 }
 
 
