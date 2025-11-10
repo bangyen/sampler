@@ -299,8 +299,10 @@ async function classifyText() {
     }
     
     isGenerating = true;
-    hide('classify-btn');
-    show('stop-classification-btn');
+    const classifyBtn = document.getElementById('classify-btn');
+    classifyBtn.textContent = 'Stop Classifying';
+    classifyBtn.classList.add('btn-danger');
+    classifyBtn.classList.remove('btn-primary');
     
     const resultsDiv = document.getElementById('classification-results');
     show(resultsDiv);
@@ -401,8 +403,10 @@ async function classifyText() {
         }
     } finally {
         isGenerating = false;
-        show('classify-btn');
-        hide('stop-classification-btn');
+        const classifyBtn = document.getElementById('classify-btn');
+        classifyBtn.textContent = 'Classify Text';
+        classifyBtn.classList.remove('btn-danger');
+        classifyBtn.classList.add('btn-primary');
     }
 }
 
@@ -1038,17 +1042,14 @@ function stopGeneration() {
 
 function setupEventListeners() {
     const classifyBtn = document.getElementById('classify-btn');
-    const stopClassificationBtn = document.getElementById('stop-classification-btn');
     
     if (classifyBtn) {
         classifyBtn.addEventListener('click', () => {
-            classifyText();
-        });
-    }
-    
-    if (stopClassificationBtn) {
-        stopClassificationBtn.addEventListener('click', () => {
-            stopGeneration();
+            if (isGenerating) {
+                stopGeneration();
+            } else {
+                classifyText();
+            }
         });
     }
     
@@ -1328,8 +1329,7 @@ function setupNER() {
                                 }
                                 
                                 if (data.model_loading_start) {
-                                    // Keep skeleton visible, update button text for feedback
-                                    submitBtn.textContent = 'Loading model...';
+                                    // Keep skeleton visible, update load button
                                     const nerLoadBtn = document.getElementById('ner-load-model-btn');
                                     if (nerLoadBtn) {
                                         nerLoadBtn.textContent = 'Loading...';
@@ -1338,8 +1338,7 @@ function setupNER() {
                                 }
                                 
                                 if (data.model_loading_end) {
-                                    // Keep skeleton visible, update button text
-                                    submitBtn.textContent = 'Extracting...';
+                                    // Keep skeleton visible, submit button stays at "Extracting..."
                                     updateNERLoadButton(true);
                                 }
                                 
@@ -1597,8 +1596,7 @@ function setupOCR() {
                                 }
                                 
                                 if (data.model_loading_start) {
-                                    // Keep skeleton visible, update button text for feedback
-                                    submitBtn.textContent = 'Loading model...';
+                                    // Keep skeleton visible, update load button
                                     const ocrLoadBtn = document.getElementById('ocr-load-model-btn');
                                     if (ocrLoadBtn) {
                                         ocrLoadBtn.textContent = 'Loading...';
@@ -1607,8 +1605,7 @@ function setupOCR() {
                                 }
                                 
                                 if (data.model_loading_end) {
-                                    // Keep skeleton visible, update button text
-                                    submitBtn.textContent = 'Extracting...';
+                                    // Keep skeleton visible, submit button stays at "Extracting..."
                                     updateOCRLoadButton(true);
                                 }
                                 
