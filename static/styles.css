@@ -412,6 +412,7 @@ body {
 
 .sidebar-section.settings-accordion {
     flex: none;
+    padding: 0;
 }
 
 .sidebar-section h3 {
