@@ -1618,6 +1618,12 @@ body {
     border-color: var(--color-primary);
 }
 
+.example-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
 .label-management-section {
     display: flex;
     flex-direction: column;
