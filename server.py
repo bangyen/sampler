@@ -17,69 +17,89 @@ import asyncio
 from pathlib import Path
 import os
 
-try:
-    import easyocr  # noqa: F401
+# Skip heavy model imports during testing to prevent test hangs
+TESTING = os.getenv("TESTING", "0") == "1"
 
-    EASYOCR_AVAILABLE = True
-except ImportError:
+if not TESTING:
+    try:
+        import easyocr  # noqa: F401
+
+        EASYOCR_AVAILABLE = True
+    except ImportError:
+        EASYOCR_AVAILABLE = False
+
+    try:
+        from paddleocr import PaddleOCR  # noqa: F401
+
+        PADDLEOCR_AVAILABLE = True
+    except ImportError:
+        PADDLEOCR_AVAILABLE = False
+
+    try:
+        from PIL import Image  # noqa: F401
+
+        PILLOW_AVAILABLE = True
+    except ImportError:
+        PILLOW_AVAILABLE = False
+
+    try:
+        import pytesseract  # noqa: F401
+
+        PYTESSERACT_AVAILABLE = True
+    except ImportError:
+        PYTESSERACT_AVAILABLE = False
+
+    # Import zero-shot classifier
+    try:
+        from inference.zero_shot_classifier import (
+            LLMZeroShotClassifier,
+            ZeroShotResult,
+            build_zero_shot_prompt,
+        )
+
+        ZERO_SHOT_AVAILABLE = True
+    except ImportError:
+        ZERO_SHOT_AVAILABLE = False
+        LLMZeroShotClassifier = None
+        ZeroShotResult = None
+        build_zero_shot_prompt = None
+
+    # Import bitnet.cpp inference module (llama-cpp-python wrapper)
+    try:
+        from inference.bitnet_inference import (
+            BitNetInference,
+            is_available as llama_cpp_available,
+            download_gguf_model,
+        )
+
+        LLAMA_CPP_AVAILABLE = llama_cpp_available()
+    except ImportError:
+        LLAMA_CPP_AVAILABLE = False
+        BitNetInference = None
+        download_gguf_model = None
+
+    # Import BitNet compiled binary bridge
+    try:
+        from inference.bitnet_cpp_bridge import BitNetCppBridge, load_bitnet_model
+
+        BITNET_CPP_AVAILABLE = True
+    except ImportError:
+        BITNET_CPP_AVAILABLE = False
+        BitNetCppBridge = None
+        load_bitnet_model = None
+else:
+    # Testing mode - skip all heavy imports
     EASYOCR_AVAILABLE = False
-
-try:
-    from paddleocr import PaddleOCR  # noqa: F401
-
-    PADDLEOCR_AVAILABLE = True
-except ImportError:
     PADDLEOCR_AVAILABLE = False
-
-try:
-    from PIL import Image  # noqa: F401
-
-    PILLOW_AVAILABLE = True
-except ImportError:
     PILLOW_AVAILABLE = False
-
-try:
-    import pytesseract  # noqa: F401
-
-    PYTESSERACT_AVAILABLE = True
-except ImportError:
     PYTESSERACT_AVAILABLE = False
-
-# Import zero-shot classifier
-try:
-    from inference.zero_shot_classifier import (
-        LLMZeroShotClassifier,
-        ZeroShotResult,
-        build_zero_shot_prompt,
-    )
-
-    ZERO_SHOT_AVAILABLE = True
-except ImportError:
     ZERO_SHOT_AVAILABLE = False
     LLMZeroShotClassifier = None
     ZeroShotResult = None
     build_zero_shot_prompt = None
-
-# Import bitnet.cpp inference module (llama-cpp-python wrapper)
-try:
-    from inference.bitnet_inference import (
-        BitNetInference,
-        is_available as llama_cpp_available,
-        download_gguf_model,
-    )
-
-    LLAMA_CPP_AVAILABLE = llama_cpp_available()
-except ImportError:
     LLAMA_CPP_AVAILABLE = False
     BitNetInference = None
     download_gguf_model = None
-
-# Import BitNet compiled binary bridge
-try:
-    from inference.bitnet_cpp_bridge import BitNetCppBridge, load_bitnet_model
-
-    BITNET_CPP_AVAILABLE = True
-except ImportError:
     BITNET_CPP_AVAILABLE = False
     BitNetCppBridge = None
     load_bitnet_model = None

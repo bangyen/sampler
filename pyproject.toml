@@ -1140,3 +1140,30 @@ yta-general-utils = [{ index = "pytorch-cpu", marker = "platform_system == 'Linu
 zensvi = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 zetascale = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 zuko = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Ignore integration test scripts and debugging files
+norecursedirs = [".git", ".pytest_cache", "__pycache__"]
+# Ignore integration tests that require running server or missing dependencies
+addopts = [
+    "-v",
+    "--tb=short",
+    "--ignore=tests/benchmark_zero_shot_maritime.py",
+    "--ignore=tests/debug_logprobs.py",
+    "--ignore=tests/quick_maritime_test.py",
+    "--ignore=tests/simple_logprob_test.py",
+    "--ignore=tests/test_constrained_generation.py",
+    "--ignore=tests/test_database.py",
+    "--ignore=tests/test_early_termination.py",
+    "--ignore=tests/test_early_termination_comprehensive.py",
+    "--ignore=tests/test_example_predictions.py",
+    "--ignore=tests/test_gguf_zero_shot.py",
+    "--ignore=tests/test_json_storage.py",
+    "--ignore=tests/test_logprobs_timing.py",
+    "--ignore=tests/test_speed_comparison.py",
+    "--ignore=tests/test_zero_shot_comprehensive.py",
+]

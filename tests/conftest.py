@@ -5,6 +5,9 @@ import tempfile
 import shutil
 from pathlib import Path
 
+# Set TESTING mode globally for all tests to prevent heavy model imports
+os.environ["TESTING"] = "1"
+
 
 @pytest.fixture
 def temp_dir():
