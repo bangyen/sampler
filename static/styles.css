@@ -1780,7 +1780,7 @@ body {
     font-size: var(--font-size-md);
 }
 
-.classification-actions {
+.action-buttons {
     display: flex;
     gap: var(--space-md);
 }
@@ -1918,12 +1918,12 @@ body {
         gap: var(--space-md);
     }
     
-    .classification-actions {
+    .action-buttons {
         flex-direction: column;
         width: 100%;
     }
     
-    .classification-actions button {
+    .action-buttons button {
         width: 100%;
     }
 }
