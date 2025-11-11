@@ -531,23 +531,24 @@ function renderClassificationResults(result, useLogprobs = false, duration = nul
         html += '</div>';
     }
     
-    const labelsCount = result.labels ? result.labels.length : 0;
-    const textLength = inputText.length;
-    
-    html += `
-        <div id="classification-metrics" class="metrics-display">
-            ${duration ? `
-            <div class="metrics-stats">
-                <div><strong>Processing Time:</strong> ${duration}s</div>
-                <div><strong>Labels Evaluated:</strong> ${labelsCount}</div>
-                <div><strong>Text Length:</strong> ${textLength} characters</div>
-            </div>
-            ` : ''}
-            <button class="copy-btn" id="classification-copy-btn">Copy Result</button>
-        </div>
-    `;
+    html += '<div id="classification-metrics" class="metrics-display"></div>';
     
     resultsDiv.innerHTML = html;
+    
+    const labelsCount = result.labels ? result.labels.length : 0;
+    const textLength = inputText.length;
+    const metricsDiv = document.getElementById('classification-metrics');
+    
+    metricsDiv.innerHTML = `
+        ${duration ? `
+        <div class="metrics-stats">
+            <div><strong>Processing Time:</strong> ${duration}s</div>
+            <div><strong>Labels Evaluated:</strong> ${labelsCount}</div>
+            <div><strong>Text Length:</strong> ${textLength} characters</div>
+        </div>
+        ` : ''}
+        <button class="copy-btn" id="classification-copy-btn">Copy Result</button>
+    `;
     
     document.getElementById('classification-copy-btn').addEventListener('click', function() {
         const copyText = `Classification Result: ${result.top_label}`;
