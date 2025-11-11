@@ -178,7 +178,6 @@
 
 .info-box {
     background: var(--color-info-bg);
-    border-left: var(--border-width-thick) solid var(--color-info-text);
     padding: var(--space-md);
     margin-bottom: var(--space-lg);
     border-radius: var(--radius-sm);
