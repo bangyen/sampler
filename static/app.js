@@ -322,9 +322,13 @@ async function classifyText() {
         </div>
     `;
     
-    const abstainThreshold = parseFloat(document.getElementById('abstain-threshold-slider').value);
-    const useLogprobs = document.getElementById('use-logprobs-checkbox').checked;
-    const hypothesisTemplate = document.getElementById('hypothesis-template-input').value;
+    const abstainThresholdSlider = document.getElementById('abstain-threshold-slider');
+    const useLogprobsCheckbox = document.getElementById('use-logprobs-checkbox');
+    const hypothesisTemplateInput = document.getElementById('hypothesis-template-input');
+    
+    const abstainThreshold = abstainThresholdSlider ? parseFloat(abstainThresholdSlider.value) : 0.5;
+    const useLogprobs = useLogprobsCheckbox ? useLogprobsCheckbox.checked : false;
+    const hypothesisTemplate = hypothesisTemplateInput ? hypothesisTemplateInput.value : 'The sentiment of this text is {label}.';
     
     // Show loading on Load Model button if model not loaded
     const mainLoadBtn = document.getElementById('main-load-model-btn');
