@@ -22,10 +22,10 @@ const examplePrompts = {
     sentiment: {
         info: 'Try one of these example texts for sentiment analysis:',
         examples: [
-            { text: 'Major shipping alliance announces new ultra-large container vessels with 50% reduction in emissions per container. Industry leaders praise breakthrough in sustainable maritime transport.', label: 'Positive news', predicted: 'positive' },
-            { text: 'Port strike enters third week as dockworkers reject latest offer. Container backlog grows to record levels, threatening supply chain collapse across major retail sectors.', label: 'Negative news', predicted: 'negative' },
-            { text: 'Global container shipping rates remain stable in Q3 according to latest freight index. Trans-Pacific routes show minimal fluctuation from previous quarter.', label: 'Neutral news', predicted: 'neutral' },
-            { text: 'New Panama Canal expansion opens to fanfare, but analysts warn increased capacity may not offset rising fuel costs. Mixed reactions from shipping executives.', label: 'Mixed sentiment', predicted: 'neutral' }
+            { text: 'Major shipping alliance announces new ultra-large container vessels with 50% reduction in emissions per container. Industry leaders praise breakthrough in sustainable maritime transport.', label: 'Positive News', predicted: 'positive' },
+            { text: 'Port strike enters third week as dockworkers reject latest offer. Container backlog grows to record levels, threatening supply chain collapse across major retail sectors.', label: 'Negative News', predicted: 'negative' },
+            { text: 'Global container shipping rates remain stable in Q3 according to latest freight index. Trans-Pacific routes show minimal fluctuation from previous quarter.', label: 'Neutral News', predicted: 'neutral' },
+            { text: 'New Panama Canal expansion opens to fanfare, but analysts warn increased capacity may not offset rising fuel costs. Mixed reactions from shipping executives.', label: 'Mixed Sentiment', predicted: 'neutral' }
         ]
     },
     intent: {
@@ -40,19 +40,19 @@ const examplePrompts = {
     urgency: {
         info: 'Try one of these example texts for urgency classification:',
         examples: [
-            { text: 'BREAKING: Container ship experiencing engine failure in Suez Canal. Vessel blocking northbound traffic. Immediate tugboat assistance required to prevent extended closure of critical waterway.', label: 'Urgent', predicted: 'urgent' },
-            { text: 'Industry conference announces 2025 dates for annual maritime logistics summit. Early bird registration opens next quarter for Singapore venue.', label: 'Low priority', predicted: 'low-priority' },
-            { text: 'New container terminal at Port of Hamburg scheduled to open next spring. Facility will add 2 million TEU annual capacity to Northern European hub.', label: 'Normal', predicted: 'normal' },
-            { text: 'MARITIME EMERGENCY: Typhoon Haikui forces evacuation of Shanghai port. All vessel movements suspended. Hundreds of ships seeking emergency anchorage. Coast guard on high alert.', label: 'Critical emergency', predicted: 'urgent' }
+            { text: 'BREAKING: Container ship experiencing engine failure in Suez Canal. Vessel blocking northbound traffic. Immediate tugboat assistance required to prevent extended closure of critical waterway.', label: 'High Priority', predicted: 'urgent' },
+            { text: 'Industry conference announces 2025 dates for annual maritime logistics summit. Early bird registration opens next quarter for Singapore venue.', label: 'Low Priority', predicted: 'low-priority' },
+            { text: 'New container terminal at Port of Hamburg scheduled to open next spring. Facility will add 2 million TEU annual capacity to Northern European hub.', label: 'Normal Priority', predicted: 'normal' },
+            { text: 'MARITIME EMERGENCY: Typhoon Haikui forces evacuation of Shanghai port. All vessel movements suspended. Hundreds of ships seeking emergency anchorage. Coast guard on high alert.', label: 'Critical Emergency', predicted: 'urgent' }
         ]
     },
     cargo: {
         info: 'Try one of these example texts for cargo type classification:',
         examples: [
-            { text: 'Pharmaceutical shipment of temperature-sensitive vaccines requires uninterrupted cold chain at 2-8°C from manufacturing facility through final delivery. Advanced reefer monitoring deployed.', label: 'Refrigerated cargo', predicted: 'refrigerated cargo' },
-            { text: 'Container manifest shows 500 TEU of consumer electronics and textiles loaded at Shenzhen. Standard dry containers with ambient temperature storage for trans-Pacific crossing.', label: 'Standard cargo', predicted: 'standard cargo' },
-            { text: 'Vessel carries 200 tons of lithium-ion batteries classified as UN3480 Class 9 dangerous goods. Special segregation and fire suppression protocols in effect per IMDG Code.', label: 'Hazardous materials', predicted: 'hazardous materials' },
-            { text: 'Breakbulk carrier loading 80-meter wind turbine blades onto reinforced flat racks. Route survey completed for overhead clearances through Panama Canal transit.', label: 'Oversized freight', predicted: 'oversized freight' }
+            { text: 'Pharmaceutical shipment of temperature-sensitive vaccines requires uninterrupted cold chain at 2-8°C from manufacturing facility through final delivery. Advanced reefer monitoring deployed.', label: 'Refrigerated Cargo', predicted: 'refrigerated cargo' },
+            { text: 'Container manifest shows 500 TEU of consumer electronics and textiles loaded at Shenzhen. Standard dry containers with ambient temperature storage for trans-Pacific crossing.', label: 'Standard Cargo', predicted: 'standard cargo' },
+            { text: 'Vessel carries 200 tons of lithium-ion batteries classified as UN3480 Class 9 dangerous goods. Special segregation and fire suppression protocols in effect per IMDG Code.', label: 'Hazardous Materials', predicted: 'hazardous materials' },
+            { text: 'Breakbulk carrier loading 80-meter wind turbine blades onto reinforced flat racks. Route survey completed for overhead clearances through Panama Canal transit.', label: 'Oversized Freight', predicted: 'oversized freight' }
         ]
     }
 };
