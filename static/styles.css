@@ -983,6 +983,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
 }
 
 .ner-input-section label {
@@ -1083,7 +1084,7 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all var(--transition-base);
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
     position: relative;
     min-height: 200px;
     display: flex;
@@ -1609,6 +1610,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
 }
 
 .classification-input-section label {
