@@ -904,7 +904,7 @@ body {
 .tabs {
     display: flex;
     gap: var(--space-md);
-    padding: var(--space-lg) var(--space-xl);
+    padding: var(--space-lg) var(--space-3xl);
     background: var(--color-bg-white);
     border-bottom: var(--border-width-base) solid var(--color-border);
 }
