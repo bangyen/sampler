@@ -501,6 +501,10 @@ body {
     margin-top: var(--space-sm);
 }
 
+.entity-type-filters .checkbox-label {
+    font-weight: normal;
+}
+
 .checkbox-label {
     display: flex;
     align-items: center;
