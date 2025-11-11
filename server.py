@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, AsyncGenerator
 import torch
@@ -12,6 +13,9 @@ import json
 import time
 from sse_starlette.sse import EventSourceResponse
 import io
+import asyncio
+from pathlib import Path
+import os
 
 try:
     import easyocr  # noqa: F401
@@ -82,6 +86,14 @@ except ImportError:
 
 
 app = FastAPI(title="Quantized LLM Comparison API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 AVAILABLE_MODELS = {
     # Qwen 0.5B always available as lightweight option
@@ -196,6 +208,97 @@ LAYOUT_CONFIG = {
         "description": "Advanced layout analysis with PaddleOCR (CPU-optimized)",
     },
 }
+
+class CacheManager:
+    """Thread-safe cache manager for models and resources"""
+    def __init__(self):
+        self._models = {}
+        self._llama_models = {}
+        self._bitnet_models = {}
+        self._ner_pipelines = {}
+        self._ocr_readers = {}
+        self._locks = {
+            'models': asyncio.Lock(),
+            'llama': asyncio.Lock(),
+            'bitnet': asyncio.Lock(),
+            'ner': asyncio.Lock(),
+            'ocr': asyncio.Lock()
+        }
+    
+    async def get_or_load_model(self, model_id: str, loader_fn):
+        """Thread-safe model loading"""
+        async with self._locks['models']:
+            if model_id in self._models:
+                return self._models[model_id], None
+            result, load_time = loader_fn(model_id)
+            self._models[model_id] = result
+            return result, load_time
+    
+    async def get_or_load_llama(self, model_name: str, loader_fn):
+        """Thread-safe llama model loading"""
+        async with self._locks['llama']:
+            if model_name in self._llama_models:
+                return self._llama_models[model_name], None
+            result, load_time = loader_fn(model_name)
+            self._llama_models[model_name] = result
+            return result, load_time
+    
+    async def get_or_load_bitnet(self, model_name: str, loader_fn):
+        """Thread-safe bitnet model loading"""
+        async with self._locks['bitnet']:
+            if model_name in self._bitnet_models:
+                return self._bitnet_models[model_name], None
+            result, load_time = loader_fn(model_name)
+            self._bitnet_models[model_name] = result
+            return result, load_time
+    
+    async def get_or_load_ner(self, model_name: str, loader_fn):
+        """Thread-safe NER model loading"""
+        async with self._locks['ner']:
+            model_id = NER_MODELS[model_name]["id"]
+            if model_id in self._ner_pipelines:
+                return self._ner_pipelines[model_id], None
+            result, load_time = loader_fn(model_name)
+            self._ner_pipelines[model_id] = result
+            return result, load_time
+    
+    async def get_or_load_ocr(self, config_name: str, loader_fn):
+        """Thread-safe OCR model loading"""
+        async with self._locks['ocr']:
+            config = OCR_CONFIGS[config_name]
+            engine = config["engine"]
+            
+            if engine == "easyocr":
+                cache_key = tuple(config["languages"])
+            elif engine == "paddleocr":
+                cache_key = "paddleocr"
+            elif engine == "tesseract":
+                cache_key = "tesseract"
+            else:
+                cache_key = engine
+            
+            if cache_key in self._ocr_readers:
+                return self._ocr_readers[cache_key], None
+            result, load_time = loader_fn(config_name)
+            self._ocr_readers[cache_key] = result
+            return result, load_time
+    
+    def is_model_loaded(self, model_id: str) -> bool:
+        return model_id in self._models
+    
+    def is_llama_loaded(self, model_name: str) -> bool:
+        return model_name in self._llama_models
+    
+    def is_bitnet_loaded(self, model_name: str) -> bool:
+        return model_name in self._bitnet_models
+    
+    def is_ner_loaded(self, model_id: str) -> bool:
+        return model_id in self._ner_pipelines
+    
+    def is_ocr_loaded(self, cache_key) -> bool:
+        return cache_key in self._ocr_readers
+
+cache_manager = CacheManager()
 
 loaded_models = {}
 loaded_llama_models = {}
@@ -532,6 +635,7 @@ async def generate_response_streaming(
     load_time=None,
 ) -> AsyncGenerator[str, None]:
     """Generate a streaming response from the model"""
+    thread = None
     try:
         # Send model loading events if this was a fresh load
         if load_time is not None:
@@ -566,26 +670,32 @@ async def generate_response_streaming(
         thread.start()
 
         token_count = 0
-        for new_text in streamer:
-            # Check if client disconnected
-            if request and await request.is_disconnected():
-                thread.join(timeout=0.1)  # Try to cleanup thread
-                return
+        try:
+            for new_text in streamer:
+                # Check if client disconnected
+                if request and await request.is_disconnected():
+                    print("[DEBUG] Client disconnected, stopping generation")
+                    return
 
-            if new_text.startswith("Assistant:"):
-                new_text = new_text[len("Assistant:") :].strip()
-            token_count += 1
-            yield json.dumps({"text": new_text})
+                if new_text.startswith("Assistant:"):
+                    new_text = new_text[len("Assistant:") :].strip()
+                token_count += 1
+                yield json.dumps({"text": new_text})
 
-        thread.join()
-        print(f"[DEBUG] Transformers generation complete, {token_count} tokens")
-        yield json.dumps({"done": True})
+            print(f"[DEBUG] Transformers generation complete, {token_count} tokens")
+            yield json.dumps({"done": True})
+        finally:
+            if thread and thread.is_alive():
+                thread.join(timeout=1.0)
     except Exception as e:
         import traceback
 
         print(f"[ERROR] Exception in generate_response_streaming: {e}")
         print(traceback.format_exc())
         yield json.dumps({"error": str(e)})
+    finally:
+        if thread and thread.is_alive():
+            thread.join(timeout=1.0)
 
 
 async def generate_response_streaming_llama(
@@ -708,8 +818,10 @@ async def generate_response_streaming_bitnet_cpp(
 @app.get("/")
 async def read_root():
     """Serve the main HTML page"""
-    with open("static/index.html", "r") as f:
-        return HTMLResponse(content=f.read())
+    index_path = Path("static/index.html")
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Index page not found")
+    return FileResponse(index_path)
 
 
 @app.get("/api/models")
@@ -756,18 +868,18 @@ async def get_models_status():
 
         if backend == "llamacpp":
             status[model_name] = {
-                "loaded": model_name in loaded_llama_models,
+                "loaded": cache_manager.is_llama_loaded(model_name),
                 "backend": backend,
             }
         elif backend == "bitnet_cpp":
             status[model_name] = {
-                "loaded": model_name in loaded_bitnet_models,
+                "loaded": cache_manager.is_bitnet_loaded(model_name),
                 "backend": backend,
             }
         else:
             model_id = model_config["id"]
             status[model_name] = {
-                "loaded": model_id in loaded_models,
+                "loaded": cache_manager.is_model_loaded(model_id),
                 "backend": backend,
             }
 
@@ -789,7 +901,8 @@ async def load_model_endpoint(request: LoadModelRequest):
         backend = model_config.get("backend", "transformers")
 
         if backend == "llamacpp":
-            if request.model_name in loaded_llama_models:
+            already_loaded = cache_manager.is_llama_loaded(request.model_name)
+            if already_loaded:
                 return {
                     "success": True,
                     "already_loaded": True,
@@ -797,7 +910,7 @@ async def load_model_endpoint(request: LoadModelRequest):
                     "backend": backend,
                 }
 
-            inference, load_time = load_llama_model(request.model_name)
+            inference, load_time = await cache_manager.get_or_load_llama(request.model_name, load_llama_model)
             return {
                 "success": True,
                 "already_loaded": False,
@@ -807,7 +920,8 @@ async def load_model_endpoint(request: LoadModelRequest):
             }
 
         elif backend == "bitnet_cpp":
-            if request.model_name in loaded_bitnet_models:
+            already_loaded = cache_manager.is_bitnet_loaded(request.model_name)
+            if already_loaded:
                 return {
                     "success": True,
                     "already_loaded": True,
@@ -815,7 +929,7 @@ async def load_model_endpoint(request: LoadModelRequest):
                     "backend": backend,
                 }
 
-            bridge, load_time = load_bitnet_cpp_model(request.model_name)
+            bridge, load_time = await cache_manager.get_or_load_bitnet(request.model_name, load_bitnet_cpp_model)
             return {
                 "success": True,
                 "already_loaded": False,
@@ -826,7 +940,8 @@ async def load_model_endpoint(request: LoadModelRequest):
 
         else:
             model_id = model_config["id"]
-            if model_id in loaded_models:
+            already_loaded = cache_manager.is_model_loaded(model_id)
+            if already_loaded:
                 return {
                     "success": True,
                     "already_loaded": True,
@@ -834,7 +949,7 @@ async def load_model_endpoint(request: LoadModelRequest):
                     "backend": backend,
                 }
 
-            model_data, load_time = load_model(model_id)
+            model_data, load_time = await cache_manager.get_or_load_model(model_id, load_model)
             return {
                 "success": True,
                 "already_loaded": False,
@@ -855,7 +970,7 @@ async def get_ner_models_status():
     status = {}
     for model_name, model_config in NER_MODELS.items():
         model_id = model_config["id"]
-        status[model_name] = {"loaded": model_id in ner_pipelines}
+        status[model_name] = {"loaded": cache_manager.is_ner_loaded(model_id)}
 
     return {"status": status}
 
@@ -872,15 +987,16 @@ async def load_ner_model_endpoint(request: LoadNERModelRequest):
             raise HTTPException(status_code=400, detail="Invalid NER model name")
 
         model_id = NER_MODELS[request.model_name]["id"]
+        already_loaded = cache_manager.is_ner_loaded(model_id)
 
-        if model_id in ner_pipelines:
+        if already_loaded:
             return {
                 "success": True,
                 "already_loaded": True,
                 "model_name": request.model_name,
             }
 
-        ner_model, load_time = load_ner_model(request.model_name)
+        ner_model, load_time = await cache_manager.get_or_load_ner(request.model_name, load_ner_model)
 
         return {
             "success": True,
@@ -906,15 +1022,15 @@ async def get_ocr_configs_status():
 
         if engine == "easyocr":
             cache_key = tuple(config["languages"])
-            status[config_name] = {"loaded": cache_key in ocr_readers, "engine": engine}
+            status[config_name] = {"loaded": cache_manager.is_ocr_loaded(cache_key), "engine": engine}
         elif engine == "paddleocr":
             status[config_name] = {
-                "loaded": "paddleocr" in ocr_readers,
+                "loaded": cache_manager.is_ocr_loaded("paddleocr"),
                 "engine": engine,
             }
         elif engine == "tesseract":
             status[config_name] = {
-                "loaded": "tesseract" in ocr_readers,
+                "loaded": cache_manager.is_ocr_loaded("tesseract"),
                 "engine": engine,
             }
         else:
@@ -939,16 +1055,17 @@ async def load_ocr_config_endpoint(request: LoadOCRConfigRequest):
         config = OCR_CONFIGS[request.config_name]
         engine = config["engine"]
 
-        # Check if already loaded
+        # Determine cache key
         if engine == "easyocr":
             cache_key = tuple(config["languages"])
-            already_loaded = cache_key in ocr_readers
         elif engine == "paddleocr":
-            already_loaded = "paddleocr" in ocr_readers
+            cache_key = "paddleocr"
         elif engine == "tesseract":
-            already_loaded = "tesseract" in ocr_readers
+            cache_key = "tesseract"
         else:
-            already_loaded = False
+            cache_key = engine
+        
+        already_loaded = cache_manager.is_ocr_loaded(cache_key)
 
         if already_loaded:
             return {
@@ -958,7 +1075,7 @@ async def load_ocr_config_endpoint(request: LoadOCRConfigRequest):
                 "engine": engine,
             }
 
-        ocr_model, load_time = load_ocr_model(request.config_name)
+        ocr_model, load_time = await cache_manager.get_or_load_ocr(request.config_name, load_ocr_model)
 
         return {
             "success": True,
@@ -981,14 +1098,14 @@ async def stream_with_loading_wrapper_transformers(
 ) -> AsyncGenerator[str, None]:
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
-    is_cached = model_id in loaded_models
+    is_cached = cache_manager.is_model_loaded(model_id)
 
     if not is_cached:
         # Emit model loading start event
         yield json.dumps({"model_loading_start": True})
 
     # Load the model (returns cached model if already loaded)
-    model_data, load_time = load_model(model_id)
+    model_data, load_time = await cache_manager.get_or_load_model(model_id, load_model)
 
     # Stream the actual generation
     async for chunk in generate_response_streaming(
@@ -1010,14 +1127,14 @@ async def stream_with_loading_wrapper_llama(
 ) -> AsyncGenerator[str, None]:
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
-    is_cached = model_name in loaded_llama_models
+    is_cached = cache_manager.is_llama_loaded(model_name)
 
     if not is_cached:
         # Emit model loading start event
         yield json.dumps({"model_loading_start": True})
 
     # Load the model (returns cached model if already loaded)
-    inference, load_time = load_llama_model(model_name)
+    inference, load_time = await cache_manager.get_or_load_llama(model_name, load_llama_model)
 
     # Stream the actual generation
     async for chunk in generate_response_streaming_llama(
@@ -1038,14 +1155,14 @@ async def stream_with_loading_wrapper_bitnet(
 ) -> AsyncGenerator[str, None]:
     """Wrapper generator that handles model loading and emits loading events"""
     # Check if model needs to be loaded
-    is_cached = model_name in loaded_bitnet_models
+    is_cached = cache_manager.is_bitnet_loaded(model_name)
 
     if not is_cached:
         # Emit model loading start event
         yield json.dumps({"model_loading_start": True})
 
     # Load the model (returns cached model if already loaded)
-    bridge, load_time = load_bitnet_cpp_model(model_name)
+    bridge, load_time = await cache_manager.get_or_load_bitnet(model_name, load_bitnet_cpp_model)
 
     # Stream the actual generation
     async for chunk in generate_response_streaming_bitnet_cpp(
@@ -1134,14 +1251,14 @@ async def stream_ner_extraction(request: NERRequest) -> AsyncGenerator[str, None
     try:
         # Check if model needs to be loaded
         model_id = NER_MODELS[request.model]["id"]
-        is_cached = model_id in ner_pipelines
+        is_cached = cache_manager.is_ner_loaded(model_id)
 
         if not is_cached:
             # Emit model loading start event
             yield json.dumps({"model_loading_start": True})
 
         # Load the model (returns cached model if already loaded)
-        ner_model, load_time = load_ner_model(request.model)
+        ner_model, load_time = await cache_manager.get_or_load_ner(request.model, load_ner_model)
 
         # Emit model loading end event if this was a fresh load
         if load_time is not None:
@@ -1216,12 +1333,12 @@ async def stream_zero_shot_classification(
         # Route to appropriate backend for zero-shot classification
         if backend == "llamacpp":
             # Use GGUF model via llama.cpp backend (2-3x faster)
-            is_cached = request.model in loaded_llama_models
+            is_cached = cache_manager.is_llama_loaded(request.model)
 
             if not is_cached:
                 yield json.dumps({"model_loading_start": True})
 
-            model_instance, load_time = load_llama_model(request.model)
+            model_instance, load_time = await cache_manager.get_or_load_llama(request.model, load_llama_model)
 
             if load_time is not None:
                 yield json.dumps({"model_loading_end": True, "load_time": load_time})
@@ -1260,12 +1377,12 @@ async def stream_zero_shot_classification(
         else:
             # Regular transformers backend
             model_id = model_config["id"]
-            is_cached = model_id in loaded_models
+            is_cached = cache_manager.is_model_loaded(model_id)
 
             if not is_cached:
                 yield json.dumps({"model_loading_start": True})
 
-            model_data, load_time = load_model(model_id)
+            model_data, load_time = await cache_manager.get_or_load_model(model_id, load_model)
 
             if load_time is not None:
                 yield json.dumps({"model_loading_end": True, "load_time": load_time})
@@ -1334,22 +1451,21 @@ async def stream_ocr_extraction(
         # Determine cache key
         if engine == "easyocr":
             cache_key = tuple(ocr_config["languages"])
-            is_cached = cache_key in ocr_readers
         elif engine == "paddleocr":
             cache_key = "paddleocr"
-            is_cached = cache_key in ocr_readers
         elif engine == "tesseract":
             cache_key = "tesseract"
-            is_cached = cache_key in ocr_readers
         else:
             raise HTTPException(status_code=400, detail=f"Unknown OCR engine: {engine}")
+        
+        is_cached = cache_manager.is_ocr_loaded(cache_key)
 
         if not is_cached:
             # Emit model loading start event
             yield json.dumps({"model_loading_start": True})
 
         # Load the model (returns cached model if already loaded)
-        ocr_model, load_time = load_ocr_model(config)
+        ocr_model, load_time = await cache_manager.get_or_load_ocr(config, load_ocr_model)
 
         # Emit model loading end event if this was a fresh load
         if load_time is not None:
@@ -1600,7 +1716,10 @@ async def analyze_layout(file: UploadFile = File(...)):
         )
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if Path("static").exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+else:
+    print("[WARNING] Static directory not found - static file serving disabled")
 
 if __name__ == "__main__":
     import uvicorn
