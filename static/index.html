@@ -46,7 +46,7 @@
                                 Abstain Threshold: <span id="abstain-threshold-value">0.5</span>
                             </label>
                             <input type="range" id="abstain-threshold-slider" min="0" max="1" step="0.05" value="0.5" />
-                            <small>Minimum confidence required to accept classification</small>
+                            <small>Set minimum confidence required to accept classification</small>
                         </div>
 
                         <div class="setting-group">
@@ -54,7 +54,7 @@
                                 <span>Use Logprob Scoring</span>
                                 <input type="checkbox" id="use-logprobs-checkbox" />
                             </label>
-                            <small>Compute sequence probabilities for confidence calibration (slower, provides detailed probability scores)</small>
+                            <small>Compute sequence probabilities for confidence calibration - slower, provides detailed probability scores</small>
                         </div>
 
                         <div class="setting-group setting-group-last">
@@ -62,7 +62,7 @@
                                 Hypothesis Template
                             </label>
                             <input type="text" id="hypothesis-template-input" value="The sentiment of this text is {label}." />
-                            <small>Template for generating hypotheses. Use {label} as placeholder. Auto-updates when you select a preset.</small>
+                            <small>Customize template for generating hypotheses - use {label} as placeholder, auto-updates when you select a preset</small>
                         </div>
                     </div>
                 </details>
