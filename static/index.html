@@ -54,7 +54,7 @@
                                 <span>Use Logprob Scoring</span>
                                 <input type="checkbox" id="use-logprobs-checkbox" />
                             </label>
-                            <small>Compute sequence probabilities for confidence calibration - slower, provides detailed probability scores</small>
+                            <small>Compute sequence log probabilities for calibration - slower but more detailed</small>
                         </div>
 
                         <div class="setting-group setting-group-last">
@@ -62,7 +62,7 @@
                                 Hypothesis Template
                             </label>
                             <input type="text" id="hypothesis-template-input" value="The sentiment of this text is {label}." />
-                            <small>Customize template for generating hypotheses - use <code>{label}</code> as placeholder, auto-updates when you select a preset</small>
+                            <small>Customize hypothesis template - use <code>{label}</code> placeholder, updates with presets</small>
                         </div>
                     </div>
                 </details>
