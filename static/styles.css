@@ -1800,9 +1800,10 @@ body {
     flex-direction: column;
     gap: var(--space-lg);
     padding: var(--space-xl);
-    background: var(--color-bg-light);
-    border-radius: var(--radius-base);
-    margin-bottom: var(--space-3xl);
+    background: var(--color-bg-white);
+    border-radius: var(--radius-md);
+    border: var(--border-width-base) solid var(--color-border);
+    margin-top: var(--space-xl);
 }
 
 .classification-results h3 {
