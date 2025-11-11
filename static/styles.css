@@ -599,6 +599,11 @@ body {
     font-size: var(--font-size-regular);
 }
 
+.setting-group label.checkbox-label,
+.setting-group label.checkbox-label-right {
+    display: flex;
+}
+
 .setting-group label.checkbox-label-right {
     width: 100%;
 }
