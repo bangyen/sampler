@@ -472,12 +472,12 @@ function renderClassificationResults(result, useLogprobs = false, duration = nul
     
     if (!hasLogprobs) {
         html += `
+            <div class="info-box">
+                <strong>Fast mode</strong> - Confidence scoring is disabled. Enable "Use Logprob Scoring" for detailed confidence estimates.
+            </div>
             <div class="top-prediction">
                 <div class="prediction-header">Predicted Label</div>
                 <div class="prediction-label">${result.top_label}</div>
-            </div>
-            <div class="info-box">
-                <strong>Fast mode</strong> - Confidence scoring is disabled. Enable "Use Logprob Scoring" for detailed confidence estimates.
             </div>
         `;
     } else {
