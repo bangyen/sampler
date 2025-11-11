@@ -364,7 +364,7 @@ async function classifyText() {
         const decoder = new TextDecoder();
         let buffer = '';
         let result = null;
-        let startTime = null;
+        let processingTime = null;
         
         while (true) {
             const { done, value } = await reader.read();
@@ -387,12 +387,10 @@ async function classifyText() {
                         }
                     } else if (data.model_loading_end) {
                         // Keep skeleton visible during classification
-                        if (!startTime) startTime = performance.now();
                         updateMainLoadButton(true);
                     } else if (data.result) {
                         result = data.result;
-                        // Start timing if not already started (cached model case)
-                        if (!startTime) startTime = performance.now();
+                        processingTime = data.processing_time;
                     } else if (data.error) {
                         displayClassificationError(data.error);
                     }
@@ -400,11 +398,8 @@ async function classifyText() {
             }
         }
         
-        if (result && startTime) {
-            const endTime = performance.now();
-            const duration = ((endTime - startTime) / 1000).toFixed(3);
-            
-            renderClassificationResults(result, useLogprobs, duration, text);
+        if (result) {
+            renderClassificationResults(result, useLogprobs, processingTime, text);
             showToast('Classification complete');
         }
         
@@ -463,7 +458,7 @@ function displayClassificationError(message) {
     `;
 }
 
-function renderClassificationResults(result, useLogprobs = false, duration = null, inputText = '') {
+function renderClassificationResults(result, useLogprobs = false, processingTime = null, inputText = '') {
     const resultsDiv = document.getElementById('classification-results');
     
     let html = '<h3>Classification Results</h3>';
@@ -540,9 +535,9 @@ function renderClassificationResults(result, useLogprobs = false, duration = nul
     const metricsDiv = document.getElementById('classification-metrics');
     
     metricsDiv.innerHTML = `
-        ${duration ? `
+        ${processingTime !== null ? `
         <div class="metrics-stats">
-            <div><strong>Processing Time:</strong> ${duration}s</div>
+            <div><strong>Processing Time:</strong> ${processingTime.toFixed(3)}s</div>
             <div><strong>Labels Evaluated:</strong> ${labelsCount}</div>
             <div><strong>Text Length:</strong> ${textLength} characters</div>
         </div>
